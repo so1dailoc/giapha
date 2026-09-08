@@ -87,6 +87,12 @@ export interface EventItem {
   responsibleBranchId?: string;
 }
 
+export interface DocumentImage {
+  id: string;
+  url: string;
+  caption?: string; // Chú thích báo chí dưới hình ảnh
+}
+
 export interface DocumentItem {
   id: string;
   title: string;
@@ -99,6 +105,7 @@ export interface DocumentItem {
   dynastyEra?: string; // Triều Lê, Triều Nguyễn, Tự Đức...
   authorOrPreserver?: string;
   tags: string[];
+  images?: DocumentImage[]; // Bộ sưu tập nhiều hình ảnh kèm chú thích báo chí
 }
 
 export interface PostItem {
@@ -148,4 +155,14 @@ export interface RelationshipResult {
   pathDescription: string;
   kinshipType: 'trực hệ' | 'bàng hệ cùng chi' | 'bàng hệ khác chi' | 'hôn phối' | 'hậu duệ' | 'tổ tiên';
   culturalNote?: string; // Ghi chú xưng hô theo phong tục Việt Nam
+}
+
+export interface ClanInfo {
+  name: string;
+  branchSubtitle: string;
+  ancestralHall: string;
+  address: string;
+  foundingYear: number;
+  motto: string;
+  mottoMeaning: string;
 }

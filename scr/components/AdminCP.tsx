@@ -325,7 +325,7 @@ export const AdminCP: React.FC<AdminCPProps> = ({
     } else {
       const isSuperAdminEmail = email === DEFAULT_SUPER_ADMIN_EMAIL.toLowerCase();
       const newUser: ClanUser = {
-        id: `user-${Date.now()}`,
+        id: crypto.randomUUID(),
         email,
         name: userForm.name.trim() || email.split('@')[0],
         role: isSuperAdminEmail ? 'super_admin' : userForm.role,

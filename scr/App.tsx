@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Member,
   Branch,
@@ -20,8 +20,14 @@ import {
 } from './data/sampleData';
 import {
   INITIAL_CLAN_USERS,
-  DEFAULT_SUPER_ADMIN_EMAIL,
+  isSupabaseConfigured,
+  supabase,
 } from './lib/supabase';
+import {
+  loadAllData, loadClanUsers, loadClanUserByEmail, saveMember, deleteMember as deleteMemberDb,
+  saveEvent, deleteEvent as deleteEventDb, saveDocument, deleteDocument as deleteDocumentDb,
+  savePost, saveFund, saveClanInfo, saveClanUser, deleteClanUser as deleteClanUserDb, saveBranch,
+} from './lib/database';
 import { GoogleAuthModal } from './components/GoogleAuthModal';
 import { FamilyTree } from './components/FamilyTree';
 import { SmartSearch } from './components/SmartSearch';
@@ -68,7 +74,7 @@ export default function App() {
 
   // Authentication & Users state
   const [clanUsers, setClanUsers] = useState<ClanUser[]>(INITIAL_CLAN_USERS);
-  const [currentUser, setCurrentUser] = useState<ClanUser | null>(INITIAL_CLAN_USERS[0]);
+  const [currentUser, setCurrentUser] = useState<ClanUser | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Active Tab
@@ -76,7 +82,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('tree');
 
   // RBAC Role State (synced with current user)
-  const [userRole, setUserRole] = useState<UserRole>(INITIAL_CLAN_USERS[0]?.role || 'super_admin');
+  const [userRole, setUserRole] = useState<UserRole>('visitor');
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   // Modals & Selection
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
@@ -86,6 +93,73 @@ export default function App() {
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [parentForNewChild, setParentForNewChild] = useState<Member | null>(null);
   const [spouseForNewMember, setSpouseForNewMember] = useState<Member | null>(null);
+
+  // Load persistent Supabase data and restore the authenticated Google session.
+  useEffect(() => {
+    let mounted = true;
+    const boot = async () => {
+      try {
+        if (!isSupabaseConfigured || !supabase) return;
+        const [{ data: sessionData }] = await Promise.all([supabase.auth.getSession()]);
+        const email = sessionData.session?.user.email;
+        if (email && mounted) {
+          const dbUser = await loadClanUserByEmail(email);
+          if (dbUser && dbUser.status === 'active') {
+            setCurrentUser(dbUser);
+            setUserRole(dbUser.role);
+            if (dbUser.role === 'super_admin') {
+              const users = await loadClanUsers();
+              if (mounted) setClanUsers(users);
+            }
+          }
+        }
+        const data = await loadAllData();
+        if (!mounted) return;
+        if (data.clanInfo) setClanInfo(data.clanInfo as typeof CLAN_INFO);
+        if (data.branches.length) setBranches(data.branches);
+        if (data.members.length) setMembers(data.members);
+        if (data.events.length) setEvents(data.events);
+        if (data.documents.length) setDocuments(data.documents);
+        if (data.posts.length) setPosts(data.posts);
+        if (data.funds.length) setFunds(data.funds);
+      } catch (error) {
+        console.error('Supabase bootstrap failed:', error);
+      } finally {
+        if (mounted) setIsLoadingData(false);
+      }
+    };
+    boot();
+    if (supabase) {
+      const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        if (!mounted) return;
+        const email = session?.user.email;
+        if (!email) {
+          setCurrentUser(null);
+          setUserRole('visitor');
+          return;
+        }
+        try {
+          const dbUser = await loadClanUserByEmail(email);
+          if (dbUser && dbUser.status === 'active') {
+            setCurrentUser(dbUser);
+            setUserRole(dbUser.role);
+            if (dbUser.role === 'super_admin') {
+              const users = await loadClanUsers();
+              if (mounted) setClanUsers(users);
+            }
+          } else {
+            await supabase.auth.signOut();
+            setCurrentUser(null);
+            setUserRole('visitor');
+          }
+        } catch (error) {
+          console.error('Auth profile lookup failed:', error);
+        }
+      });
+      return () => { mounted = false; data.subscription.unsubscribe(); };
+    }
+    return () => { mounted = false; };
+  }, []);
 
   // Quick notification message
   const upcomingEvent = events.find((e) => e.type === 'death_anniversary');
@@ -118,144 +192,77 @@ export default function App() {
     setIsAddingMember(true);
   };
 
-  const handleAddMember = (newMember: Member) => {
-    setMembers((prev) => {
-      const updated = [...prev, newMember];
-      // If adding spouse, update spouseIds in target member
+  const handleAddMember = async (newMember: Member) => {
+    try {
+      const membersToSave = [newMember];
       if (spouseForNewMember) {
-        return updated.map((m) => {
-          if (m.id === spouseForNewMember.id) {
-            return {
-              ...m,
-              spouseIds: [...(m.spouseIds || []), newMember.id],
-            };
-          }
-          return m;
-        });
-      }
-      return updated;
-    });
-
-    confetti({
-      particleCount: 35,
-      spread: 70,
-      origin: { y: 0.6 },
-    });
+        const target = members.find((m) => m.id === spouseForNewMember.id);
+        if (target) {
+          const updatedTarget = { ...target, spouseIds: [...(target.spouseIds || []), newMember.id] };
+          membersToSave.push(updatedTarget);
+          setMembers((prev) => prev.map((m) => m.id === target.id ? updatedTarget : m).concat(prev.some(m => m.id === newMember.id) ? [] : [newMember]));
+        } else setMembers((prev) => [...prev, newMember]);
+      } else setMembers((prev) => [...prev, newMember]);
+      if (isSupabaseConfigured) for (const m of membersToSave) await saveMember(m);
+      confetti({ particleCount: 35, spread: 70, origin: { y: 0.6 } });
+    } catch (error: any) { alert(`Không thể lưu thành viên: ${error.message || error}`); }
   };
 
-  const handleUpdateMember = (updated: Member) => {
+  const handleUpdateMember = async (updated: Member) => {
     setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
     setSelectedMember(updated);
+    try { if (isSupabaseConfigured) await saveMember(updated); }
+    catch (error: any) { alert(`Không thể lưu thành viên: ${error.message || error}`); }
   };
 
-  const handleDeleteMember = (id: string) => {
-    setMembers((prev) => {
-      return prev
-        .filter((m) => m.id !== id)
-        .map((m) => ({
-          ...m,
-          fatherId: m.fatherId === id ? null : m.fatherId,
-          motherId: m.motherId === id ? null : m.motherId,
-          spouseIds: m.spouseIds ? m.spouseIds.filter((sId) => sId !== id) : [],
-        }));
-    });
-    setSelectedMember(null);
+  const handleDeleteMember = async (id: string) => {
+    const next = members.filter((m) => m.id !== id).map((m) => ({
+      ...m, fatherId: m.fatherId === id ? null : m.fatherId, motherId: m.motherId === id ? null : m.motherId,
+      spouseIds: m.spouseIds ? m.spouseIds.filter((sId) => sId !== id) : [],
+    }));
+    setMembers(next); setSelectedMember(null);
+    try {
+      if (isSupabaseConfigured) { await deleteMemberDb(id); for (const m of next.filter((m) => members.find(x=>x.id===m.id)?.spouseIds?.includes(id) || members.find(x=>x.id===m.id)?.fatherId===id || members.find(x=>x.id===m.id)?.motherId===id)) await saveMember(m); }
+    } catch (error: any) { alert(`Không thể xoá thành viên: ${error.message || error}`); }
   };
 
-  const handleAddPost = (post: PostItem) => {
-    setPosts((prev) => [post, ...prev]);
-  };
+  const handleAddPost = async (post: PostItem) => { setPosts((prev) => [post, ...prev]); try { if (isSupabaseConfigured) await savePost(post); } catch (e:any) { alert(`Không thể lưu bài viết: ${e.message || e}`); } };
+  const handleAddFund = async (fund: FundRecord) => { setFunds((prev) => [fund, ...prev]); try { if (isSupabaseConfigured) await saveFund(fund); } catch (e:any) { alert(`Không thể lưu sổ quỹ: ${e.message || e}`); } };
+  const handleUpdateClanInfo = async (newInfo: typeof CLAN_INFO) => { setClanInfo(newInfo); try { if (isSupabaseConfigured) await saveClanInfo(newInfo); } catch (e:any) { alert(`Không thể lưu thông tin dòng tộc: ${e.message || e}`); } };
+  const handleAddDocument = async (newDoc: DocumentItem) => { setDocuments((prev) => [newDoc, ...prev]); try { if (isSupabaseConfigured) await saveDocument(newDoc); } catch (e:any) { alert(`Không thể lưu tư liệu: ${e.message || e}`); } };
+  const handleUpdateDocument = async (updatedDoc: DocumentItem) => { setDocuments((prev) => prev.map((d) => d.id === updatedDoc.id ? updatedDoc : d)); try { if (isSupabaseConfigured) await saveDocument(updatedDoc); } catch (e:any) { alert(`Không thể cập nhật tư liệu: ${e.message || e}`); } };
+  const handleDeleteDocument = async (id: string) => { setDocuments((prev) => prev.filter((d) => d.id !== id)); try { if (isSupabaseConfigured) await deleteDocumentDb(id); } catch (e:any) { alert(`Không thể xoá tư liệu: ${e.message || e}`); } };
+  const handleAddEvent = async (newEvent: EventItem) => { setEvents((prev) => [...prev, newEvent]); try { if (isSupabaseConfigured) await saveEvent(newEvent); } catch (e:any) { alert(`Không thể lưu sự kiện: ${e.message || e}`); } };
+  const handleUpdateEvent = async (updatedEvent: EventItem) => { setEvents((prev) => prev.map((e) => e.id === updatedEvent.id ? updatedEvent : e)); try { if (isSupabaseConfigured) await saveEvent(updatedEvent); } catch (e:any) { alert(`Không thể cập nhật sự kiện: ${e.message || e}`); } };
+  const handleDeleteEvent = async (id: string) => { setEvents((prev) => prev.filter((e) => e.id !== id)); try { if (isSupabaseConfigured) await deleteEventDb(id); } catch (e:any) { alert(`Không thể xoá sự kiện: ${e.message || e}`); } };
 
-  const handleAddFund = (fund: FundRecord) => {
-    setFunds((prev) => [fund, ...prev]);
-  };
-
-  const handleUpdateClanInfo = (newInfo: typeof CLAN_INFO) => {
-    setClanInfo(newInfo);
-  };
-
-  const handleAddDocument = (newDoc: DocumentItem) => {
-    setDocuments((prev) => [newDoc, ...prev]);
-  };
-
-  const handleUpdateDocument = (updatedDoc: DocumentItem) => {
-    setDocuments((prev) => prev.map((d) => (d.id === updatedDoc.id ? updatedDoc : d)));
-  };
-
-  const handleDeleteDocument = (id: string) => {
-    setDocuments((prev) => prev.filter((d) => d.id !== id));
-  };
-
-  const handleAddEvent = (newEvent: EventItem) => {
-    setEvents((prev) => [...prev, newEvent]);
-  };
-
-  const handleUpdateEvent = (updatedEvent: EventItem) => {
-    setEvents((prev) => prev.map((e) => (e.id === updatedEvent.id ? updatedEvent : e)));
-  };
-
-  const handleDeleteEvent = (id: string) => {
-    setEvents((prev) => prev.filter((e) => e.id !== id));
-  };
-
-  const handleResetSampleData = () => {
-    setMembers(INITIAL_MEMBERS);
-    setBranches(INITIAL_BRANCHES);
-    setEvents(INITIAL_EVENTS);
-    setDocuments(INITIAL_DOCUMENTS);
-    setPosts(INITIAL_POSTS);
-    setFunds(INITIAL_FUNDS);
-    setClanInfo(CLAN_INFO);
+  const handleResetSampleData = async () => {
+    setMembers(INITIAL_MEMBERS); setBranches(INITIAL_BRANCHES); setEvents(INITIAL_EVENTS); setDocuments(INITIAL_DOCUMENTS); setPosts(INITIAL_POSTS); setFunds(INITIAL_FUNDS); setClanInfo(CLAN_INFO);
+    try { if (isSupabaseConfigured) { for (const b of INITIAL_BRANCHES) await saveBranch(b); for (const m of INITIAL_MEMBERS) await saveMember(m); for (const e of INITIAL_EVENTS) await saveEvent(e); for (const d of INITIAL_DOCUMENTS) await saveDocument(d); for (const p of INITIAL_POSTS) await savePost(p); for (const f of INITIAL_FUNDS) await saveFund(f); await saveClanInfo(CLAN_INFO); } } catch (e:any) { alert(`Đã khôi phục giao diện nhưng chưa đồng bộ được Supabase: ${e.message || e}`); }
     confetti({ particleCount: 50, spread: 80 });
   };
 
-  const handleImportClanData = (data: any) => {
-    if (data.clanInfo) setClanInfo(data.clanInfo);
-    if (data.members) setMembers(data.members);
-    if (data.branches) setBranches(data.branches);
-    if (data.documents) setDocuments(data.documents);
-    if (data.events) setEvents(data.events);
+  const handleImportClanData = async (data: any) => {
+    if (data.clanInfo) { setClanInfo(data.clanInfo); if (isSupabaseConfigured) await saveClanInfo(data.clanInfo); }
+    if (data.members) { setMembers(data.members); if (isSupabaseConfigured) for (const m of data.members) await saveMember(m); }
+    if (data.branches) { setBranches(data.branches); if (isSupabaseConfigured) for (const b of data.branches) await saveBranch(b); }
+    if (data.documents) { setDocuments(data.documents); if (isSupabaseConfigured) for (const d of data.documents) await saveDocument(d); }
+    if (data.events) { setEvents(data.events); if (isSupabaseConfigured) for (const e of data.events) await saveEvent(e); }
   };
 
   // Authentication Handlers
   const handleLoginWithGoogle = (user: ClanUser) => {
-    setCurrentUser(user);
-    setUserRole(user.role);
-    setClanUsers((prev) => {
-      const exists = prev.find((u) => u.email.toLowerCase() === user.email.toLowerCase());
-      if (!exists) {
-        return [user, ...prev];
-      }
-      return prev.map((u) => (u.email.toLowerCase() === user.email.toLowerCase() ? user : u));
-    });
-    setIsAuthModalOpen(false);
-    confetti({ particleCount: 35, spread: 60 });
+    setCurrentUser(user); setUserRole(user.role); setClanUsers((prev) => prev.some(u => u.email.toLowerCase() === user.email.toLowerCase()) ? prev.map(u => u.email.toLowerCase() === user.email.toLowerCase() ? user : u) : [user, ...prev]); setIsAuthModalOpen(false); confetti({ particleCount: 35, spread: 60 });
   };
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setUserRole('visitor');
-    setIsAuthModalOpen(false);
-  };
+  const handleLogout = async () => { if (supabase) await supabase.auth.signOut(); setCurrentUser(null); setUserRole('visitor'); setIsAuthModalOpen(false); };
+  const handleAddUser = async (newUser: ClanUser) => { setClanUsers((prev) => [newUser, ...prev]); try { if (isSupabaseConfigured) await saveClanUser(newUser); } catch (e:any) { alert(`Không thể lưu tài khoản: ${e.message || e}`); } };
+  const handleUpdateUser = async (updatedUser: ClanUser) => { setClanUsers((prev) => prev.map((u) => u.id === updatedUser.id ? updatedUser : u)); if (currentUser?.id === updatedUser.id) { setCurrentUser(updatedUser); setUserRole(updatedUser.role); } try { if (isSupabaseConfigured) await saveClanUser(updatedUser); } catch (e:any) { alert(`Không thể cập nhật tài khoản: ${e.message || e}`); } };
+  const handleDeleteUser = async (userId: string) => { setClanUsers((prev) => prev.filter((u) => u.id !== userId)); if (currentUser?.id === userId) await handleLogout(); try { if (isSupabaseConfigured) await deleteClanUserDb(userId); } catch (e:any) { alert(`Không thể xoá tài khoản: ${e.message || e}`); } };
 
-  const handleAddUser = (newUser: ClanUser) => {
-    setClanUsers((prev) => [newUser, ...prev]);
-  };
-
-  const handleUpdateUser = (updatedUser: ClanUser) => {
-    setClanUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)));
-    if (currentUser && currentUser.id === updatedUser.id) {
-      setCurrentUser(updatedUser);
-      setUserRole(updatedUser.role);
-    }
-  };
-
-  const handleDeleteUser = (userId: string) => {
-    setClanUsers((prev) => prev.filter((u) => u.id !== userId));
-    if (currentUser && currentUser.id === userId) {
-      handleLogout();
-    }
-  };
+  if (isLoadingData && isSupabaseConfigured) {
+    return <div className="min-h-screen bg-[#180204] text-amber-100 flex items-center justify-center"><div className="text-center"><div className="text-2xl font-serif font-bold">Đang tải Gia Phả…</div><div className="text-xs text-amber-300/70 mt-2">Đang kết nối Supabase</div></div></div>;
+  }
 
   return (
     <div className="min-h-screen bg-[#180204] text-amber-50 flex flex-col font-sans selection:bg-amber-500 selection:text-amber-950">

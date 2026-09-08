@@ -10,6 +10,7 @@ import {
 import {
   DEFAULT_SUPER_ADMIN_EMAIL,
   SUPABASE_SQL_SCHEMA,
+  SUPABASE_FIX_BURIAL_COORDINATES_SQL,
   downloadSupabaseSchemaSql,
 } from '../lib/supabase';
 import {
@@ -124,6 +125,7 @@ export const AdminCP: React.FC<AdminCPProps> = ({
   const [editingUser, setEditingUser] = useState<ClanUser | null>(null);
   const [userToDelete, setUserToDelete] = useState<ClanUser | null>(null);
   const [copiedSql, setCopiedSql] = useState(false);
+  const [copiedFixSql, setCopiedFixSql] = useState(false);
 
   const [userForm, setUserForm] = useState<{
     email: string;
@@ -166,6 +168,7 @@ export const AdminCP: React.FC<AdminCPProps> = ({
     authorOrPreserver: string;
     fileUrl: string;
     tags: string;
+    images: Array<{ id: string; url: string; caption?: string }>;
   }>({
     title: '',
     category: 'sac_phong',
@@ -174,6 +177,13 @@ export const AdminCP: React.FC<AdminCPProps> = ({
     authorOrPreserver: '',
     fileUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80',
     tags: 'sac_phong, trieu_nguyen',
+    images: [
+      {
+        id: 'img-1',
+        url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80',
+        caption: 'Bản chụp sắc phong nguyên bản'
+      }
+    ],
   });
 
   // Event management modal
@@ -266,6 +276,14 @@ export const AdminCP: React.FC<AdminCPProps> = ({
     confetti({ particleCount: 25, spread: 50 });
   };
 
+  // Copy Supabase Fix Burial Coordinates SQL
+  const handleCopyFixSql = () => {
+    navigator.clipboard.writeText(SUPABASE_FIX_BURIAL_COORDINATES_SQL);
+    setCopiedFixSql(true);
+    setTimeout(() => setCopiedFixSql(false), 3500);
+    confetti({ particleCount: 25, spread: 50 });
+  };
+
   // Open User Permission Modal
   const handleOpenUserModal = (user?: ClanUser) => {
     if (user) {
@@ -325,7 +343,7 @@ export const AdminCP: React.FC<AdminCPProps> = ({
     } else {
       const isSuperAdminEmail = email === DEFAULT_SUPER_ADMIN_EMAIL.toLowerCase();
       const newUser: ClanUser = {
-        id: crypto.randomUUID(),
+        id: `user-${Date.now()}`,
         email,
         name: userForm.name.trim() || email.split('@')[0],
         role: isSuperAdminEmail ? 'super_admin' : userForm.role,
@@ -379,6 +397,16 @@ export const AdminCP: React.FC<AdminCPProps> = ({
   const handleOpenDocModal = (doc?: DocumentItem) => {
     if (doc) {
       setEditingDoc(doc);
+      const existingImages = doc.images && doc.images.length > 0
+        ? doc.images
+        : [
+            {
+              id: 'img-1',
+              url: doc.fileUrl,
+              caption: 'Bản chụp tài liệu nguyên bản'
+            }
+          ];
+
       setDocForm({
         title: doc.title,
         category: doc.category,
@@ -387,6 +415,7 @@ export const AdminCP: React.FC<AdminCPProps> = ({
         authorOrPreserver: doc.authorOrPreserver || '',
         fileUrl: doc.fileUrl,
         tags: doc.tags.join(', '),
+        images: existingImages,
       });
     } else {
       setEditingDoc(null);
@@ -398,6 +427,13 @@ export const AdminCP: React.FC<AdminCPProps> = ({
         authorOrPreserver: '',
         fileUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80',
         tags: 'sac_phong, co_truyen',
+        images: [
+          {
+            id: 'img-1',
+            url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80',
+            caption: 'Bản chụp sắc phong nguyên bản'
+          }
+        ],
       });
     }
     setIsDocModalOpen(true);
@@ -422,6 +458,9 @@ export const AdminCP: React.FC<AdminCPProps> = ({
       .map((t) => t.trim().replace(/^#/, ''))
       .filter(Boolean);
 
+    const validImages = docForm.images.filter(img => img.url.trim().length > 0);
+    const primaryFileUrl = validImages.length > 0 ? validImages[0].url : docForm.fileUrl.trim();
+
     if (editingDoc) {
       const updated: DocumentItem = {
         ...editingDoc,
@@ -431,8 +470,9 @@ export const AdminCP: React.FC<AdminCPProps> = ({
         dynastyEra: docForm.dynastyEra.trim() || undefined,
         description: docForm.description.trim(),
         authorOrPreserver: docForm.authorOrPreserver.trim() || undefined,
-        fileUrl: docForm.fileUrl.trim(),
+        fileUrl: primaryFileUrl,
         tags: parsedTags,
+        images: validImages.length > 0 ? validImages : undefined,
       };
       onUpdateDocument(updated);
     } else {
@@ -444,9 +484,10 @@ export const AdminCP: React.FC<AdminCPProps> = ({
         dynastyEra: docForm.dynastyEra.trim() || undefined,
         description: docForm.description.trim(),
         authorOrPreserver: docForm.authorOrPreserver.trim() || undefined,
-        fileUrl: docForm.fileUrl.trim(),
+        fileUrl: primaryFileUrl,
         fileType: 'image',
         tags: parsedTags,
+        images: validImages.length > 0 ? validImages : undefined,
       };
       onAddDocument(newDoc);
     }
@@ -1454,6 +1495,43 @@ export const AdminCP: React.FC<AdminCPProps> = ({
             </div>
           </div>
 
+          {/* Quick Fix Box for burial_coordinates column error */}
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border-2 border-amber-300 p-5 shadow-sm space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500 text-amber-950 flex items-center justify-center font-bold shadow-sm">
+                  <AlertTriangle className="w-5 h-5 text-amber-950" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-amber-950 text-sm font-serif">
+                    Khắc Phục Nhanh: Lỗi Thiếu Cột burial_coordinates Trên Supabase
+                  </h3>
+                  <p className="text-[11px] text-amber-800">
+                    Xử lý triệt để thông báo: <i>&ldquo;Could not find the 'burial_coordinates' column of 'members' in the schema cache&rdquo;</i>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleCopyFixSql}
+                className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow transition-all active:scale-95 whitespace-nowrap"
+                title="Sao chép 3 dòng SQL sửa lỗi"
+              >
+                {copiedFixSql ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedFixSql ? 'Đã Sao Chép SQL!' : 'Sao Chép Lệnh Sửa (1-Click)'}</span>
+              </button>
+            </div>
+
+            <p className="text-xs text-amber-900 leading-relaxed">
+              <b>Nguyên nhân:</b> Bảng <code>members</code> đã tạo trước đó trên Supabase chưa có cột <code>burial_coordinates</code> (lưu tọa độ GPS Google Maps của mộ phần).<br />
+              <b>Cách khắc phục (chỉ 10 giây):</b> Vào Supabase &rarr; Chọn <b>SQL Editor</b> &rarr; Bấm <b>"New Query"</b> &rarr; Dán đoạn mã bên dưới và nhấn <b>RUN</b>:
+            </p>
+
+            <pre className="p-3 bg-slate-950 text-emerald-300 font-mono text-[11px] rounded-xl overflow-x-auto border border-amber-400/40 leading-relaxed">
+              {SUPABASE_FIX_BURIAL_COORDINATES_SQL}
+            </pre>
+          </div>
+
           {/* 4-Step Interactive Deployment Guide */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Step 1: GitHub */}
@@ -1722,15 +1800,133 @@ git push -u origin main`}
                 </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Đường dẫn hình ảnh / Tệp nguyên bản</label>
-                <input
-                  type="url"
-                  placeholder="https://images.unsplash.com/..."
-                  value={docForm.fileUrl}
-                  onChange={(e) => setDocForm({ ...docForm, fileUrl: e.target.value })}
-                  className="w-full p-2.5 border rounded-lg focus:outline-none focus:border-amber-600 font-mono text-xs"
-                />
+              {/* Bộ sưu tập hình ảnh & chú thích báo chí */}
+              <div className="p-3.5 bg-amber-50/70 rounded-xl border border-amber-200/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-950 text-xs">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Bộ Sưu Tập Hình Ảnh & Chú Thích Báo Chí (Nhiều Ảnh)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDocForm({
+                        ...docForm,
+                        images: [
+                          ...docForm.images,
+                          {
+                            id: `img-${Date.now()}-${docForm.images.length + 1}`,
+                            url: '',
+                            caption: `Hình ${docForm.images.length + 1}: Chú thích chi tiết bức ảnh tư liệu cổ...`,
+                          },
+                        ],
+                      });
+                    }}
+                    className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-sm transition-colors"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Thêm Ảnh & Chú Thích Mới
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-amber-900/80 leading-relaxed">
+                  Bạn có thể đính kèm nhiều hình ảnh cho một sắc phong hoặc bản phả ký. Mỗi bức hình có một dòng <b>chú thích báo chí riêng biệt bên dưới hình</b> để người đọc dễ đối chiếu chi tiết.
+                </p>
+
+                <div className="space-y-3">
+                  {docForm.images.map((img, idx) => (
+                    <div
+                      key={img.id || idx}
+                      className="p-3 bg-white rounded-xl border border-slate-200 shadow-sm space-y-2 relative"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">
+                          📷 Bức Ảnh #{idx + 1}
+                        </span>
+                        {docForm.images.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const nextImgs = docForm.images.filter((_, i) => i !== idx);
+                              setDocForm({ ...docForm, images: nextImgs });
+                            }}
+                            className="text-red-500 hover:text-red-700 p-1 text-xs font-semibold flex items-center gap-0.5"
+                            title="Xóa ảnh này"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            Xóa
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
+                        {/* URL Input */}
+                        <div className="md:col-span-7 space-y-1">
+                          <label className="block text-[10px] font-semibold text-slate-600">
+                            Đường dẫn URL ảnh (Supabase Storage / Unsplash / Cloudinary)
+                          </label>
+                          <input
+                            type="url"
+                            placeholder="https://images.unsplash.com/... hoặc Supabase public URL"
+                            value={img.url}
+                            onChange={(e) => {
+                              const newImgs = [...docForm.images];
+                              newImgs[idx] = { ...newImgs[idx], url: e.target.value };
+                              setDocForm({
+                                ...docForm,
+                                images: newImgs,
+                                fileUrl: idx === 0 ? e.target.value : docForm.fileUrl,
+                              });
+                            }}
+                            className="w-full p-2 border rounded-lg focus:outline-none focus:border-amber-600 font-mono text-[11px]"
+                          />
+                        </div>
+
+                        {/* Thumbnail preview */}
+                        <div className="md:col-span-5 flex items-center gap-2">
+                          <div className="w-16 h-12 rounded-lg bg-slate-900 overflow-hidden flex-shrink-0 border border-slate-300">
+                            {img.url ? (
+                              <img
+                                src={img.url}
+                                alt={`Preview ${idx + 1}`}
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[9px] text-slate-400">
+                                Chưa có ảnh
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-slate-500 italic">
+                            {img.url ? 'Ảnh hiển thị tốt' : 'Nhập URL để xem trước'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Newspaper Caption Input */}
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-700 mb-0.5">
+                          Chú thích báo chí dưới hình (Hiển thị kiểu phóng sự):
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="VD: Hình 1: Toàn văn sắc phong Cảnh Hưng năm thứ 44 đóng dấu ngự bảo..."
+                          value={img.caption || ''}
+                          onChange={(e) => {
+                            const newImgs = [...docForm.images];
+                            newImgs[idx] = { ...newImgs[idx], caption: e.target.value };
+                            setDocForm({ ...docForm, images: newImgs });
+                          }}
+                          className="w-full p-2 border border-amber-300 rounded-lg focus:outline-none focus:border-amber-600 bg-amber-50/30 text-xs font-serif italic text-slate-800"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div>

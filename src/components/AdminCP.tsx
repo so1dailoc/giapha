@@ -1,0 +1,2177 @@
+import React, { useState } from 'react';
+import {
+  Member,
+  Branch,
+  DocumentItem,
+  EventItem,
+  UserRole,
+  ClanUser,
+} from '../types';
+import {
+  DEFAULT_SUPER_ADMIN_EMAIL,
+  SUPABASE_SQL_SCHEMA,
+  downloadSupabaseSchemaSql,
+} from '../lib/supabase';
+import {
+  ShieldCheck,
+  Scroll,
+  TreeDeciduous,
+  Settings,
+  Calendar,
+  Database,
+  Plus,
+  Edit3,
+  Trash2,
+  Search,
+  Download,
+  Upload,
+  Eye,
+  CheckCircle,
+  AlertTriangle,
+  X,
+  Save,
+  Crown,
+  Sparkles,
+  Award,
+  Users,
+  GitBranch,
+  FileText,
+  MapPin,
+  RefreshCw,
+  Mail,
+  UserPlus,
+  UserCheck,
+  Copy,
+  ExternalLink,
+  Lock,
+  Unlock,
+  Check,
+  Globe,
+  Code2,
+  HelpCircle,
+} from 'lucide-react';
+import confetti from 'canvas-confetti';
+
+interface AdminCPProps {
+  clanInfo: {
+    name: string;
+    branchSubtitle: string;
+    ancestralHall: string;
+    address: string;
+    foundingYear: number;
+    motto: string;
+    mottoMeaning: string;
+  };
+  onUpdateClanInfo: (info: any) => void;
+  members: Member[];
+  branches: Branch[];
+  documents: DocumentItem[];
+  events: EventItem[];
+  userRole: UserRole;
+  clanUsers: ClanUser[];
+  onAddUser: (user: ClanUser) => void;
+  onUpdateUser: (user: ClanUser) => void;
+  onDeleteUser: (userId: string) => void;
+  currentUser: ClanUser | null;
+  onSelectMemberForEdit: (member: Member) => void;
+  onOpenAddChild: (parent: Member) => void;
+  onOpenAddSpouse: (member: Member) => void;
+  onOpenAddNewMember: () => void;
+  onDeleteMember: (id: string) => void;
+  onAddDocument: (doc: DocumentItem) => void;
+  onUpdateDocument: (doc: DocumentItem) => void;
+  onDeleteDocument: (id: string) => void;
+  onAddEvent: (evt: EventItem) => void;
+  onUpdateEvent: (evt: EventItem) => void;
+  onDeleteEvent: (id: string) => void;
+  onResetSampleData?: () => void;
+  onImportClanData?: (data: any) => void;
+}
+
+export const AdminCP: React.FC<AdminCPProps> = ({
+  clanInfo,
+  onUpdateClanInfo,
+  members,
+  branches,
+  documents,
+  events,
+  userRole,
+  clanUsers,
+  onAddUser,
+  onUpdateUser,
+  onDeleteUser,
+  currentUser,
+  onSelectMemberForEdit,
+  onOpenAddChild,
+  onOpenAddSpouse,
+  onOpenAddNewMember,
+  onDeleteMember,
+  onAddDocument,
+  onUpdateDocument,
+  onDeleteDocument,
+  onAddEvent,
+  onUpdateEvent,
+  onDeleteEvent,
+  onResetSampleData,
+  onImportClanData,
+}) => {
+  type AdminTab = 'tree' | 'users' | 'archives' | 'settings' | 'events' | 'cloud';
+  const [activeTab, setActiveTab] = useState<AdminTab>('tree');
+
+  // User Management State
+  const [userSearch, setUserSearch] = useState('');
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<ClanUser | null>(null);
+  const [userToDelete, setUserToDelete] = useState<ClanUser | null>(null);
+  const [copiedSql, setCopiedSql] = useState(false);
+
+  const [userForm, setUserForm] = useState<{
+    email: string;
+    name: string;
+    role: UserRole;
+    memberId: string;
+    branchId: string;
+    status: 'active' | 'pending' | 'blocked';
+    notes: string;
+  }>({
+    email: '',
+    name: '',
+    role: 'member',
+    memberId: '',
+    branchId: '',
+    status: 'active',
+    notes: '',
+  });
+
+  // Search and filters for members table
+  const [memberSearch, setMemberSearch] = useState('');
+  const [selectedGenFilter, setSelectedGenFilter] = useState<string>('all');
+  const [selectedPhaiFilter, setSelectedPhaiFilter] = useState<string>('all');
+
+  // Delete Member Confirm Modal
+  const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
+
+  // Document management modals
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+  const [editingDoc, setEditingDoc] = useState<DocumentItem | null>(null);
+  const [docToDelete, setDocToDelete] = useState<DocumentItem | null>(null);
+  const [docSearch, setDocSearch] = useState('');
+
+  // Document Form State
+  const [docForm, setDocForm] = useState<{
+    title: string;
+    category: 'sac_phong' | 'pha_ky' | 'huong_uoc' | 'van_khan' | 'hinh_anh_mo_to' | 'khac';
+    dynastyEra: string;
+    description: string;
+    authorOrPreserver: string;
+    fileUrl: string;
+    tags: string;
+  }>({
+    title: '',
+    category: 'sac_phong',
+    dynastyEra: '',
+    description: '',
+    authorOrPreserver: '',
+    fileUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80',
+    tags: 'sac_phong, trieu_nguyen',
+  });
+
+  // Event management modal
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
+  const [eventToDelete, setEventToDelete] = useState<EventItem | null>(null);
+  const [eventForm, setEventForm] = useState<{
+    title: string;
+    type: 'death_anniversary' | 'clan_meeting' | 'tomb_cleaning' | 'ancestor_worship' | 'longevity_celebration';
+    lunarDay: number;
+    lunarMonth: number;
+    location: string;
+    description: string;
+  }>({
+    title: '',
+    type: 'ancestor_worship',
+    lunarDay: 1,
+    lunarMonth: 1,
+    location: clanInfo.ancestralHall,
+    description: '',
+  });
+
+  // Clan Settings Local State
+  const [clanForm, setClanForm] = useState({ ...clanInfo });
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
+
+  // Stats calculation
+  const totalMembers = members.length;
+  const livingMembers = members.filter((m) => m.isAlive).length;
+  const deceasedMembers = totalMembers - livingMembers;
+  const maxGen = Math.max(...members.map((m) => m.generation), 1);
+
+  // Available unique Phái from members & branches
+  const phaiList = React.useMemo(() => {
+    const set = new Set<string>();
+    branches.forEach((b) => set.add(b.name));
+    members.forEach((m) => {
+      if (m.phaiName) set.add(m.phaiName);
+    });
+    return Array.from(set);
+  }, [branches, members]);
+
+  // Filtered members list
+  const filteredMembers = React.useMemo(() => {
+    return members.filter((m) => {
+      if (selectedGenFilter !== 'all' && m.generation !== Number(selectedGenFilter)) {
+        return false;
+      }
+      if (selectedPhaiFilter !== 'all') {
+        const phaiMatch = m.phaiName?.toLowerCase().includes(selectedPhaiFilter.toLowerCase()) ||
+          branches.find((b) => b.id === m.branchId)?.name.toLowerCase().includes(selectedPhaiFilter.toLowerCase());
+        if (!phaiMatch) return false;
+      }
+      if (memberSearch.trim()) {
+        const q = memberSearch.toLowerCase().trim();
+        const match = `${m.fullName} ${m.courtesyName || ''} ${m.posthumousName || ''} ${m.occupation || ''}`;
+        if (!match.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [members, selectedGenFilter, selectedPhaiFilter, memberSearch, branches]);
+
+  // Handle Export Backup JSON
+  const handleExportBackup = () => {
+    const backupData = {
+      exportDate: new Date().toISOString(),
+      clanInfo,
+      members,
+      branches,
+      documents,
+      events,
+      clanUsers,
+    };
+    const jsonStr = JSON.stringify(backupData, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `gia-pha-toc-van-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    confetti({ particleCount: 40, spread: 70 });
+  };
+
+  // Copy Supabase SQL Schema
+  const handleCopySql = () => {
+    navigator.clipboard.writeText(SUPABASE_SQL_SCHEMA);
+    setCopiedSql(true);
+    setTimeout(() => setCopiedSql(false), 3500);
+    confetti({ particleCount: 25, spread: 50 });
+  };
+
+  // Open User Permission Modal
+  const handleOpenUserModal = (user?: ClanUser) => {
+    if (user) {
+      setEditingUser(user);
+      setUserForm({
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        memberId: user.memberId || '',
+        branchId: user.branchId || '',
+        status: user.status,
+        notes: user.notes || '',
+      });
+    } else {
+      setEditingUser(null);
+      setUserForm({
+        email: '',
+        name: '',
+        role: 'member',
+        memberId: '',
+        branchId: branches[0]?.id || '',
+        status: 'active',
+        notes: '',
+      });
+    }
+    setIsUserModalOpen(true);
+  };
+
+  // Submit User Permission Form
+  const handleSubmitUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = userForm.email.trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      alert('Vui lòng nhập địa chỉ email Google hợp lệ (@gmail.com)!');
+      return;
+    }
+
+    const linkedMember = members.find((m) => m.id === userForm.memberId);
+    const linkedBranch = branches.find((b) => b.id === userForm.branchId);
+
+    if (editingUser) {
+      // Protect default Super Admin account from accidental demotion
+      const isOriginalSuperAdmin = editingUser.email.toLowerCase() === DEFAULT_SUPER_ADMIN_EMAIL.toLowerCase();
+      const updatedUser: ClanUser = {
+        ...editingUser,
+        email: isOriginalSuperAdmin ? DEFAULT_SUPER_ADMIN_EMAIL : email,
+        name: userForm.name.trim() || email.split('@')[0],
+        role: isOriginalSuperAdmin ? 'super_admin' : userForm.role,
+        memberId: userForm.memberId || undefined,
+        memberName: linkedMember ? `${linkedMember.fullName} (Đời ${linkedMember.generation})` : undefined,
+        branchId: userForm.branchId || undefined,
+        branchName: linkedBranch?.name,
+        status: isOriginalSuperAdmin ? 'active' : userForm.status,
+        notes: userForm.notes.trim() || undefined,
+      };
+      onUpdateUser(updatedUser);
+    } else {
+      const isSuperAdminEmail = email === DEFAULT_SUPER_ADMIN_EMAIL.toLowerCase();
+      const newUser: ClanUser = {
+        id: crypto.randomUUID(),
+        email,
+        name: userForm.name.trim() || email.split('@')[0],
+        role: isSuperAdminEmail ? 'super_admin' : userForm.role,
+        memberId: userForm.memberId || undefined,
+        memberName: linkedMember ? `${linkedMember.fullName} (Đời ${linkedMember.generation})` : undefined,
+        branchId: userForm.branchId || undefined,
+        branchName: linkedBranch?.name,
+        createdAt: new Date().toISOString(),
+        status: userForm.status,
+        notes: userForm.notes.trim() || undefined,
+      };
+      onAddUser(newUser);
+    }
+    setIsUserModalOpen(false);
+    confetti({ particleCount: 30, spread: 60 });
+  };
+
+  // Handle Import Backup JSON
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target?.result as string);
+        if (data.members && onImportClanData) {
+          onImportClanData(data);
+          alert('Đã nạp thành công dữ liệu gia phả từ bản sao lưu JSON!');
+          confetti({ particleCount: 50, spread: 80 });
+        } else {
+          alert('Tệp tin JSON không đúng định dạng sao lưu chuẩn của Gia Phả!');
+        }
+      } catch (err) {
+        alert('Lỗi đọc tệp tin JSON sao lưu. Vui lòng kiểm tra lại!');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  // Handle Save Clan Master Settings
+  const handleSaveClanSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    onUpdateClanInfo(clanForm);
+    setSaveSuccessMsg('Đã lưu thành công thông tin & cài đặt Dòng Tộc!');
+    confetti({ particleCount: 30, spread: 60 });
+    setTimeout(() => setSaveSuccessMsg(''), 4000);
+  };
+
+  // Handle Open Document Modal (Add or Edit)
+  const handleOpenDocModal = (doc?: DocumentItem) => {
+    if (doc) {
+      setEditingDoc(doc);
+      setDocForm({
+        title: doc.title,
+        category: doc.category,
+        dynastyEra: doc.dynastyEra || '',
+        description: doc.description,
+        authorOrPreserver: doc.authorOrPreserver || '',
+        fileUrl: doc.fileUrl,
+        tags: doc.tags.join(', '),
+      });
+    } else {
+      setEditingDoc(null);
+      setDocForm({
+        title: '',
+        category: 'sac_phong',
+        dynastyEra: '',
+        description: '',
+        authorOrPreserver: '',
+        fileUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80',
+        tags: 'sac_phong, co_truyen',
+      });
+    }
+    setIsDocModalOpen(true);
+  };
+
+  // Handle Submit Document
+  const handleSubmitDoc = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!docForm.title.trim()) return;
+
+    const categoryLabels: Record<string, string> = {
+      sac_phong: 'Sắc phong triều đình',
+      pha_ky: 'Gia phả cổ chữ Nôm',
+      huong_uoc: 'Hương ước & Gia quy',
+      van_khan: 'Văn khấn cổ truyền',
+      hinh_anh_mo_to: 'Hình ảnh mộ tổ & Di tích',
+      khac: 'Tư liệu quý khác',
+    };
+
+    const parsedTags = docForm.tags
+      .split(',')
+      .map((t) => t.trim().replace(/^#/, ''))
+      .filter(Boolean);
+
+    if (editingDoc) {
+      const updated: DocumentItem = {
+        ...editingDoc,
+        title: docForm.title.trim(),
+        category: docForm.category,
+        categoryLabel: categoryLabels[docForm.category] || 'Tư liệu cổ',
+        dynastyEra: docForm.dynastyEra.trim() || undefined,
+        description: docForm.description.trim(),
+        authorOrPreserver: docForm.authorOrPreserver.trim() || undefined,
+        fileUrl: docForm.fileUrl.trim(),
+        tags: parsedTags,
+      };
+      onUpdateDocument(updated);
+    } else {
+      const newDoc: DocumentItem = {
+        id: `doc-${Date.now()}`,
+        title: docForm.title.trim(),
+        category: docForm.category,
+        categoryLabel: categoryLabels[docForm.category] || 'Tư liệu cổ',
+        dynastyEra: docForm.dynastyEra.trim() || undefined,
+        description: docForm.description.trim(),
+        authorOrPreserver: docForm.authorOrPreserver.trim() || undefined,
+        fileUrl: docForm.fileUrl.trim(),
+        fileType: 'image',
+        tags: parsedTags,
+      };
+      onAddDocument(newDoc);
+    }
+    setIsDocModalOpen(false);
+    confetti({ particleCount: 25, spread: 60 });
+  };
+
+  // Handle Event Modal
+  const handleOpenEventModal = (evt?: EventItem) => {
+    if (evt) {
+      setEditingEvent(evt);
+      setEventForm({
+        title: evt.title,
+        type: evt.type,
+        lunarDay: evt.lunarDay,
+        lunarMonth: evt.lunarMonth,
+        location: evt.location,
+        description: evt.description,
+      });
+    } else {
+      setEditingEvent(null);
+      setEventForm({
+        title: '',
+        type: 'ancestor_worship',
+        lunarDay: 1,
+        lunarMonth: 1,
+        location: clanInfo.ancestralHall,
+        description: '',
+      });
+    }
+    setIsEventModalOpen(true);
+  };
+
+  const handleSubmitEvent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!eventForm.title.trim()) return;
+
+    if (editingEvent) {
+      const updated: EventItem = {
+        ...editingEvent,
+        title: eventForm.title.trim(),
+        type: eventForm.type,
+        lunarDay: Number(eventForm.lunarDay),
+        lunarMonth: Number(eventForm.lunarMonth),
+        location: eventForm.location.trim(),
+        description: eventForm.description.trim(),
+      };
+      onUpdateEvent(updated);
+    } else {
+      const newEvt: EventItem = {
+        id: `evt-${Date.now()}`,
+        title: eventForm.title.trim(),
+        type: eventForm.type,
+        lunarDay: Number(eventForm.lunarDay),
+        lunarMonth: Number(eventForm.lunarMonth),
+        location: eventForm.location.trim(),
+        description: eventForm.description.trim(),
+      };
+      onAddEvent(newEvt);
+    }
+    setIsEventModalOpen(false);
+    confetti({ particleCount: 25, spread: 60 });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* AdminCP Master Header Banner */}
+      <div className="relative rounded-2xl bg-gradient-to-r from-[#3c0308] via-[#5c0612] to-[#3c0308] border-2 border-amber-500/50 p-6 shadow-2xl overflow-hidden text-amber-50">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-amber-400">
+              <ShieldCheck className="w-4 h-4 text-amber-400" />
+              Trung Tâm Quản Trị Phả Hệ & Tàng Thư (AdminCP)
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold font-serif text-amber-200 tracking-wide uppercase">
+              Bảng Điều Hành Gia Tộc: {clanInfo.name}
+            </h1>
+            <p className="text-xs text-amber-300/80 max-w-2xl leading-relaxed">
+              Quản trị toàn diện phả hệ {maxGen} đời, cập nhật kho sắc phong và tư liệu Hán Nôm, thiết lập nhà thờ từ đường và đồng bộ dữ liệu dòng họ.
+            </p>
+          </div>
+
+          {/* Quick Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleExportBackup}
+              className="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+              title="Tải tệp JSON sao lưu toàn bộ gia phả về máy tính"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Sao Lưu JSON (Backup)
+            </button>
+
+            <label className="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer">
+              <Upload className="w-3.5 h-3.5" />
+              Phục Hồi Dữ Liệu
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleImportFile}
+                className="hidden"
+              />
+            </label>
+
+            {onResetSampleData && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm('Bạn có chắc muốn khôi phục dữ liệu phả hệ gốc chuẩn Tộc Văn? Mọi thay đổi chưa sao lưu sẽ được làm mới.')) {
+                    onResetSampleData();
+                  }
+                }}
+                className="px-3 py-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-500/30 text-xs font-medium flex items-center gap-1 transition-all"
+                title="Khôi phục lại dữ liệu mẫu gốc"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Làm Mới Gốc
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 mt-6 pt-5 border-t border-amber-500/30">
+          <div className="bg-black/30 p-3 rounded-xl border border-amber-500/20">
+            <span className="text-[10px] uppercase font-bold text-amber-400 block">Quy Mô Phả Hệ</span>
+            <span className="text-xl font-bold font-serif text-amber-100">{maxGen} Thế Hệ</span>
+          </div>
+
+          <div className="bg-black/30 p-3 rounded-xl border border-amber-500/20">
+            <span className="text-[10px] uppercase font-bold text-amber-400 block">Tổng Thành Viên</span>
+            <span className="text-xl font-bold font-serif text-amber-100">{totalMembers} vị</span>
+          </div>
+
+          <div className="bg-black/30 p-3 rounded-xl border border-amber-500/20">
+            <span className="text-[10px] uppercase font-bold text-emerald-400 block">Còn Sống / Đã Mất</span>
+            <span className="text-xl font-bold font-serif text-amber-100">{livingMembers} / {deceasedMembers}</span>
+          </div>
+
+          <div className="bg-black/30 p-3 rounded-xl border border-amber-500/20">
+            <span className="text-[10px] uppercase font-bold text-amber-400 block">Kho Sắc Phong</span>
+            <span className="text-xl font-bold font-serif text-amber-100">{documents.length} bản</span>
+          </div>
+
+          <div className="bg-black/30 p-3 rounded-xl border border-amber-500/20 col-span-2 sm:col-span-1">
+            <span className="text-[10px] uppercase font-bold text-amber-400 block">Lễ Giỗ & Sự Kiện</span>
+            <span className="text-xl font-bold font-serif text-amber-100">{events.length} kỳ lễ</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Admin Sub-Tabs Navigation */}
+      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-[#280205] border border-amber-500/30 text-xs">
+        <button
+          type="button"
+          onClick={() => setActiveTab('tree')}
+          className={`px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'tree'
+              ? 'bg-amber-500 text-amber-950 shadow-md'
+              : 'text-amber-200 hover:bg-white/5'
+          }`}
+        >
+          <TreeDeciduous className="w-4 h-4" />
+          Cây Gia Phả & Thành Viên ({totalMembers})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('users')}
+          className={`px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'users'
+              ? 'bg-amber-500 text-amber-950 shadow-md'
+              : 'text-amber-200 hover:bg-white/5'
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4" />
+          Phân Quyền & Tài Khoản Google ({clanUsers.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('archives')}
+          className={`px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'archives'
+              ? 'bg-amber-500 text-amber-950 shadow-md'
+              : 'text-amber-200 hover:bg-white/5'
+          }`}
+        >
+          <Scroll className="w-4 h-4" />
+          Kho Sắc Phong & Tư Liệu ({documents.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('settings')}
+          className={`px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'settings'
+              ? 'bg-amber-500 text-amber-950 shadow-md'
+              : 'text-amber-200 hover:bg-white/5'
+          }`}
+        >
+          <Settings className="w-4 h-4" />
+          Cài Đặt Dòng Tộc & Từ Đường
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('events')}
+          className={`px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'events'
+              ? 'bg-amber-500 text-amber-950 shadow-md'
+              : 'text-amber-200 hover:bg-white/5'
+          }`}
+        >
+          <Calendar className="w-4 h-4" />
+          Ngày Giỗ & Tế Tự ({events.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('cloud')}
+          className={`px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'cloud'
+              ? 'bg-amber-500 text-amber-950 shadow-md'
+              : 'text-amber-200 hover:bg-white/5'
+          }`}
+        >
+          <Download className="w-4 h-4" />
+          Xuất File & Hướng Dẫn Up GitHub / Supabase 0đ
+        </button>
+      </div>
+
+      {/* TAB 1: QUẢN LÝ CÂY GIA PHẢ & THÀNH VIÊN */}
+      {activeTab === 'tree' && (
+        <div className="space-y-4">
+          {/* Filter Bar */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs text-slate-800">
+            <div className="flex flex-wrap items-center gap-2 flex-1">
+              <div className="relative flex-1 min-w-[200px]">
+                <input
+                  type="text"
+                  placeholder="Tìm theo họ tên, tên tự, chức vụ..."
+                  value={memberSearch}
+                  onChange={(e) => setMemberSearch(e.target.value)}
+                  className="w-full p-2 pl-8 border rounded-xl focus:outline-none focus:border-amber-600 text-xs"
+                />
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              </div>
+
+              {/* Gen filter */}
+              <select
+                value={selectedGenFilter}
+                onChange={(e) => setSelectedGenFilter(e.target.value)}
+                className="p-2 border rounded-xl focus:outline-none focus:border-amber-600 bg-white font-medium"
+              >
+                <option value="all">Tất cả đời thế hệ</option>
+                {Array.from({ length: maxGen }, (_, i) => i + 1).map((g) => (
+                  <option key={g} value={g}>
+                    Đời thứ {g}
+                  </option>
+                ))}
+              </select>
+
+              {/* Phái filter */}
+              <select
+                value={selectedPhaiFilter}
+                onChange={(e) => setSelectedPhaiFilter(e.target.value)}
+                className="p-2 border rounded-xl focus:outline-none focus:border-amber-600 bg-white font-medium"
+              >
+                <option value="all">Tất cả Phái & Chi</option>
+                {phaiList.map((p, idx) => (
+                  <option key={idx} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={onOpenAddNewMember}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-md transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              + Thêm Thành Viên Mới
+            </button>
+          </div>
+
+          {/* Members Table */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-xs text-slate-800">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-amber-50/80 border-b border-amber-200/80 text-amber-950 font-bold uppercase text-[11px]">
+                    <th className="p-3.5">Đời</th>
+                    <th className="p-3.5">Họ và Tên / Tên Tự / Húy</th>
+                    <th className="p-3.5">Phân Cấp Dòng Họ</th>
+                    <th className="p-3.5">Thứ Bậc</th>
+                    <th className="p-3.5">Năm Sinh / Giỗ</th>
+                    <th className="p-3.5">Công Đức / Bằng Khen</th>
+                    <th className="p-3.5 text-right">Thao Tác Quản Trị</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredMembers.map((member) => (
+                    <tr key={member.id} className="hover:bg-amber-50/40 transition-colors">
+                      <td className="p-3.5">
+                        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold text-[11px] border border-amber-300">
+                          Đời {member.generation}
+                        </span>
+                      </td>
+
+                      <td className="p-3.5">
+                        <div className="font-bold text-slate-900 font-serif uppercase text-sm">
+                          {member.fullName}
+                        </div>
+                        <div className="text-[11px] text-slate-500 space-x-2">
+                          {member.courtesyName && <span>Tự: {member.courtesyName}</span>}
+                          {member.posthumousName && <span>Húy/Thụy: {member.posthumousName}</span>}
+                        </div>
+                      </td>
+
+                      <td className="p-3.5">
+                        {member.generation <= 2 ? (
+                          <span className="text-amber-800 font-semibold italic">
+                            {member.generation === 1 ? 'Thủy Tổ Khai Sáng' : 'Khải Tổ Tông Thống'}
+                          </span>
+                        ) : (
+                          <div className="space-y-0.5">
+                            <div className="font-semibold text-slate-700">{member.phaiName || '—'}</div>
+                            {(member.chiName || member.nhanhName) && (
+                              <div className="text-[10px] text-slate-500">
+                                {member.chiName} {member.nhanhName ? `• ${member.nhanhName}` : ''}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="p-3.5">
+                        <span className="text-slate-600">
+                          {member.orderTitle || (member.gender === 'male' ? 'Nam' : 'Nữ')}
+                        </span>
+                      </td>
+
+                      <td className="p-3.5">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`w-2 h-2 rounded-full ${
+                              member.isAlive ? 'bg-emerald-500' : 'bg-amber-600'
+                            }`}
+                          />
+                          <span className="text-[11px]">
+                            {member.isAlive
+                              ? 'Còn sống'
+                              : member.deathDateLunar
+                              ? `Giỗ: ${member.deathDateLunar}`
+                              : 'Đã tạ thế'}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="p-3.5 max-w-[200px]">
+                        {member.achievements && member.achievements.length > 0 ? (
+                          <div className="flex items-center gap-1 text-amber-800 font-medium">
+                            <Award className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                            <span className="truncate" title={member.achievements.join(' • ')}>
+                              {member.achievements[0]}
+                              {member.achievements.length > 1 && ` (+${member.achievements.length - 1})`}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 italic">—</span>
+                        )}
+                      </td>
+
+                      <td className="p-3.5 text-right space-x-1 whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => onSelectMemberForEdit(member)}
+                          className="p-1.5 rounded-lg text-amber-700 hover:bg-amber-100 transition-colors"
+                          title="Sửa thông tin chi tiết & Công đức"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => onOpenAddChild(member)}
+                          className="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-100 transition-colors"
+                          title="Thêm con cho vị này"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setMemberToDelete(member)}
+                          className="p-1.5 rounded-lg text-red-600 hover:bg-red-100 transition-colors"
+                          title="Xóa thành viên khỏi gia phả"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: QUẢN LÝ PHÂN QUYỀN & ÁP EMAIL TÀI KHOẢN GOOGLE */}
+      {activeTab === 'users' && (
+        <div className="space-y-4">
+          {/* Top Banner Notice */}
+          <div className="rounded-2xl border-2 border-amber-500/40 bg-gradient-to-r from-amber-950/80 via-[#3d0309] to-[#250104] p-5 shadow-lg space-y-2 text-amber-50">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center text-amber-300">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold font-serif text-amber-200 uppercase tracking-wide flex items-center gap-2">
+                    Quản Lý Phân Quyền (RBAC) & Áp Email Google
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500 text-amber-950 font-bold font-mono">
+                      {clanUsers.length} Tài Khoản
+                    </span>
+                  </h2>
+                  <p className="text-xs text-amber-300/80">
+                    Phân quyền theo vai trò: Hội Đồng Trưởng Tộc (Super Admin), Trưởng Chi, Ban Thư Ký, Thành Viên.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleOpenUserModal()}
+                className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-amber-950 font-bold rounded-xl shadow-md flex items-center gap-1.5 transition-all text-xs"
+              >
+                <UserPlus className="w-4 h-4" />
+                + Cấp Quyền Tài Khoản Mới
+              </button>
+            </div>
+
+            <div className="mt-2 pt-3 border-t border-amber-500/20 grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] text-amber-200/80">
+              <div className="flex items-center gap-1.5">
+                <Crown className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                <span>
+                  Super Admin Tối Cao: <b className="text-amber-200 font-mono">{DEFAULT_SUPER_ADMIN_EMAIL}</b> (Phúc Thịnh)
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <UserCheck className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                <span>
+                  Áp Email vào Hồ Sơ Cây Phả Hệ giúp thành viên khi đăng nhập Google tự động định vị đúng vị trí của mình.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Filter & Search Bar */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs text-slate-800">
+            <div className="relative flex-1 min-w-[240px]">
+              <input
+                type="text"
+                placeholder="Tìm tài khoản theo email Google, họ tên, vai trò..."
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                className="w-full p-2 pl-8 border rounded-xl focus:outline-none focus:border-amber-600 text-xs text-slate-800"
+              />
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            </div>
+
+            <div className="text-[11px] text-slate-500 font-medium">
+              Đang hiển thị {clanUsers.length} tài khoản quản trị & thành viên
+            </div>
+          </div>
+
+          {/* Users Table */}
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse text-slate-800">
+                <thead>
+                  <tr className="bg-amber-50/80 border-b border-amber-200/60 font-bold text-slate-700">
+                    <th className="p-3.5">Tài Khoản Google & Người Dùng</th>
+                    <th className="p-3.5">Vai Trò (Role)</th>
+                    <th className="p-3.5">Hồ Sơ Áp Trên Cây Phả Hệ</th>
+                    <th className="p-3.5">Chi Phái Phụ Trách</th>
+                    <th className="p-3.5">Trạng Thái</th>
+                    <th className="p-3.5 text-right">Thao Tác Quản Trị</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {clanUsers
+                    .filter((u) => {
+                      if (!userSearch.trim()) return true;
+                      const q = userSearch.toLowerCase().trim();
+                      const match = `${u.email} ${u.name} ${u.role} ${u.memberName || ''} ${u.branchName || ''}`;
+                      return match.toLowerCase().includes(q);
+                    })
+                    .map((user) => {
+                      const isSuperAdminUser = user.email.toLowerCase() === DEFAULT_SUPER_ADMIN_EMAIL.toLowerCase();
+
+                      return (
+                        <tr key={user.id} className="hover:bg-amber-50/40 transition-colors">
+                          <td className="p-3.5">
+                            <div className="flex items-center gap-2.5">
+                              <img
+                                src={user.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80'}
+                                alt={user.name}
+                                className="w-8 h-8 rounded-full object-cover border border-amber-300 flex-shrink-0"
+                              />
+                              <div>
+                                <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                                  <span>{user.name}</span>
+                                  {isSuperAdminUser && (
+                                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900 border border-amber-400/50 font-bold flex items-center gap-0.5">
+                                      <Crown className="w-2.5 h-2.5 text-amber-600" />
+                                      Sáng Lập
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
+                                  <Mail className="w-3 h-3 text-slate-400" />
+                                  {user.email}
+                                </div>
+                                {user.notes && (
+                                  <div className="text-[10px] text-slate-400 italic mt-0.5">
+                                    {user.notes}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="p-3.5">
+                            {user.role === 'super_admin' && (
+                              <span className="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-950 font-bold text-[11px] border border-amber-300 flex items-center gap-1 w-max">
+                                <Crown className="w-3 h-3 text-amber-600" />
+                                Hội Đồng Trưởng Tộc
+                              </span>
+                            )}
+                            {user.role === 'branch_admin' && (
+                              <span className="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-950 font-bold text-[11px] border border-blue-300 flex items-center gap-1 w-max">
+                                <ShieldCheck className="w-3 h-3 text-blue-600" />
+                                Trưởng Chi
+                              </span>
+                            )}
+                            {user.role === 'editor' && (
+                              <span className="px-2.5 py-1 rounded-lg bg-purple-100 text-purple-950 font-bold text-[11px] border border-purple-300 flex items-center gap-1 w-max">
+                                <Edit3 className="w-3 h-3 text-purple-600" />
+                                Ban Thư Ký
+                              </span>
+                            )}
+                            {user.role === 'member' && (
+                              <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-950 font-medium text-[11px] border border-emerald-300 flex items-center gap-1 w-max">
+                                <Users className="w-3 h-3 text-emerald-600" />
+                                Thành Viên
+                              </span>
+                            )}
+                            {user.role === 'visitor' && (
+                              <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-medium text-[11px] border border-slate-300 flex items-center gap-1 w-max">
+                                <Eye className="w-3 h-3 text-slate-500" />
+                                Khách Xem
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="p-3.5">
+                            {user.memberId ? (
+                              <div className="space-y-0.5">
+                                <div className="font-bold text-amber-900 flex items-center gap-1">
+                                  <UserCheck className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                                  <span>{user.memberName || 'Đã liên kết'}</span>
+                                </div>
+                                <div className="text-[10px] text-slate-400 font-mono">
+                                  ID: {user.memberId}
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenUserModal(user)}
+                                className="text-amber-700 hover:text-amber-900 underline text-[11px] flex items-center gap-1"
+                              >
+                                <Plus className="w-3 h-3" />
+                                + Áp hồ sơ cây phả hệ
+                              </button>
+                            )}
+                          </td>
+
+                          <td className="p-3.5">
+                            {user.branchName ? (
+                              <span className="font-semibold text-slate-700">
+                                {user.branchName}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 italic">Toàn tộc</span>
+                            )}
+                          </td>
+
+                          <td className="p-3.5">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                user.status === 'active'
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                  : user.status === 'blocked'
+                                  ? 'bg-red-100 text-red-800 border border-red-300'
+                                  : 'bg-amber-100 text-amber-800 border border-amber-300'
+                              }`}
+                            >
+                              {user.status === 'active'
+                                ? 'Đang hoạt động'
+                                : user.status === 'blocked'
+                                ? 'Tạm khóa'
+                                : 'Chờ duyệt'}
+                            </span>
+                          </td>
+
+                          <td className="p-3.5 text-right space-x-1 whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenUserModal(user)}
+                              className="p-1.5 rounded-lg text-amber-700 hover:bg-amber-100 transition-colors"
+                              title="Hiệu chỉnh quyền & Hồ sơ liên kết"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+
+                            {!isSuperAdminUser && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = {
+                                    ...user,
+                                    status: user.status === 'active' ? ('blocked' as const) : ('active' as const),
+                                  };
+                                  onUpdateUser(updated);
+                                }}
+                                className={`p-1.5 rounded-lg transition-colors ${
+                                  user.status === 'active'
+                                    ? 'text-amber-600 hover:bg-amber-100'
+                                    : 'text-emerald-600 hover:bg-emerald-100'
+                                }`}
+                                title={user.status === 'active' ? 'Khóa tài khoản này' : 'Mở khóa tài khoản'}
+                              >
+                                {user.status === 'active' ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                              </button>
+                            )}
+
+                            {!isSuperAdminUser && (
+                              <button
+                                type="button"
+                                onClick={() => setUserToDelete(user)}
+                                className="p-1.5 rounded-lg text-red-600 hover:bg-red-100 transition-colors"
+                                title="Thu hồi quyền tài khoản"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: QUẢN LÝ KHO TƯ LIỆU & SẮC PHONG */}
+      {activeTab === 'archives' && (
+        <div className="space-y-4">
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="relative flex-1 min-w-[220px]">
+              <input
+                type="text"
+                placeholder="Tìm sắc phong, gia phả Nôm, niên hiệu..."
+                value={docSearch}
+                onChange={(e) => setDocSearch(e.target.value)}
+                className="w-full p-2 pl-8 border rounded-xl focus:outline-none focus:border-amber-600 text-xs text-slate-800"
+              />
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleOpenDocModal()}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-md"
+            >
+              <Plus className="w-4 h-4" />
+              + Thêm Tư Liệu Mới
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {documents
+              .filter((d) => {
+                if (!docSearch.trim()) return true;
+                const match = `${d.title} ${d.description} ${d.dynastyEra || ''}`;
+                return match.toLowerCase().includes(docSearch.toLowerCase().trim());
+              })
+              .map((doc) => (
+                <div
+                  key={doc.id}
+                  className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="relative h-40 bg-slate-900 overflow-hidden">
+                      <img
+                        src={doc.fileUrl}
+                        alt={doc.title}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover opacity-85"
+                      />
+                      <span className="absolute top-2.5 left-2.5 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500 text-amber-950 shadow">
+                        {doc.categoryLabel}
+                      </span>
+                      {doc.dynastyEra && (
+                        <span className="absolute bottom-2 left-2 text-xs font-serif font-semibold text-amber-200">
+                          {doc.dynastyEra}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="p-4 space-y-2 text-xs text-slate-800">
+                      <h3 className="font-bold text-slate-900 font-serif text-sm line-clamp-2">
+                        {doc.title}
+                      </h3>
+                      <p className="text-slate-600 text-xs line-clamp-3 leading-relaxed">
+                        {doc.description}
+                      </p>
+                      {doc.authorOrPreserver && (
+                        <p className="text-[11px] text-slate-500 italic">
+                          Lưu truyền: {doc.authorOrPreserver}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-4 pt-0 flex items-center justify-between border-t border-slate-100 mt-2">
+                    <span className="text-[10px] text-slate-400 font-mono">ID: {doc.id}</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenDocModal(doc)}
+                        className="p-1.5 rounded-lg text-amber-700 hover:bg-amber-50 transition-colors"
+                        title="Sửa tư liệu"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDocToDelete(doc)}
+                        className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                        title="Xóa tư liệu"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: CÀI ĐẶT DÒNG TỘC & NHÀ THỜ */}
+      {activeTab === 'settings' && (
+        <form onSubmit={handleSaveClanSettings} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5 text-xs text-slate-800 max-w-3xl">
+          <div className="border-b pb-3">
+            <h2 className="text-base font-bold font-serif text-amber-950 uppercase">
+              Thiết Lập Thông Tin Đại Tộc & Từ Đường
+            </h2>
+            <p className="text-slate-500 text-xs">
+              Các thông tin dưới đây sẽ hiển thị trên thanh tiêu đề, chân trang và các văn kiện chính thống của dòng tộc.
+            </p>
+          </div>
+
+          {saveSuccessMsg && (
+            <div className="p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 font-semibold flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-emerald-600" />
+              {saveSuccessMsg}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <label className="block font-bold text-slate-700 mb-1">Tên Chính Thức Của Tộc *</label>
+              <input
+                type="text"
+                required
+                value={clanForm.name}
+                onChange={(e) => setClanForm({ ...clanForm, name: e.target.value })}
+                className="w-full p-2.5 border rounded-xl focus:outline-none focus:border-amber-600 font-bold uppercase text-sm"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block font-bold text-slate-700 mb-1">Phụ Đề / Các Nhánh Hợp Tự</label>
+              <input
+                type="text"
+                value={clanForm.branchSubtitle}
+                onChange={(e) => setClanForm({ ...clanForm, branchSubtitle: e.target.value })}
+                className="w-full p-2.5 border rounded-xl focus:outline-none focus:border-amber-600"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block font-bold text-slate-700 mb-1">Hoành Phi Đại Tự / Khẩu Hiệu Gia Tộc</label>
+              <input
+                type="text"
+                value={clanForm.motto}
+                onChange={(e) => setClanForm({ ...clanForm, motto: e.target.value })}
+                className="w-full p-2.5 border rounded-xl focus:outline-none focus:border-amber-600 font-serif font-bold text-amber-900 bg-amber-50/50"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block font-bold text-slate-700 mb-1">Ý Nghĩa Hoành Phi / Lời Dặn Tổ Tiên</label>
+              <textarea
+                rows={2}
+                value={clanForm.mottoMeaning}
+                onChange={(e) => setClanForm({ ...clanForm, mottoMeaning: e.target.value })}
+                className="w-full p-2.5 border rounded-xl focus:outline-none focus:border-amber-600 leading-relaxed"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Từ Đường / Nhà Thờ Tộc</label>
+              <input
+                type="text"
+                value={clanForm.ancestralHall}
+                onChange={(e) => setClanForm({ ...clanForm, ancestralHall: e.target.value })}
+                className="w-full p-2.5 border rounded-xl focus:outline-none focus:border-amber-600"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Năm Khai Cơ Lập Nghiệp (Dương lịch)</label>
+              <input
+                type="number"
+                value={clanForm.foundingYear}
+                onChange={(e) => setClanForm({ ...clanForm, foundingYear: Number(e.target.value) })}
+                className="w-full p-2.5 border rounded-xl focus:outline-none focus:border-amber-600"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block font-bold text-slate-700 mb-1">Địa Chỉ Nhà Thờ & Nghĩa Trang Dòng Họ</label>
+              <input
+                type="text"
+                value={clanForm.address}
+                onChange={(e) => setClanForm({ ...clanForm, address: e.target.value })}
+                className="w-full p-2.5 border rounded-xl focus:outline-none focus:border-amber-600"
+              />
+            </div>
+          </div>
+
+          <div className="pt-4 border-t flex items-center justify-end">
+            <button
+              type="submit"
+              className="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-md flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              Lưu Thiết Lập Dòng Tộc
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* TAB 4: QUẢN LÝ NGÀY GIỖ & SỰ KIỆN */}
+      {activeTab === 'events' && (
+        <div className="space-y-4">
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between text-xs">
+            <div>
+              <h2 className="font-bold text-slate-900 text-sm font-serif">Lịch Tế Tự & Kỵ Nhật Hằng Năm</h2>
+              <p className="text-slate-500 text-xs">Danh mục các ngày giỗ tổ, lễ thanh minh và ngày tế thu/xuân của dòng họ.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleOpenEventModal()}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-md"
+            >
+              <Plus className="w-4 h-4" />
+              + Thêm Ngày Giỗ / Lễ Tộc
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {events.map((evt) => (
+              <div
+                key={evt.id}
+                className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex items-start justify-between gap-3 text-xs text-slate-800"
+              >
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[10px]">
+                      Ngày {evt.lunarDay}/{evt.lunarMonth} Âm lịch
+                    </span>
+                    <span className="text-slate-400">•</span>
+                    <span className="text-slate-500 capitalize">{evt.type.replace(/_/g, ' ')}</span>
+                  </div>
+
+                  <h3 className="font-bold text-slate-900 font-serif text-sm">{evt.title}</h3>
+                  <p className="text-slate-600 leading-relaxed text-xs">{evt.description}</p>
+                  <p className="text-slate-500 text-[11px] flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                    {evt.location}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEventModal(evt)}
+                    className="p-1.5 rounded-lg text-amber-700 hover:bg-amber-50"
+                    title="Sửa sự kiện"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEventToDelete(evt)}
+                    className="p-1.5 rounded-lg text-red-600 hover:bg-red-50"
+                    title="Xóa sự kiện"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: XUẤT FILE & HƯỚNG DẪN TRIỂN KHAI GITHUB / SUPABASE 0Đ */}
+      {activeTab === 'cloud' && (
+        <div className="space-y-6 text-xs text-slate-800">
+          {/* Top Hero Banner */}
+          <div className="rounded-2xl border-2 border-amber-500/50 bg-gradient-to-r from-amber-950/90 via-[#3d0309] to-[#250104] p-6 shadow-xl text-amber-50 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 font-bold uppercase tracking-wider">
+                    Chi Phí Vận Hành: 0 VNĐ / Tháng
+                  </span>
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 font-bold uppercase tracking-wider">
+                    Super Admin: {DEFAULT_SUPER_ADMIN_EMAIL}
+                  </span>
+                </div>
+                <h2 className="text-lg md:text-xl font-bold font-serif text-amber-200 uppercase tracking-wide">
+                  Trung Tâm Xuất File & Triển Khai GitHub + Supabase
+                </h2>
+                <p className="text-xs text-amber-300/80 max-w-2xl leading-relaxed">
+                  Toàn bộ mã nguồn, cấu trúc cơ sở dữ liệu PostgreSQL và quyền quản trị đã được cấu hình tối ưu. Dưới đây là các tệp tin xuất ra và hướng dẫn từng bước để đưa hệ thống lên Internet vĩnh viễn.
+                </p>
+              </div>
+
+              {/* 3 Main Action Download Buttons */}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={downloadSupabaseSchemaSql}
+                  className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-amber-950 font-bold rounded-xl shadow-lg flex items-center gap-2 text-xs transition-all hover:scale-[1.02]"
+                  title="Tải tệp tin SQL đã cấu hình sẵn bảng, RLS và tài khoản 13.phucthinh@gmail.com"
+                >
+                  <Download className="w-4 h-4" />
+                  1. Tải Tệp SQL Supabase (.sql)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportBackup}
+                  className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-amber-100 border border-amber-400/40 font-bold rounded-xl shadow-md flex items-center gap-2 text-xs transition-all"
+                  title="Tải bản sao lưu toàn bộ dữ liệu hiện tại dạng JSON"
+                >
+                  <FileText className="w-4 h-4 text-amber-300" />
+                  2. Tải Dữ Liệu Sao Lưu (.json)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopySql}
+                  className="px-4 py-2.5 bg-black/40 hover:bg-black/60 text-amber-200 border border-amber-500/40 font-bold rounded-xl shadow-md flex items-center gap-2 text-xs transition-all"
+                  title="Sao chép toàn bộ lệnh SQL để dán trực tiếp vào Supabase SQL Editor"
+                >
+                  {copiedSql ? (
+                    <>
+                      <Check className="w-4 h-4 text-emerald-400" />
+                      <span className="text-emerald-300">Đã Sao Chép SQL!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 text-amber-400" />
+                      3. Sao Chép Toàn Bộ SQL
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 4-Step Interactive Deployment Guide */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Step 1: GitHub */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm">
+                  1
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm font-serif flex items-center gap-1.5">
+                    Xuất Mã Nguồn & Đưa Lên GitHub (0đ)
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Lưu trữ toàn bộ mã nguồn website trên nền tảng GitHub an toàn
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <p>
+                  <b>Cách 1 (Nhanh nhất từ AI Studio):</b> Nhấp vào biểu tượng <b>Settings / Export</b> ở góc trên bên phải của giao diện AI Studio, chọn <b>"Export to GitHub"</b> (hoặc <b>"Download ZIP"</b> rồi giải nén).
+                </p>
+                <p>
+                  <b>Cách 2 (Nếu dùng Git trên máy tính):</b> Khởi tạo repository và đẩy code lên:
+                </p>
+                <pre className="bg-slate-900 text-amber-200 p-2.5 rounded-lg text-[10px] font-mono overflow-x-auto">
+{`git init
+git add .
+git commit -m "Khoi tao he thong Gia Pha Toc"
+git branch -M main
+git remote add origin https://github.com/<tai-khoan>/gia-pha-toc.git
+git push -u origin main`}
+                </pre>
+              </div>
+            </div>
+
+            {/* Step 2: Supabase */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm">
+                  2
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm font-serif flex items-center gap-1.5">
+                    Tạo Database Supabase & Chạy File SQL (0đ)
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    500MB PostgreSQL + 1GB Storage hoàn toàn miễn phí mãi mãi
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <ol className="list-decimal list-inside space-y-1.5">
+                  <li>
+                    Truy cập <b>https://supabase.com</b> và bấm <b>"Start your project"</b> (Đăng nhập miễn phí).
+                  </li>
+                  <li>
+                    Nhấn <b>"New Project"</b>, đặt tên dự án (VD: <code>gia-pha-toc-van</code>), chọn khu vực <b>Singapore</b> hoặc <b>Tokyo</b> (tốc độ nhanh nhất từ VN).
+                  </li>
+                  <li>
+                    Nhấp vào biểu tượng <b>"SQL Editor"</b> (menu bên trái) -&gt; Bấm <b>"New Query"</b>.
+                  </li>
+                  <li>
+                    Nhấn nút <b>"3. Sao Chép Toàn Bộ SQL"</b> ở trên và <b>dán (Ctrl+V)</b> vào ô soạn thảo, sau đó nhấn nút <b>"RUN"</b>.
+                  </li>
+                </ol>
+                <div className="text-[11px] text-emerald-800 bg-emerald-50 p-2 rounded-lg border border-emerald-200 font-medium">
+                  ✓ Toàn bộ bảng, bảo mật RLS và tài khoản <b>13.phucthinh@gmail.com</b> sẽ được kích hoạt Super Admin tự động!
+                </div>
+              </div>
+            </div>
+
+            {/* Step 3: Google OAuth */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-amber-600 text-white flex items-center justify-center font-bold text-sm">
+                  3
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm font-serif flex items-center gap-1.5">
+                    Cấu Hình Đăng Nhập Google (OAuth)
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Cho phép con cháu 1-click đăng nhập bằng tài khoản Google
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <ol className="list-decimal list-inside space-y-1.5">
+                  <li>
+                    Trong Supabase: Vào <b>Authentication</b> -&gt; <b>Providers</b> -&gt; Chọn <b>Google</b> -&gt; Bật sang <b>ON</b>.
+                  </li>
+                  <li>
+                    Sao chép đường dẫn <b>Callback URL (for OAuth)</b> hiển thị trên màn hình Supabase.
+                  </li>
+                  <li>
+                    Vào <b>https://console.cloud.google.com</b> (miễn phí): Tạo Project mới -&gt; Tạo <b>OAuth Client ID</b> (Web application) -&gt; Dán Callback URL vào ô <i>Authorized redirect URIs</i>.
+                  </li>
+                  <li>
+                    Copy <b>Client ID</b> và <b>Client Secret</b> từ Google dán vào Supabase rồi nhấn <b>Save</b>.
+                  </li>
+                </ol>
+              </div>
+            </div>
+
+            {/* Step 4: Vercel Deploy */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
+                  4
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm font-serif flex items-center gap-1.5">
+                    Deploy Lên Vercel / GitHub Pages (0đ)
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Website hoạt động 24/7 trực tuyến với tên miền riêng hoặc .vercel.app
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <ol className="list-decimal list-inside space-y-1.5">
+                  <li>
+                    Truy cập <b>https://vercel.com</b> -&gt; Đăng nhập bằng tài khoản GitHub của bạn.
+                  </li>
+                  <li>
+                    Nhấn <b>"Add New..."</b> -&gt; <b>"Project"</b> -&gt; Chọn repo gia phả vừa đẩy lên ở Bước 1.
+                  </li>
+                  <li>
+                    Tại mục <b>Environment Variables</b>, thêm 2 biến lấy từ Supabase (Settings -&gt; API):
+                    <div className="mt-1 font-mono text-[10px] bg-slate-100 p-1.5 rounded border">
+                      VITE_SUPABASE_URL = &lt;Project URL của bạn&gt;<br />
+                      VITE_SUPABASE_ANON_KEY = &lt;anon public key của bạn&gt;
+                    </div>
+                  </li>
+                  <li>
+                    Bấm <b>Deploy</b>. Sau 60 giây trang web gia phả sẽ chính thức hoạt động toàn cầu!
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </div>
+
+          {/* SQL Preview Box */}
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm space-y-0">
+            <div className="bg-slate-900 px-5 py-3 text-amber-100 flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Code2 className="w-4 h-4 text-amber-400" />
+                <span className="font-bold font-mono text-xs text-amber-200">
+                  supabase_schema.sql (PostgreSQL 15+ & RLS Security)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCopySql}
+                className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold rounded-lg text-[11px] flex items-center gap-1 transition-colors"
+              >
+                {copiedSql ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedSql ? 'Đã Sao Chép!' : 'Sao Chép SQL'}
+              </button>
+            </div>
+
+            <pre className="p-4 bg-slate-950 text-emerald-300 font-mono text-[11px] max-h-72 overflow-y-auto leading-relaxed scrollbar-thin">
+              {SUPABASE_SQL_SCHEMA}
+            </pre>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirm Delete Member */}
+      {memberToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl border border-red-200 text-xs text-slate-800">
+            <div className="flex items-center gap-2 text-red-600 font-bold text-sm">
+              <AlertTriangle className="w-5 h-5" />
+              Xác Nhận Xóa Thành Viên Khỏi Phả Hệ
+            </div>
+            <p className="text-slate-600 leading-relaxed">
+              Bạn có chắc chắn muốn xóa thành viên <b className="text-slate-900 uppercase">{memberToDelete.fullName}</b> (Đời {memberToDelete.generation}) khỏi cây gia phả?
+            </p>
+            <p className="text-[11px] text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+              Hệ thống sẽ tự động gỡ liên kết cha/mẹ và phối ngẫu liên quan để bảo toàn tính toàn vẹn của cây phả hệ.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setMemberToDelete(null)}
+                className="px-4 py-2 border rounded-lg text-slate-700 hover:bg-slate-100"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteMember(memberToDelete.id);
+                  setMemberToDelete(null);
+                }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg"
+              >
+                Xác Nhận Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Add/Edit Document */}
+      {isDocModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl border-2 border-amber-500/40 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-gradient-to-r from-[#400207] to-[#5c0612] px-6 py-4 text-amber-100 flex items-center justify-between">
+              <h3 className="text-base font-bold font-serif text-amber-200">
+                {editingDoc ? 'Hiệu Chỉnh Tư Liệu Sắc Phong' : 'Thêm Tư Liệu Sắc Phong Mới'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsDocModalOpen(false)}
+                className="p-1 text-amber-200 hover:bg-white/10 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitDoc} className="p-6 overflow-y-auto space-y-4 text-xs text-slate-800">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Tiêu đề tư liệu *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="VD: Sắc phong Triều Nguyễn - Niên hiệu Tự Đức cửu niên..."
+                  value={docForm.title}
+                  onChange={(e) => setDocForm({ ...docForm, title: e.target.value })}
+                  className="w-full p-2.5 border rounded-lg focus:outline-none focus:border-amber-600 font-semibold"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Phân loại *</label>
+                  <select
+                    value={docForm.category}
+                    onChange={(e) => setDocForm({ ...docForm, category: e.target.value as any })}
+                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:border-amber-600"
+                  >
+                    <option value="sac_phong">Sắc phong triều đình</option>
+                    <option value="pha_ky">Gia phả cổ chữ Nôm</option>
+                    <option value="huong_uoc">Hương ước & Gia quy</option>
+                    <option value="van_khan">Văn khấn cổ truyền</option>
+                    <option value="hinh_anh_mo_to">Hình ảnh mộ tổ & Di tích</option>
+                    <option value="khac">Tư liệu quý khác</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Triều đại / Thời kỳ</label>
+                  <input
+                    type="text"
+                    placeholder="VD: Triều Nguyễn (Tự Đức, 1856)..."
+                    value={docForm.dynastyEra}
+                    onChange={(e) => setDocForm({ ...docForm, dynastyEra: e.target.value })}
+                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:border-amber-600"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Đường dẫn hình ảnh / Tệp nguyên bản</label>
+                <input
+                  type="url"
+                  placeholder="https://images.unsplash.com/..."
+                  value={docForm.fileUrl}
+                  onChange={(e) => setDocForm({ ...docForm, fileUrl: e.target.value })}
+                  className="w-full p-2.5 border rounded-lg focus:outline-none focus:border-amber-600 font-mono text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Mô tả nội dung / Phiên âm & Dịch nghĩa</label>
+                <textarea
+                  rows={3}
+                  placeholder="Nội dung sắc phong, lệnh ban của vua, chỉ dụ khen thưởng..."
+                  value={docForm.description}
+                  onChange={(e) => setDocForm({ ...docForm, description: e.target.value })}
+                  className="w-full p-2.5 border rounded-lg focus:outline-none focus:border-amber-600 leading-relaxed"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Người bảo quản / Lưu truyền</label>
+                  <input
+                    type="text"
+                    placeholder="VD: Chi Trưởng Văn Bá - Xuyên Tây..."
+                    value={docForm.authorOrPreserver}
+                    onChange={(e) => setDocForm({ ...docForm, authorOrPreserver: e.target.value })}
+                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:border-amber-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Thẻ tags (phân cách bằng dấu phẩy)</label>
+                  <input
+                    type="text"
+                    placeholder="sac_phong, trieu_nguyen, tu_duc"
+                    value={docForm.tags}
+                    onChange={(e) => setDocForm({ ...docForm, tags: e.target.value })}
+                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:border-amber-600"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => setIsDocModalOpen(false)}
+                  className="px-4 py-2 border rounded-lg text-slate-700 hover:bg-slate-100"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg shadow-md"
+                >
+                  {editingDoc ? 'Cập Nhật Tư Liệu' : 'Lưu Vào Tàng Thư'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirm Delete Document */}
+      {docToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl border border-red-200 text-xs text-slate-800">
+            <div className="flex items-center gap-2 text-red-600 font-bold text-sm">
+              <AlertTriangle className="w-5 h-5" />
+              Xác Nhận Xóa Tư Liệu
+            </div>
+            <p className="text-slate-600 leading-relaxed">
+              Bạn có chắc muốn xóa tư liệu <b className="text-slate-900">{docToDelete.title}</b> khỏi Kho Tàng Thư?
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDocToDelete(null)}
+                className="px-4 py-2 border rounded-lg text-slate-700 hover:bg-slate-100"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteDocument(docToDelete.id);
+                  setDocToDelete(null);
+                }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg"
+              >
+                Xóa Vĩnh Viễn
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Add/Edit Event */}
+      {isEventModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border-2 border-amber-500/40 overflow-hidden flex flex-col">
+            <div className="bg-gradient-to-r from-[#400207] to-[#5c0612] px-6 py-4 text-amber-100 flex items-center justify-between">
+              <h3 className="text-base font-bold font-serif text-amber-200">
+                {editingEvent ? 'Hiệu Chỉnh Lễ Giỗ / Sự Kiện' : 'Thêm Lễ Giỗ / Sự Kiện Tộc'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsEventModalOpen(false)}
+                className="p-1 text-amber-200 hover:bg-white/10 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitEvent} className="p-6 space-y-4 text-xs text-slate-800">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Tên lễ giỗ / sự kiện *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="VD: Lễ Chạp Tộc Đầu Năm, Giỗ Tiên Tổ..."
+                  value={eventForm.title}
+                  onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
+                  className="w-full p-2.5 border rounded-lg focus:outline-none focus:border-amber-600 font-semibold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Ngày Âm lịch *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={30}
+                    required
+                    value={eventForm.lunarDay}
+                    onChange={(e) => setEventForm({ ...eventForm, lunarDay: Number(e.target.value) })}
+                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:border-amber-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Tháng Âm lịch *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    required
+                    value={eventForm.lunarMonth}
+                    onChange={(e) => setEventForm({ ...eventForm, lunarMonth: Number(e.target.value) })}
+                    className="w-full p-2.5 border rounded-lg focus:outline-none focus:border-amber-600"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Địa điểm tổ chức</label>
+                <input
+                  type="text"
+                  value={eventForm.location}
+                  onChange={(e) => setEventForm({ ...eventForm, location: e.target.value })}
+                  className="w-full p-2.5 border rounded-lg focus:outline-none focus:border-amber-600"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Mô tả nghi thức tế lễ</label>
+                <textarea
+                  rows={3}
+                  value={eventForm.description}
+                  onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
+                  className="w-full p-2.5 border rounded-lg focus:outline-none focus:border-amber-600 leading-relaxed"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => setIsEventModalOpen(false)}
+                  className="px-4 py-2 border rounded-lg text-slate-700 hover:bg-slate-100"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg shadow-md"
+                >
+                  {editingEvent ? 'Cập Nhật Sự Kiện' : 'Lưu Vào Lịch Tộc'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirm Delete Event */}
+      {eventToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl border border-red-200 text-xs text-slate-800">
+            <div className="flex items-center gap-2 text-red-600 font-bold text-sm">
+              <AlertTriangle className="w-5 h-5" />
+              Xác Nhận Xóa Sự Kiện / Lễ Giỗ
+            </div>
+            <p className="text-slate-600 leading-relaxed">
+              Bạn có chắc muốn xóa sự kiện <b className="text-slate-900">{eventToDelete.title}</b>?
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setEventToDelete(null)}
+                className="px-4 py-2 border rounded-lg text-slate-700 hover:bg-slate-100"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteEvent(eventToDelete.id);
+                  setEventToDelete(null);
+                }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg"
+              >
+                Xác Nhận Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Add/Edit User & Link Member Profile */}
+      {isUserModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl border-2 border-amber-500/40 overflow-hidden flex flex-col max-h-[92vh]">
+            <div className="bg-gradient-to-r from-[#400207] to-[#5c0612] px-6 py-4 text-amber-100 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck className="w-5 h-5 text-amber-400" />
+                <h3 className="text-base font-bold font-serif text-amber-200">
+                  {editingUser ? 'Hiệu Chỉnh Phân Quyền & Áp Email' : 'Cấp Quyền & Áp Email Google Mới'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsUserModalOpen(false)}
+                className="p-1 text-amber-200 hover:bg-white/10 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitUser} className="p-6 space-y-4 overflow-y-auto text-xs text-slate-800">
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 space-y-1">
+                <div className="font-bold flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  Cơ chế tự động liên kết danh tính Google
+                </div>
+                <p className="text-[11px] leading-relaxed text-amber-800">
+                  Khi người dùng đăng nhập bằng tài khoản Google có email trùng khớp, hệ thống sẽ tự động gán vai trò tương ứng và định vị vị trí của họ trên cây gia phả.
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Địa Chỉ Email Google (Bắt buộc) <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    required
+                    placeholder="ví dụ: 13.phucthinh@gmail.com"
+                    value={userForm.email}
+                    onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                    disabled={editingUser?.email.toLowerCase() === DEFAULT_SUPER_ADMIN_EMAIL.toLowerCase()}
+                    className="w-full p-2.5 pl-8 border rounded-xl focus:border-amber-600 focus:outline-none disabled:bg-slate-100 disabled:text-slate-500 font-mono text-xs"
+                  />
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                </div>
+                {editingUser?.email.toLowerCase() === DEFAULT_SUPER_ADMIN_EMAIL.toLowerCase() && (
+                  <p className="text-[10px] text-amber-600 mt-1 font-medium">
+                    ★ Email của Super Admin Sáng Lập được bảo vệ cố định.
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Họ & Tên Người Dùng
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Nguyễn Văn A"
+                    value={userForm.name}
+                    onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                    className="w-full p-2.5 border rounded-xl focus:border-amber-600 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Vai Trò Quyền Hạn (Role) <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={userForm.role}
+                    onChange={(e) => setUserForm({ ...userForm, role: e.target.value as UserRole })}
+                    disabled={editingUser?.email.toLowerCase() === DEFAULT_SUPER_ADMIN_EMAIL.toLowerCase()}
+                    className="w-full p-2.5 border rounded-xl focus:border-amber-600 focus:outline-none bg-white font-medium"
+                  >
+                    <option value="super_admin">👑 Hội Đồng Trưởng Tộc (Super Admin - Toàn Quyền)</option>
+                    <option value="branch_admin">🛡️ Trưởng Chi (Quản Trị Theo Phái / Chi)</option>
+                    <option value="editor">✍️ Ban Thư Ký (Thêm / Sửa Phả Hệ & Tư Liệu)</option>
+                    <option value="member">👥 Thành Viên Dòng Tộc (Xem Đầy Đủ & Bình Luận)</option>
+                    <option value="visitor">👁️ Khách Xem (Chỉ Xem Công Khai)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Áp Email vào Thành Viên Trên Cây Phả Hệ */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Áp Vào Vị Trí Thành Viên Trên Cây Phả Hệ
+                </label>
+                <select
+                  value={userForm.memberId}
+                  onChange={(e) => setUserForm({ ...userForm, memberId: e.target.value })}
+                  className="w-full p-2.5 border rounded-xl focus:border-amber-600 focus:outline-none bg-white"
+                >
+                  <option value="">— Chưa gắn kết với vị trí nào (Tài khoản quản trị viên) —</option>
+                  {members
+                    .slice()
+                    .sort((a, b) => a.generation - b.generation)
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        Đời {m.generation}: {m.fullName} {m.courtesyName ? `(${m.courtesyName})` : ''} - {m.phaiName || 'Chính phái'}
+                      </option>
+                    ))}
+                </select>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Khi áp hồ sơ, người này khi bấm "Vị trí của tôi" trên cây gia phả sẽ được phóng to đến vị trí của mình ngay lập tức.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Chi Phái Trực Thuộc (Nếu có)
+                  </label>
+                  <select
+                    value={userForm.branchId}
+                    onChange={(e) => setUserForm({ ...userForm, branchId: e.target.value })}
+                    className="w-full p-2.5 border rounded-xl focus:border-amber-600 focus:outline-none bg-white"
+                  >
+                    <option value="">— Quản lý toàn dòng tộc —</option>
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Trạng Thái Tài Khoản
+                  </label>
+                  <select
+                    value={userForm.status}
+                    onChange={(e) => setUserForm({ ...userForm, status: e.target.value as any })}
+                    disabled={editingUser?.email.toLowerCase() === DEFAULT_SUPER_ADMIN_EMAIL.toLowerCase()}
+                    className="w-full p-2.5 border rounded-xl focus:border-amber-600 focus:outline-none bg-white"
+                  >
+                    <option value="active">✓ Đang hoạt động (Cho phép truy cập)</option>
+                    <option value="pending">⏳ Đang chờ duyệt</option>
+                    <option value="blocked">🔒 Tạm khóa truy cập</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Ghi Chú Ban Quản Trị
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ví dụ: Cháu trưởng chi 2, liên hệ SĐT: 0912..."
+                  value={userForm.notes}
+                  onChange={(e) => setUserForm({ ...userForm, notes: e.target.value })}
+                  className="w-full p-2.5 border rounded-xl focus:border-amber-600 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => setIsUserModalOpen(false)}
+                  className="px-4 py-2 border rounded-xl text-slate-700 hover:bg-slate-100 font-medium"
+                >
+                  Hủy Bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold rounded-xl shadow-md flex items-center gap-1.5"
+                >
+                  <Save className="w-4 h-4" />
+                  {editingUser ? 'Lưu Cập Nhật Quyền' : 'Cấp Quyền & Lưu'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirm Delete User */}
+      {userToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl border border-red-200 text-xs text-slate-800">
+            <div className="flex items-center gap-2 text-red-600 font-bold text-sm">
+              <AlertTriangle className="w-5 h-5" />
+              Thu Hồi Quyền Tài Khoản
+            </div>
+            <p className="text-slate-600 leading-relaxed">
+              Bạn có chắc chắn muốn thu hồi quyền hạn của tài khoản Google <b className="text-slate-900 font-mono">{userToDelete.email}</b> ({userToDelete.name})?
+            </p>
+            <p className="text-[11px] text-amber-800 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+              Người dùng này khi đăng nhập sẽ chỉ có quyền Khách xem (visitor) và không thể chỉnh sửa dữ liệu phả hệ nữa.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setUserToDelete(null)}
+                className="px-4 py-2 border rounded-lg text-slate-700 hover:bg-slate-100"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteUser(userToDelete.id);
+                  setUserToDelete(null);
+                }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg"
+              >
+                Xác Nhận Thu Hồi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

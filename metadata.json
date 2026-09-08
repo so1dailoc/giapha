@@ -1,0 +1,6 @@
+{
+  "name": "Gia Phả Đại Tộc",
+  "description": "Website Quản lý Gia phả Tộc Văn (Văn Bá – Xuyên Tây, Văn Tấn – Quế Xuân, Văn Bá – Đại Lộc, Văn Phú – Xuyên Đông & Xuyên Tây) với sơ đồ phả hệ trực quan, tính quan hệ gia tộc, lịch giỗ âm lịch và lưu trữ tư liệu dòng họ.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

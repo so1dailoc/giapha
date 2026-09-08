@@ -25,11 +25,6 @@ import {
   isSupabaseConfigured,
 } from './lib/supabase';
 import {
-  loadAllData, loadClanUsers, loadClanUserByEmail, saveMember, deleteMember as deleteMemberDb,
-  saveEvent, deleteEvent as deleteEventDb, saveDocument, deleteDocument as deleteDocumentDb,
-  savePost, saveFund, saveClanInfo, saveClanUser, deleteClanUser as deleteClanUserDb, saveBranch,
-} from './lib/database';
-import {
   saveMemberToSupabase,
   deleteMemberFromSupabase,
   fetchMembersFromSupabase,
@@ -816,7 +811,7 @@ export default function App() {
             title="Vào ngay Bảng Điều Khiển Quản Trị Tộc"
           >
             <SlidersHorizontal className="w-4 h-4 text-amber-950" />
-            <span>AdminCP</span>
+            <span>Lối Vào AdminCP</span>
           </button>
         ) : (
           <button
@@ -826,7 +821,7 @@ export default function App() {
             title="Đăng nhập để vào Bảng Điều Khiển Quản Trị Tộc"
           >
             <Lock className="w-3.5 h-3.5 text-amber-200" />
-            <span>Đăng Nhập</span>
+            <span>Đăng Nhập Quản Trị</span>
           </button>
         )}
 

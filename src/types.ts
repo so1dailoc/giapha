@@ -166,3 +166,4 @@ export interface ClanInfo {
   motto: string;
   mottoMeaning: string;
 }
+

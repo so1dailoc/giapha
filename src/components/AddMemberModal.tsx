@@ -98,6 +98,47 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
   const maleMembers = allMembers.filter((m) => m.gender === 'male');
   const femaleMembers = allMembers.filter((m) => m.gender === 'female');
 
+  // Thông báo tính toán tự động đời
+  const [autoGenNotice, setAutoGenNotice] = useState<string | null>(() => {
+    if (parentMember) {
+      return `Tự động nhảy sang Đời thứ ${parentMember.generation + 1} (con của ${parentMember.fullName} - Đời ${parentMember.generation})`;
+    }
+    if (spouseForMember) {
+      return `Tự động đặt Đời thứ ${spouseForMember.generation} (cùng thế hệ với phối ngẫu ${spouseForMember.fullName})`;
+    }
+    return null;
+  });
+
+  const handleFatherChange = (newFatherId: string) => {
+    setFatherId(newFatherId);
+    const father = allMembers.find((m) => m.id === newFatherId);
+    if (father) {
+      const nextGen = father.generation + 1;
+      setGeneration(nextGen);
+      setAutoGenNotice(`Tự động nhảy sang Đời thứ ${nextGen} (con của ${father.fullName} - Đời thứ ${father.generation})`);
+      // Kế thừa phái, chi, nhánh nếu đang để trống
+      if (!phaiName && father.phaiName) setPhaiName(father.phaiName);
+      if (!chiName && father.chiName) setChiName(father.chiName);
+      if (!nhanhName && father.nhanhName) setNhanhName(father.nhanhName);
+      if (father.branchId) setBranchId(father.branchId);
+      if (!birthPlace && father.birthPlace) setBirthPlace(father.birthPlace);
+    } else {
+      setAutoGenNotice(null);
+    }
+  };
+
+  const handleMotherChange = (newMotherId: string) => {
+    setMotherId(newMotherId);
+    if (!fatherId) {
+      const mother = allMembers.find((m) => m.id === newMotherId);
+      if (mother) {
+        const nextGen = mother.generation + 1;
+        setGeneration(nextGen);
+        setAutoGenNotice(`Tự động nhảy sang Đời thứ ${nextGen} (con của ${mother.fullName} - Đời thứ ${mother.generation})`);
+      }
+    }
+  };
+
   // If father is selected and has multiple wives (ví dụ bà B và bà C), filter candidate mothers
   const selectedFather = allMembers.find((m) => m.id === fatherId);
   const fatherWives = selectedFather?.spouseIds
@@ -212,18 +253,63 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Đời (Thế Hệ) *</label>
-              <select
-                value={generation}
-                onChange={(e) => setGeneration(Number(e.target.value))}
-                className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none font-semibold text-amber-900 bg-amber-50/50"
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map((gen) => (
-                  <option key={gen} value={gen}>
-                    Đời thứ {gen}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block font-bold text-slate-700">Đời (Thế Hệ) *</label>
+                <span className="text-[11px] font-semibold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full">
+                  Đời thứ {generation}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = Math.max(1, generation - 1);
+                    setGeneration(next);
+                    setAutoGenNotice(null);
+                  }}
+                  className="w-10 h-10 rounded-lg border border-slate-300 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-base flex items-center justify-center transition-colors active:scale-95"
+                  title="Giảm 1 đời"
+                >
+                  -
+                </button>
+                <div className="relative flex-1">
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={generation}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      if (!isNaN(val) && val >= 1) {
+                        setGeneration(val);
+                        setAutoGenNotice(null);
+                      }
+                    }}
+                    className="w-full p-2.5 text-center border rounded-lg focus:border-amber-600 focus:outline-none font-bold text-base text-amber-900 bg-amber-50/50"
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none hidden sm:inline">
+                    (Tùy ý)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = generation + 1;
+                    setGeneration(next);
+                    setAutoGenNotice(null);
+                  }}
+                  className="w-10 h-10 rounded-lg border border-slate-300 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-base flex items-center justify-center transition-colors active:scale-95"
+                  title="Tăng 1 đời"
+                >
+                  +
+                </button>
+              </div>
+              {autoGenNotice && (
+                <div className="mt-1.5 text-[11px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-200/80 rounded-md px-2 py-1 flex items-center gap-1">
+                  <span>⚡</span>
+                  <span className="truncate">{autoGenNotice}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -294,19 +380,19 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
           {/* Section 3: Quan hệ phụ mẫu (Cha & Mẹ đẻ - Hỗ trợ cha có nhiều vợ: Bà B, Bà C) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Người Cha (Phụ thân)</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block font-bold text-slate-700">Người Cha (Phụ thân)</label>
+                <span className="text-[10px] text-amber-800 font-semibold">Tự tính Đời con = Đời cha + 1</span>
+              </div>
               <select
                 value={fatherId}
-                onChange={(e) => {
-                  setFatherId(e.target.value);
-                  // Auto reset mother if not matched
-                }}
+                onChange={(e) => handleFatherChange(e.target.value)}
                 className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none"
               >
                 <option value="">-- Không chọn hoặc Thủy Tổ --</option>
                 {maleMembers.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.fullName} (Đời {m.generation}) {m.orderTitle ? `- ${m.orderTitle}` : ''}
+                    {m.fullName} (Đời thứ {m.generation}) {m.orderTitle ? `- ${m.orderTitle}` : ''}
                   </option>
                 ))}
               </select>
@@ -318,7 +404,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
               </label>
               <select
                 value={motherId}
-                onChange={(e) => setMotherId(e.target.value)}
+                onChange={(e) => handleMotherChange(e.target.value)}
                 className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none"
               >
                 <option value="">-- Không rõ hoặc Chưa cập nhật --</option>

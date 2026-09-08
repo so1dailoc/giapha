@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Member,
   Branch,
@@ -20,14 +20,15 @@ import {
 } from './data/sampleData';
 import {
   INITIAL_CLAN_USERS,
+  DEFAULT_SUPER_ADMIN_EMAIL,
+  SUPABASE_FIX_BURIAL_COORDINATES_SQL,
   isSupabaseConfigured,
-  supabase,
 } from './lib/supabase';
 import {
-  loadAllData, loadClanUsers, loadClanUserByEmail, saveMember, deleteMember as deleteMemberDb,
-  saveEvent, deleteEvent as deleteEventDb, saveDocument, deleteDocument as deleteDocumentDb,
-  savePost, saveFund, saveClanInfo, saveClanUser, deleteClanUser as deleteClanUserDb, saveBranch,
-} from './lib/database';
+  saveMemberToSupabase,
+  deleteMemberFromSupabase,
+  fetchMembersFromSupabase,
+} from './lib/supabaseService';
 import { GoogleAuthModal } from './components/GoogleAuthModal';
 import { FamilyTree } from './components/FamilyTree';
 import { SmartSearch } from './components/SmartSearch';
@@ -59,6 +60,12 @@ import {
   LogOut,
   User,
   ExternalLink,
+  Copy,
+  Check,
+  CheckCircle2,
+  AlertTriangle,
+  X,
+  Lock,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -72,9 +79,17 @@ export default function App() {
   const [posts, setPosts] = useState<PostItem[]>(INITIAL_POSTS);
   const [funds, setFunds] = useState<FundRecord[]>(INITIAL_FUNDS);
 
-  // Authentication & Users state
+  // Authentication & Users state (Bảo mật: Mặc định chưa đăng nhập là Khách xem)
   const [clanUsers, setClanUsers] = useState<ClanUser[]>(INITIAL_CLAN_USERS);
-  const [currentUser, setCurrentUser] = useState<ClanUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<ClanUser | null>(() => {
+    try {
+      const saved = localStorage.getItem('clan_current_user');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      // ignore
+    }
+    return null; // Khách vãng lai mặc định, không tự động cho vào Super Admin
+  });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Active Tab
@@ -82,8 +97,23 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('tree');
 
   // RBAC Role State (synced with current user)
-  const [userRole, setUserRole] = useState<UserRole>('visitor');
-  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [userRole, setUserRole] = useState<UserRole>(() => {
+    try {
+      const saved = localStorage.getItem('clan_current_user');
+      if (saved) {
+        const u = JSON.parse(saved);
+        if (u && u.role) return u.role;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return 'visitor'; // Khách chỉ có quyền xem
+  });
+
+  // Kiểm tra quyền quản trị: Chỉ Super Admin hoặc Trưởng Chi khi ĐÃ ĐĂNG NHẬP
+  const isAdmin = Boolean(
+    currentUser && ['super_admin', 'branch_admin', 'editor'].includes(userRole)
+  );
 
   // Modals & Selection
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
@@ -94,71 +124,20 @@ export default function App() {
   const [parentForNewChild, setParentForNewChild] = useState<Member | null>(null);
   const [spouseForNewMember, setSpouseForNewMember] = useState<Member | null>(null);
 
-  // Load persistent Supabase data and restore the authenticated Google session.
+  // Supabase Schema Warning Notice (Lỗi burial_coordinates) & Notification Toast
+  const [schemaWarningNotice, setSchemaWarningNotice] = useState(false);
+  const [copiedNoticeSql, setCopiedNoticeSql] = useState(false);
+  const [saveToast, setSaveToast] = useState<string | null>(null);
+
+  // Tự động tải danh sách thành viên từ Supabase nếu đã cấu hình
   useEffect(() => {
-    let mounted = true;
-    const boot = async () => {
-      try {
-        if (!isSupabaseConfigured || !supabase) return;
-        const [{ data: sessionData }] = await Promise.all([supabase.auth.getSession()]);
-        const email = sessionData.session?.user.email;
-        if (email && mounted) {
-          const dbUser = await loadClanUserByEmail(email);
-          if (dbUser && dbUser.status === 'active') {
-            setCurrentUser(dbUser);
-            setUserRole(dbUser.role);
-            if (dbUser.role === 'super_admin') {
-              const users = await loadClanUsers();
-              if (mounted) setClanUsers(users);
-            }
-          }
-        }
-        const data = await loadAllData();
-        if (!mounted) return;
-        if (data.clanInfo) setClanInfo(data.clanInfo as typeof CLAN_INFO);
-        if (data.branches.length) setBranches(data.branches);
-        if (data.members.length) setMembers(data.members);
-        if (data.events.length) setEvents(data.events);
-        if (data.documents.length) setDocuments(data.documents);
-        if (data.posts.length) setPosts(data.posts);
-        if (data.funds.length) setFunds(data.funds);
-      } catch (error) {
-        console.error('Supabase bootstrap failed:', error);
-      } finally {
-        if (mounted) setIsLoadingData(false);
-      }
-    };
-    boot();
-    if (supabase) {
-      const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        if (!mounted) return;
-        const email = session?.user.email;
-        if (!email) {
-          setCurrentUser(null);
-          setUserRole('visitor');
-          return;
-        }
-        try {
-          const dbUser = await loadClanUserByEmail(email);
-          if (dbUser && dbUser.status === 'active') {
-            setCurrentUser(dbUser);
-            setUserRole(dbUser.role);
-            if (dbUser.role === 'super_admin') {
-              const users = await loadClanUsers();
-              if (mounted) setClanUsers(users);
-            }
-          } else {
-            await supabase.auth.signOut();
-            setCurrentUser(null);
-            setUserRole('visitor');
-          }
-        } catch (error) {
-          console.error('Auth profile lookup failed:', error);
+    if (isSupabaseConfigured) {
+      fetchMembersFromSupabase().then((res) => {
+        if (res.members && res.members.length > 0) {
+          setMembers(res.members);
         }
       });
-      return () => { mounted = false; data.subscription.unsubscribe(); };
     }
-    return () => { mounted = false; };
   }, []);
 
   // Quick notification message
@@ -193,76 +172,188 @@ export default function App() {
   };
 
   const handleAddMember = async (newMember: Member) => {
-    try {
-      const membersToSave = [newMember];
+    setMembers((prev) => {
+      const updated = [...prev, newMember];
+      // If adding spouse, update spouseIds in target member
       if (spouseForNewMember) {
-        const target = members.find((m) => m.id === spouseForNewMember.id);
-        if (target) {
-          const updatedTarget = { ...target, spouseIds: [...(target.spouseIds || []), newMember.id] };
-          membersToSave.push(updatedTarget);
-          setMembers((prev) => prev.map((m) => m.id === target.id ? updatedTarget : m).concat(prev.some(m => m.id === newMember.id) ? [] : [newMember]));
-        } else setMembers((prev) => [...prev, newMember]);
-      } else setMembers((prev) => [...prev, newMember]);
-      if (isSupabaseConfigured) for (const m of membersToSave) await saveMember(m);
-      confetti({ particleCount: 35, spread: 70, origin: { y: 0.6 } });
-    } catch (error: any) { alert(`Không thể lưu thành viên: ${error.message || error}`); }
+        return updated.map((m) => {
+          if (m.id === spouseForNewMember.id) {
+            return {
+              ...m,
+              spouseIds: [...(m.spouseIds || []), newMember.id],
+            };
+          }
+          return m;
+        });
+      }
+      return updated;
+    });
+
+    confetti({
+      particleCount: 35,
+      spread: 70,
+      origin: { y: 0.6 },
+    });
+
+    // Lưu vào Supabase an toàn (có cơ chế tự động fallback nếu thiếu cột burial_coordinates)
+    if (isSupabaseConfigured) {
+      const res = await saveMemberToSupabase(newMember);
+      if (res.missingBurialCoordinatesColumn) {
+        setSchemaWarningNotice(true);
+      }
+      if (spouseForNewMember) {
+        const updatedSpouse: Member = {
+          ...spouseForNewMember,
+          spouseIds: [...(spouseForNewMember.spouseIds || []), newMember.id],
+        };
+        await saveMemberToSupabase(updatedSpouse);
+      }
+      setSaveToast('Đã lưu thành viên vào hệ thống thành công');
+      setTimeout(() => setSaveToast(null), 3500);
+    }
   };
 
   const handleUpdateMember = async (updated: Member) => {
     setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
     setSelectedMember(updated);
-    try { if (isSupabaseConfigured) await saveMember(updated); }
-    catch (error: any) { alert(`Không thể lưu thành viên: ${error.message || error}`); }
+
+    if (isSupabaseConfigured) {
+      const res = await saveMemberToSupabase(updated);
+      if (res.missingBurialCoordinatesColumn) {
+        setSchemaWarningNotice(true);
+      }
+      setSaveToast('Đã cập nhật hồ sơ thành viên thành công');
+      setTimeout(() => setSaveToast(null), 3500);
+    }
   };
 
   const handleDeleteMember = async (id: string) => {
-    const next = members.filter((m) => m.id !== id).map((m) => ({
-      ...m, fatherId: m.fatherId === id ? null : m.fatherId, motherId: m.motherId === id ? null : m.motherId,
-      spouseIds: m.spouseIds ? m.spouseIds.filter((sId) => sId !== id) : [],
-    }));
-    setMembers(next); setSelectedMember(null);
-    try {
-      if (isSupabaseConfigured) { await deleteMemberDb(id); for (const m of next.filter((m) => members.find(x=>x.id===m.id)?.spouseIds?.includes(id) || members.find(x=>x.id===m.id)?.fatherId===id || members.find(x=>x.id===m.id)?.motherId===id)) await saveMember(m); }
-    } catch (error: any) { alert(`Không thể xoá thành viên: ${error.message || error}`); }
+    setMembers((prev) => {
+      return prev
+        .filter((m) => m.id !== id)
+        .map((m) => ({
+          ...m,
+          fatherId: m.fatherId === id ? null : m.fatherId,
+          motherId: m.motherId === id ? null : m.motherId,
+          spouseIds: m.spouseIds ? m.spouseIds.filter((sId) => sId !== id) : [],
+        }));
+    });
+    setSelectedMember(null);
+
+    if (isSupabaseConfigured) {
+      await deleteMemberFromSupabase(id);
+      setSaveToast('Đã xóa thành viên khỏi hệ thống');
+      setTimeout(() => setSaveToast(null), 3500);
+    }
   };
 
-  const handleAddPost = async (post: PostItem) => { setPosts((prev) => [post, ...prev]); try { if (isSupabaseConfigured) await savePost(post); } catch (e:any) { alert(`Không thể lưu bài viết: ${e.message || e}`); } };
-  const handleAddFund = async (fund: FundRecord) => { setFunds((prev) => [fund, ...prev]); try { if (isSupabaseConfigured) await saveFund(fund); } catch (e:any) { alert(`Không thể lưu sổ quỹ: ${e.message || e}`); } };
-  const handleUpdateClanInfo = async (newInfo: typeof CLAN_INFO) => { setClanInfo(newInfo); try { if (isSupabaseConfigured) await saveClanInfo(newInfo); } catch (e:any) { alert(`Không thể lưu thông tin dòng tộc: ${e.message || e}`); } };
-  const handleAddDocument = async (newDoc: DocumentItem) => { setDocuments((prev) => [newDoc, ...prev]); try { if (isSupabaseConfigured) await saveDocument(newDoc); } catch (e:any) { alert(`Không thể lưu tư liệu: ${e.message || e}`); } };
-  const handleUpdateDocument = async (updatedDoc: DocumentItem) => { setDocuments((prev) => prev.map((d) => d.id === updatedDoc.id ? updatedDoc : d)); try { if (isSupabaseConfigured) await saveDocument(updatedDoc); } catch (e:any) { alert(`Không thể cập nhật tư liệu: ${e.message || e}`); } };
-  const handleDeleteDocument = async (id: string) => { setDocuments((prev) => prev.filter((d) => d.id !== id)); try { if (isSupabaseConfigured) await deleteDocumentDb(id); } catch (e:any) { alert(`Không thể xoá tư liệu: ${e.message || e}`); } };
-  const handleAddEvent = async (newEvent: EventItem) => { setEvents((prev) => [...prev, newEvent]); try { if (isSupabaseConfigured) await saveEvent(newEvent); } catch (e:any) { alert(`Không thể lưu sự kiện: ${e.message || e}`); } };
-  const handleUpdateEvent = async (updatedEvent: EventItem) => { setEvents((prev) => prev.map((e) => e.id === updatedEvent.id ? updatedEvent : e)); try { if (isSupabaseConfigured) await saveEvent(updatedEvent); } catch (e:any) { alert(`Không thể cập nhật sự kiện: ${e.message || e}`); } };
-  const handleDeleteEvent = async (id: string) => { setEvents((prev) => prev.filter((e) => e.id !== id)); try { if (isSupabaseConfigured) await deleteEventDb(id); } catch (e:any) { alert(`Không thể xoá sự kiện: ${e.message || e}`); } };
+  const handleAddPost = (post: PostItem) => {
+    setPosts((prev) => [post, ...prev]);
+  };
 
-  const handleResetSampleData = async () => {
-    setMembers(INITIAL_MEMBERS); setBranches(INITIAL_BRANCHES); setEvents(INITIAL_EVENTS); setDocuments(INITIAL_DOCUMENTS); setPosts(INITIAL_POSTS); setFunds(INITIAL_FUNDS); setClanInfo(CLAN_INFO);
-    try { if (isSupabaseConfigured) { for (const b of INITIAL_BRANCHES) await saveBranch(b); for (const m of INITIAL_MEMBERS) await saveMember(m); for (const e of INITIAL_EVENTS) await saveEvent(e); for (const d of INITIAL_DOCUMENTS) await saveDocument(d); for (const p of INITIAL_POSTS) await savePost(p); for (const f of INITIAL_FUNDS) await saveFund(f); await saveClanInfo(CLAN_INFO); } } catch (e:any) { alert(`Đã khôi phục giao diện nhưng chưa đồng bộ được Supabase: ${e.message || e}`); }
+  const handleAddFund = (fund: FundRecord) => {
+    setFunds((prev) => [fund, ...prev]);
+  };
+
+  const handleUpdateClanInfo = (newInfo: typeof CLAN_INFO) => {
+    setClanInfo(newInfo);
+  };
+
+  const handleAddDocument = (newDoc: DocumentItem) => {
+    setDocuments((prev) => [newDoc, ...prev]);
+  };
+
+  const handleUpdateDocument = (updatedDoc: DocumentItem) => {
+    setDocuments((prev) => prev.map((d) => (d.id === updatedDoc.id ? updatedDoc : d)));
+  };
+
+  const handleDeleteDocument = (id: string) => {
+    setDocuments((prev) => prev.filter((d) => d.id !== id));
+  };
+
+  const handleAddEvent = (newEvent: EventItem) => {
+    setEvents((prev) => [...prev, newEvent]);
+  };
+
+  const handleUpdateEvent = (updatedEvent: EventItem) => {
+    setEvents((prev) => prev.map((e) => (e.id === updatedEvent.id ? updatedEvent : e)));
+  };
+
+  const handleDeleteEvent = (id: string) => {
+    setEvents((prev) => prev.filter((e) => e.id !== id));
+  };
+
+  const handleResetSampleData = () => {
+    setMembers(INITIAL_MEMBERS);
+    setBranches(INITIAL_BRANCHES);
+    setEvents(INITIAL_EVENTS);
+    setDocuments(INITIAL_DOCUMENTS);
+    setPosts(INITIAL_POSTS);
+    setFunds(INITIAL_FUNDS);
+    setClanInfo(CLAN_INFO);
     confetti({ particleCount: 50, spread: 80 });
   };
 
-  const handleImportClanData = async (data: any) => {
-    if (data.clanInfo) { setClanInfo(data.clanInfo); if (isSupabaseConfigured) await saveClanInfo(data.clanInfo); }
-    if (data.members) { setMembers(data.members); if (isSupabaseConfigured) for (const m of data.members) await saveMember(m); }
-    if (data.branches) { setBranches(data.branches); if (isSupabaseConfigured) for (const b of data.branches) await saveBranch(b); }
-    if (data.documents) { setDocuments(data.documents); if (isSupabaseConfigured) for (const d of data.documents) await saveDocument(d); }
-    if (data.events) { setEvents(data.events); if (isSupabaseConfigured) for (const e of data.events) await saveEvent(e); }
+  const handleImportClanData = (data: any) => {
+    if (data.clanInfo) setClanInfo(data.clanInfo);
+    if (data.members) setMembers(data.members);
+    if (data.branches) setBranches(data.branches);
+    if (data.documents) setDocuments(data.documents);
+    if (data.events) setEvents(data.events);
   };
 
   // Authentication Handlers
   const handleLoginWithGoogle = (user: ClanUser) => {
-    setCurrentUser(user); setUserRole(user.role); setClanUsers((prev) => prev.some(u => u.email.toLowerCase() === user.email.toLowerCase()) ? prev.map(u => u.email.toLowerCase() === user.email.toLowerCase() ? user : u) : [user, ...prev]); setIsAuthModalOpen(false); confetti({ particleCount: 35, spread: 60 });
+    setCurrentUser(user);
+    setUserRole(user.role);
+    try {
+      localStorage.setItem('clan_current_user', JSON.stringify(user));
+    } catch (e) {
+      // ignore
+    }
+    setClanUsers((prev) => {
+      const exists = prev.find((u) => u.email.toLowerCase() === user.email.toLowerCase());
+      if (!exists) {
+        return [user, ...prev];
+      }
+      return prev.map((u) => (u.email.toLowerCase() === user.email.toLowerCase() ? user : u));
+    });
+    setIsAuthModalOpen(false);
+    confetti({ particleCount: 35, spread: 60 });
   };
 
-  const handleLogout = async () => { if (supabase) await supabase.auth.signOut(); setCurrentUser(null); setUserRole('visitor'); setIsAuthModalOpen(false); };
-  const handleAddUser = async (newUser: ClanUser) => { setClanUsers((prev) => [newUser, ...prev]); try { if (isSupabaseConfigured) await saveClanUser(newUser); } catch (e:any) { alert(`Không thể lưu tài khoản: ${e.message || e}`); } };
-  const handleUpdateUser = async (updatedUser: ClanUser) => { setClanUsers((prev) => prev.map((u) => u.id === updatedUser.id ? updatedUser : u)); if (currentUser?.id === updatedUser.id) { setCurrentUser(updatedUser); setUserRole(updatedUser.role); } try { if (isSupabaseConfigured) await saveClanUser(updatedUser); } catch (e:any) { alert(`Không thể cập nhật tài khoản: ${e.message || e}`); } };
-  const handleDeleteUser = async (userId: string) => { setClanUsers((prev) => prev.filter((u) => u.id !== userId)); if (currentUser?.id === userId) await handleLogout(); try { if (isSupabaseConfigured) await deleteClanUserDb(userId); } catch (e:any) { alert(`Không thể xoá tài khoản: ${e.message || e}`); } };
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setUserRole('visitor');
+    try {
+      localStorage.removeItem('clan_current_user');
+    } catch (e) {
+      // ignore
+    }
+    if (activeTab === 'admin') {
+      setActiveTab('tree');
+    }
+    setIsAuthModalOpen(false);
+  };
 
-  if (isLoadingData && isSupabaseConfigured) {
-    return <div className="min-h-screen bg-[#180204] text-amber-100 flex items-center justify-center"><div className="text-center"><div className="text-2xl font-serif font-bold">Đang tải Gia Phả…</div><div className="text-xs text-amber-300/70 mt-2">Đang kết nối Supabase</div></div></div>;
-  }
+  const handleAddUser = (newUser: ClanUser) => {
+    setClanUsers((prev) => [newUser, ...prev]);
+  };
+
+  const handleUpdateUser = (updatedUser: ClanUser) => {
+    setClanUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)));
+    if (currentUser && currentUser.id === updatedUser.id) {
+      setCurrentUser(updatedUser);
+      setUserRole(updatedUser.role);
+    }
+  };
+
+  const handleDeleteUser = (userId: string) => {
+    setClanUsers((prev) => prev.filter((u) => u.id !== userId));
+    if (currentUser && currentUser.id === userId) {
+      handleLogout();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#180204] text-amber-50 flex flex-col font-sans selection:bg-amber-500 selection:text-amber-950">
@@ -298,28 +389,30 @@ export default function App() {
 
           {/* Action Center: LỐI VÀO ADMINCP + ĐĂNG NHẬP GOOGLE */}
           <div className="flex flex-wrap items-center justify-center md:justify-end gap-2.5">
-            {/* 1. LỐI VÀO ADMINCP NỔI BẬT */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('admin')}
-              className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg transition-all transform hover:scale-105 active:scale-95 ${
-                activeTab === 'admin'
-                  ? 'bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 text-amber-950 ring-2 ring-amber-300 border-2 border-white'
-                  : 'bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-amber-950 hover:from-amber-400 hover:to-amber-500 border border-amber-300'
-              }`}
-              title="Bấm để mở Bảng Điều Khiển Quản Trị Tộc (AdminCP)"
-            >
-              <SlidersHorizontal className="w-4 h-4 text-amber-950 flex-shrink-0" />
-              <div className="text-left leading-tight">
-                <div className="font-extrabold uppercase text-[11px] tracking-wide flex items-center gap-1">
-                  <span>Lối Vào AdminCP</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping" />
+            {/* 1. LỐI VÀO ADMINCP - CHỈ HIỂN THỊ KHI ĐÃ ĐĂNG NHẬP QUẢN TRỊ */}
+            {isAdmin ? (
+              <button
+                type="button"
+                onClick={() => setActiveTab('admin')}
+                className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg transition-all transform hover:scale-105 active:scale-95 ${
+                  activeTab === 'admin'
+                    ? 'bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 text-amber-950 ring-2 ring-amber-300 border-2 border-white'
+                    : 'bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-amber-950 hover:from-amber-400 hover:to-amber-500 border border-amber-300'
+                }`}
+                title="Bấm để mở Bảng Điều Khiển Quản Trị Tộc (AdminCP)"
+              >
+                <SlidersHorizontal className="w-4 h-4 text-amber-950 flex-shrink-0" />
+                <div className="text-left leading-tight">
+                  <div className="font-extrabold uppercase text-[11px] tracking-wide flex items-center gap-1">
+                    <span>Lối Vào AdminCP</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping" />
+                  </div>
+                  <div className="text-[9px] text-amber-950/80 font-medium">
+                    {activeTab === 'admin' ? '★ Đang Mở AdminCP' : (userRole === 'super_admin' ? 'Trưởng Tộc Toàn Quyền' : 'Trưởng Chi')}
+                  </div>
                 </div>
-                <div className="text-[9px] text-amber-950/80 font-medium">
-                  {activeTab === 'admin' ? '★ Đang Mở AdminCP' : 'Quản Trị Toàn Diện'}
-                </div>
-              </div>
-            </button>
+              </button>
+            ) : null}
 
             {/* 2. KHU VỰC ĐĂNG NHẬP GOOGLE / TÀI KHOẢN HIỆN TẠI */}
             {currentUser ? (
@@ -384,42 +477,44 @@ export default function App() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                 </svg>
-                <span className="font-bold text-slate-800">Đăng Nhập Google</span>
+                <span className="font-bold text-slate-800">Đăng Nhập Quản Trị</span>
               </button>
             )}
 
-            {/* Role Quick Switch (tiện thử nghiệm mọi quyền) */}
-            <div className="hidden lg:flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-amber-500/30 text-[10px]">
-              <span className="text-amber-300/70 px-1.5 font-medium">Quyền:</span>
-              <button
-                type="button"
-                onClick={() => setUserRole('super_admin')}
-                className={`px-2 py-0.5 rounded ${userRole === 'super_admin' ? 'bg-amber-500 text-amber-950 font-bold' : 'text-amber-200/70 hover:bg-white/5'}`}
-              >
-                Trưởng Tộc
-              </button>
-              <button
-                type="button"
-                onClick={() => setUserRole('branch_admin')}
-                className={`px-2 py-0.5 rounded ${userRole === 'branch_admin' ? 'bg-amber-500 text-amber-950 font-bold' : 'text-amber-200/70 hover:bg-white/5'}`}
-              >
-                Trưởng Chi
-              </button>
-              <button
-                type="button"
-                onClick={() => setUserRole('member')}
-                className={`px-2 py-0.5 rounded ${userRole === 'member' ? 'bg-amber-500 text-amber-950 font-bold' : 'text-amber-200/70 hover:bg-white/5'}`}
-              >
-                Thành Viên
-              </button>
-              <button
-                type="button"
-                onClick={() => setUserRole('visitor')}
-                className={`px-2 py-0.5 rounded ${userRole === 'visitor' ? 'bg-amber-500 text-amber-950 font-bold' : 'text-amber-200/70 hover:bg-white/5'}`}
-              >
-                Khách
-              </button>
-            </div>
+            {/* Role Quick Switch (Chỉ hiển thị khi đã đăng nhập Super Admin thực thụ để kiểm thử) */}
+            {currentUser && currentUser.role === 'super_admin' && (
+              <div className="hidden lg:flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-amber-500/30 text-[10px]">
+                <span className="text-amber-300/70 px-1.5 font-medium">Thử Quyền:</span>
+                <button
+                  type="button"
+                  onClick={() => setUserRole('super_admin')}
+                  className={`px-2 py-0.5 rounded ${userRole === 'super_admin' ? 'bg-amber-500 text-amber-950 font-bold' : 'text-amber-200/70 hover:bg-white/5'}`}
+                >
+                  Trưởng Tộc
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserRole('branch_admin')}
+                  className={`px-2 py-0.5 rounded ${userRole === 'branch_admin' ? 'bg-amber-500 text-amber-950 font-bold' : 'text-amber-200/70 hover:bg-white/5'}`}
+                >
+                  Trưởng Chi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserRole('member')}
+                  className={`px-2 py-0.5 rounded ${userRole === 'member' ? 'bg-amber-500 text-amber-950 font-bold' : 'text-amber-200/70 hover:bg-white/5'}`}
+                >
+                  Thành Viên
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserRole('visitor')}
+                  className={`px-2 py-0.5 rounded ${userRole === 'visitor' ? 'bg-amber-500 text-amber-950 font-bold' : 'text-amber-200/70 hover:bg-white/5'}`}
+                >
+                  Khách
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -536,22 +631,24 @@ export default function App() {
               Database Supabase & 0đ Guide
             </button>
 
-            {/* AdminCP Tab */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('admin')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 flex-shrink-0 transition-all border ${
-                activeTab === 'admin'
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-amber-950 shadow-xl border-amber-300'
-                  : 'text-amber-300 bg-amber-950/40 border-amber-500/40 hover:bg-amber-900/60'
-              }`}
-            >
-              <SlidersHorizontal className="w-4 h-4 text-amber-400" />
-              AdminCP Quản Trị
-              <span className="text-[9px] px-1.5 py-0.2 rounded-full font-bold uppercase bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                Toàn Quyền
-              </span>
-            </button>
+            {/* AdminCP Tab - CHỈ HIỂN THỊ KHI ĐÃ ĐĂNG NHẬP VỚI QUYỀN QUẢN TRỊ */}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('admin')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 flex-shrink-0 transition-all border ${
+                  activeTab === 'admin'
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-amber-950 shadow-xl border-amber-300'
+                    : 'text-amber-300 bg-amber-950/40 border-amber-500/40 hover:bg-amber-900/60'
+                }`}
+              >
+                <SlidersHorizontal className="w-4 h-4 text-amber-400" />
+                AdminCP Quản Trị
+                <span className="text-[9px] px-1.5 py-0.2 rounded-full font-bold uppercase bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                  {userRole === 'super_admin' ? 'Toàn Quyền' : 'Trưởng Chi'}
+                </span>
+              </button>
+            )}
           </div>
         </div>
       </nav>
@@ -620,51 +717,113 @@ export default function App() {
         {activeTab === 'database' && <DatabaseSchemaView />}
 
         {activeTab === 'admin' && (
-          <AdminCP
-            clanInfo={clanInfo}
-            onUpdateClanInfo={handleUpdateClanInfo}
-            members={members}
-            branches={branches}
-            documents={documents}
-            events={events}
-            userRole={userRole}
-            clanUsers={clanUsers}
-            onAddUser={handleAddUser}
-            onUpdateUser={handleUpdateUser}
-            onDeleteUser={handleDeleteUser}
-            currentUser={currentUser}
-            onSelectMemberForEdit={handleSelectMember}
-            onOpenAddChild={handleOpenAddChild}
-            onOpenAddSpouse={handleOpenAddSpouse}
-            onOpenAddNewMember={handleOpenAddNewMember}
-            onDeleteMember={handleDeleteMember}
-            onAddDocument={handleAddDocument}
-            onUpdateDocument={handleUpdateDocument}
-            onDeleteDocument={handleDeleteDocument}
-            onAddEvent={handleAddEvent}
-            onUpdateEvent={handleUpdateEvent}
-            onDeleteEvent={handleDeleteEvent}
-            onResetSampleData={handleResetSampleData}
-            onImportClanData={handleImportClanData}
-          />
+          isAdmin ? (
+            <AdminCP
+              clanInfo={clanInfo}
+              onUpdateClanInfo={handleUpdateClanInfo}
+              members={members}
+              branches={branches}
+              documents={documents}
+              events={events}
+              userRole={userRole}
+              clanUsers={clanUsers}
+              onAddUser={handleAddUser}
+              onUpdateUser={handleUpdateUser}
+              onDeleteUser={handleDeleteUser}
+              currentUser={currentUser}
+              onSelectMemberForEdit={handleSelectMember}
+              onOpenAddChild={handleOpenAddChild}
+              onOpenAddSpouse={handleOpenAddSpouse}
+              onOpenAddNewMember={handleOpenAddNewMember}
+              onDeleteMember={handleDeleteMember}
+              onAddDocument={handleAddDocument}
+              onUpdateDocument={handleUpdateDocument}
+              onDeleteDocument={handleDeleteDocument}
+              onAddEvent={handleAddEvent}
+              onUpdateEvent={handleUpdateEvent}
+              onDeleteEvent={handleDeleteEvent}
+              onResetSampleData={handleResetSampleData}
+              onImportClanData={handleImportClanData}
+            />
+          ) : (
+            <div className="max-w-xl mx-auto my-12 bg-white rounded-3xl border-2 border-amber-500/40 shadow-2xl p-8 text-center space-y-5">
+              <div className="w-16 h-16 rounded-2xl bg-amber-100 border-2 border-amber-400 flex items-center justify-center mx-auto text-amber-800 shadow-inner">
+                <Lock className="w-8 h-8 text-amber-800" />
+              </div>
+              <div className="space-y-2">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+                  Bảo Vệ Quyền Hạn Dòng Tộc
+                </span>
+                <h2 className="text-xl font-bold font-serif text-slate-900">
+                  Khu Vực Quản Trị Bảo Mật (AdminCP)
+                </h2>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Bảng điều khiển AdminCP chỉ dành riêng cho <b>Hội Đồng Trưởng Tộc</b> và các <b>Trưởng Chi</b> được ủy quyền. Bạn cần đăng nhập bằng tài khoản Google có quyền để truy cập.
+                </p>
+              </div>
+
+              <div className="p-4 bg-amber-50/70 rounded-2xl border border-amber-200/80 text-left text-xs space-y-1.5 text-slate-700">
+                <div className="font-bold text-amber-900 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-amber-700" />
+                  <span>Quyền truy cập hợp lệ:</span>
+                </div>
+                <p className="text-[11px] text-slate-600">
+                  • Tài khoản Super Admin: <b>sanhangdoc.shop@gmail.com</b>
+                </p>
+                <p className="text-[11px] text-slate-600">
+                  • Hoặc các tài khoản Google đã được cấp quyền Quản trị trong danh sách gia tộc.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Đăng Nhập Quản Trị Bằng Google
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('tree')}
+                  className="w-full sm:w-auto px-5 py-3 rounded-xl font-semibold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                >
+                  Quay Về Cây Gia Phả
+                </button>
+              </div>
+            </div>
+          )
         )}
       </main>
 
       {/* Floating Quick Action Bar for Index / Mobile / Everywhere */}
       <div className="fixed bottom-5 right-5 z-40 flex items-center gap-2 bg-[#250104]/90 p-2 rounded-2xl border-2 border-amber-500/70 shadow-2xl backdrop-blur-md">
-        <button
-          type="button"
-          onClick={() => setActiveTab('admin')}
-          className={`px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md transition-transform hover:scale-105 active:scale-95 ${
-            activeTab === 'admin'
-              ? 'bg-amber-400 text-amber-950 ring-2 ring-white'
-              : 'bg-gradient-to-r from-amber-500 to-amber-600 text-amber-950 hover:from-amber-400 hover:to-amber-500'
-          }`}
-          title="Vào ngay Bảng Điều Khiển Quản Trị Tộc"
-        >
-          <SlidersHorizontal className="w-4 h-4 text-amber-950" />
-          <span>Lối Vào AdminCP</span>
-        </button>
+        {isAdmin ? (
+          <button
+            type="button"
+            onClick={() => setActiveTab('admin')}
+            className={`px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md transition-transform hover:scale-105 active:scale-95 ${
+              activeTab === 'admin'
+                ? 'bg-amber-400 text-amber-950 ring-2 ring-white'
+                : 'bg-gradient-to-r from-amber-500 to-amber-600 text-amber-950 hover:from-amber-400 hover:to-amber-500'
+            }`}
+            title="Vào ngay Bảng Điều Khiển Quản Trị Tộc"
+          >
+            <SlidersHorizontal className="w-4 h-4 text-amber-950" />
+            <span>AdminCP</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setIsAuthModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white transition-transform hover:scale-105 active:scale-95"
+            title="Đăng nhập để vào Bảng Điều Khiển Quản Trị Tộc"
+          >
+            <Lock className="w-3.5 h-3.5 text-amber-200" />
+            <span>Đăng Nhập</span>
+          </button>
+        )}
 
         <button
           type="button"
@@ -674,7 +833,7 @@ export default function App() {
         >
           <LogIn className="w-3.5 h-3.5 text-amber-300" />
           <span className="hidden sm:inline">
-            {currentUser ? currentUser.name.split(' ')[0] : 'Đăng Nhập'}
+            {currentUser ? currentUser.name.split(' ')[0] : 'Tài Khoản'}
           </span>
         </button>
       </div>
@@ -713,6 +872,79 @@ export default function App() {
           onClose={() => setIsAddingMember(false)}
           onAddMember={handleAddMember}
         />
+      )}
+
+      {/* Floating Save Toast */}
+      {saveToast && (
+        <div className="fixed top-20 right-5 z-50 flex items-center gap-2.5 bg-emerald-900/95 text-emerald-100 px-4 py-3 rounded-xl border border-emerald-400/50 shadow-2xl backdrop-blur-md text-xs font-semibold animate-in fade-in slide-in-from-top-3">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+          <span>{saveToast}</span>
+        </div>
+      )}
+
+      {/* Modal/Banner Cảnh Báo Thiếu Cột burial_coordinates & Hướng Dẫn Sửa Lỗi 10 Giây */}
+      {schemaWarningNotice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border-2 border-amber-400 space-y-4 text-xs text-slate-800">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2.5 text-amber-900 font-bold text-sm font-serif">
+                <div className="w-8 h-8 rounded-xl bg-amber-500 text-amber-950 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-4 h-4 text-amber-950" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Cần Cập Nhật Cột burial_coordinates Trên Supabase</h3>
+                  <p className="text-[11px] text-emerald-700 font-medium">✓ Thành viên đã được lưu an toàn vào hệ thống</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSchemaWarningNotice(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-slate-700 leading-relaxed bg-amber-50/70 p-3.5 rounded-xl border border-amber-200">
+              <p>
+                <b>Nguyên nhân thông báo:</b> Bảng <code>members</code> trên dự án Supabase của bạn đang thiếu cột <code>burial_coordinates</code> (lưu kinh độ / vĩ độ GPS mộ phần).
+              </p>
+              <p>
+                <b>Cách khắc phục triệt để trong 10 giây:</b> Vào trang quản trị <b>Supabase</b> &rarr; Menu <b>SQL Editor</b> &rarr; Bấm <b>"New Query"</b> &rarr; Dán 3 dòng lệnh sau và nhấn <b>RUN</b>:
+              </p>
+            </div>
+
+            <div className="relative">
+              <pre className="p-3 bg-slate-950 text-emerald-300 font-mono text-[11px] rounded-xl overflow-x-auto border border-slate-800 leading-relaxed">
+                {SUPABASE_FIX_BURIAL_COORDINATES_SQL}
+              </pre>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(SUPABASE_FIX_BURIAL_COORDINATES_SQL);
+                  setCopiedNoticeSql(true);
+                  setTimeout(() => setCopiedNoticeSql(false), 3000);
+                  confetti({ particleCount: 30, spread: 60 });
+                }}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow transition-all active:scale-95"
+              >
+                {copiedNoticeSql ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                <span>{copiedNoticeSql ? 'Đã Sao Chép SQL!' : 'Sao Chép Mã SQL Này'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSchemaWarningNotice(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-xs transition-colors"
+              >
+                Đã Hiểu & Đóng
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Footer */}

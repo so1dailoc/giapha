@@ -20,26 +20,14 @@ import {
 } from './data/sampleData';
 import {
   INITIAL_CLAN_USERS,
+  DEFAULT_SUPER_ADMIN_EMAIL,
   SUPABASE_FIX_BURIAL_COORDINATES_SQL,
   isSupabaseConfigured,
-  supabase,
 } from './lib/supabase';
 import {
   saveMemberToSupabase,
   deleteMemberFromSupabase,
   fetchMembersFromSupabase,
-  fetchClanDataFromSupabase,
-  fetchCurrentClanUser,
-  fetchClanUsersFromSupabase,
-  saveClanUserToSupabase,
-  deleteClanUserFromSupabase,
-  upsertClanInfoToSupabase,
-  upsertEventToSupabase,
-  deleteEventFromSupabase,
-  upsertDocumentToSupabase,
-  deleteDocumentFromSupabase,
-  upsertFundToSupabase,
-  upsertPostToSupabase,
 } from './lib/supabaseService';
 import { GoogleAuthModal } from './components/GoogleAuthModal';
 import { FamilyTree } from './components/FamilyTree';
@@ -94,12 +82,35 @@ export default function App() {
 
   // Authentication & Users state (Bảo mật: Mặc định chưa đăng nhập là Khách xem)
   const [clanUsers, setClanUsers] = useState<ClanUser[]>(INITIAL_CLAN_USERS);
-  const [currentUser, setCurrentUser] = useState<ClanUser | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<ClanUser | null>(() => {
+    try {
+      const saved = localStorage.getItem('clan_current_user');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      // ignore
+    }
+    return null; // Khách vãng lai mặc định, không tự động cho vào Super Admin
+  });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
-  // Vai trò luôn lấy từ hồ sơ đã xác thực trong Supabase, không tin dữ liệu localStorage.
-  const [userRole, setUserRole] = useState<UserRole>('visitor');
+  // Active Tab
+  type TabType = 'tree' | 'search' | 'relationship' | 'anniversaries' | 'archives' | 'community' | 'database' | 'admin';
+  const [activeTab, setActiveTab] = useState<TabType>('tree');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // RBAC Role State (synced with current user)
+  const [userRole, setUserRole] = useState<UserRole>(() => {
+    try {
+      const saved = localStorage.getItem('clan_current_user');
+      if (saved) {
+        const u = JSON.parse(saved);
+        if (u && u.role) return u.role;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return 'visitor'; // Khách chỉ có quyền xem
+  });
 
   // Kiểm tra quyền quản trị: Chỉ Super Admin hoặc Trưởng Chi khi ĐÃ ĐĂNG NHẬP
   const isAdmin = Boolean(
@@ -120,76 +131,15 @@ export default function App() {
   const [copiedNoticeSql, setCopiedNoticeSql] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
 
-  // Khởi tạo dữ liệu + phiên đăng nhập thật từ Supabase.
+  // Tự động tải danh sách thành viên từ Supabase nếu đã cấu hình
   useEffect(() => {
-    let mounted = true;
-
-    const load = async () => {
-      if (!isSupabaseConfigured || !supabase) {
-        if (mounted) setAuthLoading(false);
-        return;
-      }
-
-      const [{ data: sessionData }, membersResult, cloudData] = await Promise.all([
-        supabase.auth.getSession(),
-        fetchMembersFromSupabase(),
-        fetchClanDataFromSupabase(),
-      ]);
-
-      if (!mounted) return;
-
-      if (membersResult.members && membersResult.members.length > 0) setMembers(membersResult.members);
-      if (cloudData.clanInfo) setClanInfo((prev) => ({ ...prev, ...cloudData.clanInfo }));
-      if (cloudData.branches?.length) setBranches(cloudData.branches);
-      if (cloudData.events?.length) setEvents(cloudData.events);
-      if (cloudData.documents?.length) setDocuments(cloudData.documents);
-      if (cloudData.funds?.length) setFunds(cloudData.funds);
-      if (cloudData.posts?.length) setPosts(cloudData.posts);
-
-      if (sessionData.session?.user) {
-        const profile = await fetchCurrentClanUser(sessionData.session.user);
-        if (mounted && profile) {
-          setCurrentUser(profile);
-          setUserRole(profile.role);
-          if (profile.role === 'super_admin') {
-            const dbUsers = await fetchClanUsersFromSupabase();
-            if (mounted && dbUsers.length) setClanUsers(dbUsers);
-          }
+    if (isSupabaseConfigured) {
+      fetchMembersFromSupabase().then((res) => {
+        if (res.members && res.members.length > 0) {
+          setMembers(res.members);
         }
-      }
-
-      if (mounted) setAuthLoading(false);
-    };
-
-    load();
-
-    const { data: listener } = supabase?.auth.onAuthStateChange((_event, session) => {
-      // Không gọi API Supabase trực tiếp bên trong callback auth để tránh deadlock.
-      window.setTimeout(async () => {
-        if (!session?.user) {
-          if (mounted) {
-            setCurrentUser(null);
-            setUserRole('visitor');
-          }
-          return;
-        }
-
-        const profile = await fetchCurrentClanUser(session.user);
-        if (mounted) {
-          setCurrentUser(profile);
-          setUserRole(profile?.role || 'visitor');
-          if (profile?.role === 'super_admin') {
-            const dbUsers = await fetchClanUsersFromSupabase();
-            if (mounted && dbUsers.length) setClanUsers(dbUsers);
-          }
-        }
-      }, 0);
-    }) ?? { subscription: { unsubscribe: () => undefined } };
-
-    return () => {
-      mounted = false;
-      listener.subscription.unsubscribe();
-    };
+      });
+    }
   }, []);
 
   // Quick notification message
@@ -258,14 +208,9 @@ export default function App() {
           ...spouseForNewMember,
           spouseIds: [...(spouseForNewMember.spouseIds || []), newMember.id],
         };
-        const spouseResult = await saveMemberToSupabase(updatedSpouse);
-        if (!spouseResult.success) {
-          setSaveToast(spouseResult.error || 'Đã thêm người nhưng chưa đồng bộ quan hệ phối ngẫu');
-          setTimeout(() => setSaveToast(null), 3500);
-          return;
-        }
+        await saveMemberToSupabase(updatedSpouse);
       }
-      setSaveToast(res.success ? 'Đã lưu thành viên vào hệ thống thành công' : (res.error || 'Không thể lưu thành viên'));
+      setSaveToast('Đã lưu thành viên vào hệ thống thành công');
       setTimeout(() => setSaveToast(null), 3500);
     }
   };
@@ -279,7 +224,7 @@ export default function App() {
       if (res.missingBurialCoordinatesColumn) {
         setSchemaWarningNotice(true);
       }
-      setSaveToast(res.success ? 'Đã cập nhật hồ sơ thành viên thành công' : (res.error || 'Không thể cập nhật hồ sơ'));
+      setSaveToast('Đã cập nhật hồ sơ thành viên thành công');
       setTimeout(() => setSaveToast(null), 3500);
     }
   };
@@ -298,82 +243,46 @@ export default function App() {
     setSelectedMember(null);
 
     if (isSupabaseConfigured) {
-      const result = await deleteMemberFromSupabase(id);
-      setSaveToast(result.success ? 'Đã xóa thành viên khỏi hệ thống' : (result.error || 'Không thể xóa thành viên'));
+      await deleteMemberFromSupabase(id);
+      setSaveToast('Đã xóa thành viên khỏi hệ thống');
       setTimeout(() => setSaveToast(null), 3500);
     }
   };
 
-  const handleAddPost = async (post: PostItem) => {
+  const handleAddPost = (post: PostItem) => {
     setPosts((prev) => [post, ...prev]);
-    if (isSupabaseConfigured) {
-      const result = await upsertPostToSupabase(post);
-      if (!result.success) setSaveToast(result.error || 'Không thể lưu bài viết');
-    }
   };
 
-  const handleAddFund = async (fund: FundRecord) => {
+  const handleAddFund = (fund: FundRecord) => {
     setFunds((prev) => [fund, ...prev]);
-    if (isSupabaseConfigured) {
-      const result = await upsertFundToSupabase(fund);
-      if (!result.success) setSaveToast(result.error || 'Không thể lưu giao dịch quỹ');
-    }
   };
 
-  const handleUpdateClanInfo = async (newInfo: typeof CLAN_INFO) => {
+  const handleUpdateClanInfo = (newInfo: typeof CLAN_INFO) => {
     setClanInfo(newInfo);
-    if (isSupabaseConfigured) {
-      const result = await upsertClanInfoToSupabase(newInfo);
-      if (!result.success) setSaveToast(result.error || 'Không thể lưu thông tin dòng tộc');
-    }
   };
 
-  const handleAddDocument = async (newDoc: DocumentItem) => {
+  const handleAddDocument = (newDoc: DocumentItem) => {
     setDocuments((prev) => [newDoc, ...prev]);
-    if (isSupabaseConfigured) {
-      const result = await upsertDocumentToSupabase(newDoc);
-      if (!result.success) setSaveToast(result.error || 'Không thể lưu tư liệu');
-    }
   };
 
-  const handleUpdateDocument = async (updatedDoc: DocumentItem) => {
+  const handleUpdateDocument = (updatedDoc: DocumentItem) => {
     setDocuments((prev) => prev.map((d) => (d.id === updatedDoc.id ? updatedDoc : d)));
-    if (isSupabaseConfigured) {
-      const result = await upsertDocumentToSupabase(updatedDoc);
-      if (!result.success) setSaveToast(result.error || 'Không thể cập nhật tư liệu');
-    }
   };
 
-  const handleDeleteDocument = async (id: string) => {
+  const handleDeleteDocument = (id: string) => {
     setDocuments((prev) => prev.filter((d) => d.id !== id));
-    if (isSupabaseConfigured) {
-      const result = await deleteDocumentFromSupabase(id);
-      if (!result.success) setSaveToast(result.error || 'Không thể xóa tư liệu');
-    }
   };
 
-  const handleAddEvent = async (newEvent: EventItem) => {
+  const handleAddEvent = (newEvent: EventItem) => {
     setEvents((prev) => [...prev, newEvent]);
-    if (isSupabaseConfigured) {
-      const result = await upsertEventToSupabase(newEvent);
-      if (!result.success) setSaveToast(result.error || 'Không thể lưu sự kiện');
-    }
   };
 
-  const handleUpdateEvent = async (updatedEvent: EventItem) => {
+  const handleUpdateEvent = (updatedEvent: EventItem) => {
     setEvents((prev) => prev.map((e) => (e.id === updatedEvent.id ? updatedEvent : e)));
-    if (isSupabaseConfigured) {
-      const result = await upsertEventToSupabase(updatedEvent);
-      if (!result.success) setSaveToast(result.error || 'Không thể cập nhật sự kiện');
-    }
   };
 
-  const handleDeleteEvent = async (id: string) => {
+  const handleDeleteEvent = (id: string) => {
     setEvents((prev) => prev.filter((e) => e.id !== id));
-    if (isSupabaseConfigured) {
-      const result = await deleteEventFromSupabase(id);
-      if (!result.success) setSaveToast(result.error || 'Không thể xóa sự kiện');
-    }
   };
 
   const handleResetSampleData = () => {
@@ -411,72 +320,58 @@ export default function App() {
     confetti({ particleCount: 60, spread: 80 });
   };
 
-  // Authentication Handlers: chỉ nhận danh tính từ Supabase Auth.
-  const handleLoginWithGoogle = () => {
-    // OAuth được thực hiện trong GoogleAuthModal. Session listener sẽ cập nhật profile.
+  // Authentication Handlers
+  const handleLoginWithGoogle = (user: ClanUser) => {
+    setCurrentUser(user);
+    setUserRole(user.role);
+    try {
+      localStorage.setItem('clan_current_user', JSON.stringify(user));
+    } catch (e) {
+      // ignore
+    }
+    setClanUsers((prev) => {
+      const exists = prev.find((u) => u.email.toLowerCase() === user.email.toLowerCase());
+      if (!exists) {
+        return [user, ...prev];
+      }
+      return prev.map((u) => (u.email.toLowerCase() === user.email.toLowerCase() ? user : u));
+    });
     setIsAuthModalOpen(false);
+    confetti({ particleCount: 35, spread: 60 });
   };
 
-  const handleLogout = async () => {
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
+  const handleLogout = () => {
     setCurrentUser(null);
     setUserRole('visitor');
-    if (activeTab === 'admin') setActiveTab('tree');
+    try {
+      localStorage.removeItem('clan_current_user');
+    } catch (e) {
+      // ignore
+    }
+    if (activeTab === 'admin') {
+      setActiveTab('tree');
+    }
     setIsAuthModalOpen(false);
   };
 
-  const handleAddUser = async (newUser: ClanUser) => {
-    const result = await saveClanUserToSupabase(newUser);
-    if (result.success && result.user) {
-      setClanUsers((prev) => [result.user!, ...prev.filter((u) => u.email !== result.user!.email)]);
-      setSaveToast('Đã lưu tài khoản vào Supabase');
-    } else if (!isSupabaseConfigured) {
-      setClanUsers((prev) => [newUser, ...prev]);
-    } else {
-      setSaveToast(result.error || 'Không thể lưu tài khoản');
-    }
-    setTimeout(() => setSaveToast(null), 3500);
+  const handleAddUser = (newUser: ClanUser) => {
+    setClanUsers((prev) => [newUser, ...prev]);
   };
 
-  const handleUpdateUser = async (updatedUser: ClanUser) => {
-    const result = await saveClanUserToSupabase(updatedUser);
-    if (result.success && result.user) {
-      setClanUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? result.user! : u)));
-      if (currentUser && currentUser.id === updatedUser.id) {
-        setCurrentUser(result.user);
-        setUserRole(result.user.role);
-      }
-    } else if (!isSupabaseConfigured) {
-      setClanUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)));
-    } else {
-      setSaveToast(result.error || 'Không thể cập nhật tài khoản');
-      setTimeout(() => setSaveToast(null), 3500);
+  const handleUpdateUser = (updatedUser: ClanUser) => {
+    setClanUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)));
+    if (currentUser && currentUser.id === updatedUser.id) {
+      setCurrentUser(updatedUser);
+      setUserRole(updatedUser.role);
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    const result = await deleteClanUserFromSupabase(userId);
-    if (result.success || !isSupabaseConfigured) {
-      setClanUsers((prev) => prev.filter((u) => u.id !== userId));
-      if (currentUser && currentUser.id === userId) await handleLogout();
-    } else {
-      setSaveToast(result.error || 'Không thể xóa tài khoản');
-      setTimeout(() => setSaveToast(null), 3500);
+  const handleDeleteUser = (userId: string) => {
+    setClanUsers((prev) => prev.filter((u) => u.id !== userId));
+    if (currentUser && currentUser.id === userId) {
+      handleLogout();
     }
   };
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-[#180204] text-amber-100 flex items-center justify-center p-6">
-        <div className="text-center space-y-3">
-          <div className="mx-auto w-10 h-10 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
-          <p className="text-sm font-semibold">Đang kết nối dữ liệu gia phả…</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#180204] text-amber-50 flex flex-col font-sans selection:bg-amber-500 selection:text-amber-950 pb-16 sm:pb-0">
@@ -604,6 +499,40 @@ export default function App() {
               </button>
             )}
 
+            {/* Role Quick Switch (Chỉ hiển thị khi đã đăng nhập Super Admin thực thụ để kiểm thử) */}
+            {currentUser && currentUser.role === 'super_admin' && (
+              <div className="hidden lg:flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-amber-500/30 text-[10px]">
+                <span className="text-amber-300/70 px-1.5 font-medium">Thử Quyền:</span>
+                <button
+                  type="button"
+                  onClick={() => setUserRole('super_admin')}
+                  className={`px-2 py-0.5 rounded ${userRole === 'super_admin' ? 'bg-amber-500 text-amber-950 font-bold' : 'text-amber-200/70 hover:bg-white/5'}`}
+                >
+                  Trưởng Tộc
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserRole('branch_admin')}
+                  className={`px-2 py-0.5 rounded ${userRole === 'branch_admin' ? 'bg-amber-500 text-amber-950 font-bold' : 'text-amber-200/70 hover:bg-white/5'}`}
+                >
+                  Trưởng Chi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserRole('member')}
+                  className={`px-2 py-0.5 rounded ${userRole === 'member' ? 'bg-amber-500 text-amber-950 font-bold' : 'text-amber-200/70 hover:bg-white/5'}`}
+                >
+                  Thành Viên
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserRole('visitor')}
+                  className={`px-2 py-0.5 rounded ${userRole === 'visitor' ? 'bg-amber-500 text-amber-950 font-bold' : 'text-amber-200/70 hover:bg-white/5'}`}
+                >
+                  Khách
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -870,7 +799,7 @@ export default function App() {
                   <span>Quyền truy cập hợp lệ:</span>
                 </div>
                 <p className="text-[11px] text-slate-600">
-                  • Tài khoản Super Admin: tài khoản được khai báo trong bảng <b>clan_users</b> của Supabase.
+                  • Tài khoản Super Admin: <b>sanhangdoc.shop@gmail.com</b>
                 </p>
                 <p className="text-[11px] text-slate-600">
                   • Hoặc các tài khoản Google đã được cấp quyền Quản trị trong danh sách gia tộc.

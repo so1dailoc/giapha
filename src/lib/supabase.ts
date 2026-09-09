@@ -88,7 +88,6 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- 2. BẢNG QUẢN LÝ TÀI KHOẢN & PHÂN QUYỀN (CLAN_USERS)
 CREATE TABLE IF NOT EXISTS public.clan_users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    auth_user_id UUID UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
     avatar_url TEXT,
@@ -100,8 +99,6 @@ CREATE TABLE IF NOT EXISTS public.clan_users (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     last_login TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
-ALTER TABLE public.clan_users ADD COLUMN IF NOT EXISTS auth_user_id UUID UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE;
 
 -- Khởi tạo sẵn Super Admin Tối Cao cho Phúc Thịnh
 INSERT INTO public.clan_users (email, name, role, status, notes)
@@ -188,9 +185,7 @@ CREATE TABLE IF NOT EXISTS public.documents (
     description TEXT,
     dynasty_era TEXT,
     author_or_preserver TEXT,
-    recorded_date TEXT,
     tags JSONB DEFAULT '[]'::jsonb,
-    images JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -205,7 +200,6 @@ CREATE TABLE IF NOT EXISTS public.events (
     lunar_year INT,
     description TEXT,
     location TEXT,
-    responsible_branch_id TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -238,23 +232,8 @@ CREATE TABLE IF NOT EXISTS public.posts (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Bổ sung an toàn cho database đã tạo từ phiên bản cũ.
-ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS recorded_date TEXT;
-ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS images JSONB DEFAULT '[]'::jsonb;
-ALTER TABLE public.events ADD COLUMN IF NOT EXISTS responsible_branch_id TEXT;
-ALTER TABLE public.members ADD COLUMN IF NOT EXISTS burial_coordinates JSONB;
-ALTER TABLE public.members ADD COLUMN IF NOT EXISTS burial_location TEXT;
-
-CREATE INDEX IF NOT EXISTS idx_members_generation ON public.members(generation);
-CREATE INDEX IF NOT EXISTS idx_members_branch_id ON public.members(branch_id);
-CREATE INDEX IF NOT EXISTS idx_members_father_id ON public.members(father_id);
-CREATE INDEX IF NOT EXISTS idx_members_mother_id ON public.members(mother_id);
-CREATE INDEX IF NOT EXISTS idx_events_member_id ON public.events(member_id);
-CREATE INDEX IF NOT EXISTS idx_events_lunar ON public.events(lunar_month, lunar_day);
-CREATE INDEX IF NOT EXISTS idx_clan_users_email ON public.clan_users(lower(email));
-
 -- ========================================================
--- THIẾT LẬP BẢO MẬT & PHÂN QUYỀN HÀNG (RLS)
+-- THIẾT LẬP BẢO MẬT & PHÂN QUYỀN HÀNG (ROW LEVEL SECURITY)
 -- ========================================================
 ALTER TABLE public.clan_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.clan_info ENABLE ROW LEVEL SECURITY;
@@ -265,154 +244,50 @@ ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.funds ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
 
--- Đồng bộ hồ sơ Google Auth -> clan_users.
-CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  INSERT INTO public.clan_users (auth_user_id, email, name, avatar_url, role, status)
-  VALUES (
-    NEW.id,
-    lower(NEW.email),
-    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
-    NEW.raw_user_meta_data->>'avatar_url',
-    CASE WHEN lower(NEW.email) = '13.phucthinh@gmail.com' THEN 'super_admin' ELSE 'member' END,
-    'active'
-  )
-  ON CONFLICT (email) DO UPDATE
-  SET auth_user_id = EXCLUDED.auth_user_id,
-      name = COALESCE(NULLIF(EXCLUDED.name, ''), public.clan_users.name),
-      avatar_url = COALESCE(EXCLUDED.avatar_url, public.clan_users.avatar_url);
-  RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
-
+-- Hàm kiểm tra quyền Super Admin (đối chiếu email từ token Google của Supabase Auth)
 CREATE OR REPLACE FUNCTION public.is_super_admin()
-RETURNS BOOLEAN
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM public.clan_users
-    WHERE auth_user_id = auth.uid()
-      AND role = 'super_admin'
-      AND status = 'active'
-  );
-$$;
-
-CREATE OR REPLACE FUNCTION public.current_user_role()
-RETURNS TEXT
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT COALESCE(
-    (SELECT role FROM public.clan_users WHERE auth_user_id = auth.uid() AND status = 'active'),
-    'visitor'
-  );
-$$;
-
-CREATE OR REPLACE FUNCTION public.is_branch_admin(target_branch_id TEXT)
-RETURNS BOOLEAN
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT public.is_super_admin()
-      OR EXISTS (
-        SELECT 1 FROM public.clan_users
-        WHERE auth_user_id = auth.uid()
-          AND status = 'active'
-          AND role = 'branch_admin'
-          AND branch_id = target_branch_id
-      );
-$$;
-
--- Xóa policy cũ để script có thể chạy lại nhiều lần.
-DO $$
-DECLARE p RECORD;
+RETURNS BOOLEAN AS $$
 BEGIN
-  FOR p IN
-    SELECT policyname, tablename
-    FROM pg_policies
-    WHERE schemaname = 'public'
-      AND tablename IN ('clan_users','clan_info','branches','members','documents','events','funds','posts')
-  LOOP
-    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', p.policyname, p.tablename);
-  END LOOP;
-END $$;
+    RETURN (
+        auth.jwt() ->> 'email' = '13.phucthinh@gmail.com'
+        OR EXISTS (
+            SELECT 1 FROM public.clan_users
+            WHERE email = auth.jwt() ->> 'email'
+              AND role = 'super_admin'
+              AND status = 'active'
+        )
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Dữ liệu gia phả công khai: chỉ đọc các bảng không chứa thông tin tài khoản riêng.
-CREATE POLICY "Public read members" ON public.members FOR SELECT USING (true);
-CREATE POLICY "Public read branches" ON public.branches FOR SELECT USING (true);
-CREATE POLICY "Public read documents" ON public.documents FOR SELECT USING (true);
-CREATE POLICY "Public read events" ON public.events FOR SELECT USING (true);
-CREATE POLICY "Public read clan info" ON public.clan_info FOR SELECT USING (true);
-CREATE POLICY "Public read posts" ON public.posts FOR SELECT USING (true);
+-- Chính sách đọc: Mọi người dùng (kể cả khách) đều có thể xem dữ liệu gia phả công khai
+CREATE POLICY "Public Read Members" ON public.members FOR SELECT USING (true);
+CREATE POLICY "Public Read Branches" ON public.branches FOR SELECT USING (true);
+CREATE POLICY "Public Read Documents" ON public.documents FOR SELECT USING (true);
+CREATE POLICY "Public Read Events" ON public.events FOR SELECT USING (true);
+CREATE POLICY "Public Read Funds" ON public.funds FOR SELECT USING (true);
+CREATE POLICY "Public Read Posts" ON public.posts FOR SELECT USING (true);
+CREATE POLICY "Public Read Clan Info" ON public.clan_info FOR SELECT USING (true);
+CREATE POLICY "Public Read Clan Users" ON public.clan_users FOR SELECT USING (true);
 
--- Sổ quỹ mặc định chỉ người đã đăng nhập mới xem.
-CREATE POLICY "Authenticated read funds" ON public.funds
-FOR SELECT USING (auth.uid() IS NOT NULL);
+-- Chính sách ghi: Chỉ Super Admin hoặc tài khoản quản trị được sửa dữ liệu phả hệ
+CREATE POLICY "Super Admin Manage Members" ON public.members 
+FOR ALL USING (public.is_super_admin() OR auth.role() = 'service_role');
 
--- Người dùng chỉ xem hồ sơ tài khoản của mình; Super Admin xem toàn bộ.
-CREATE POLICY "Users read own profile" ON public.clan_users
-FOR SELECT USING (auth.uid() = auth_user_id OR public.is_super_admin());
+CREATE POLICY "Super Admin Manage Documents" ON public.documents 
+FOR ALL USING (public.is_super_admin() OR auth.role() = 'service_role');
 
--- Super Admin toàn quyền.
-CREATE POLICY "Super admin members" ON public.members
-FOR ALL USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
-CREATE POLICY "Super admin branches" ON public.branches
-FOR ALL USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
-CREATE POLICY "Super admin documents" ON public.documents
-FOR ALL USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
-CREATE POLICY "Super admin events" ON public.events
-FOR ALL USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
-CREATE POLICY "Super admin funds" ON public.funds
-FOR ALL USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
-CREATE POLICY "Super admin posts" ON public.posts
-FOR ALL USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
-CREATE POLICY "Super admin clan info" ON public.clan_info
-FOR ALL USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
-CREATE POLICY "Super admin clan users" ON public.clan_users
-FOR ALL USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
+CREATE POLICY "Super Admin Manage Events" ON public.events 
+FOR ALL USING (public.is_super_admin() OR auth.role() = 'service_role');
 
--- Trưởng Chi chỉ được sửa thành viên trong chi của mình.
-CREATE POLICY "Branch admin manage members" ON public.members
-FOR ALL
-USING (public.is_branch_admin(branch_id))
-WITH CHECK (public.is_branch_admin(branch_id));
+CREATE POLICY "Super Admin Manage Clan Users" ON public.clan_users 
+FOR ALL USING (public.is_super_admin() OR auth.role() = 'service_role');
 
--- Editor được chỉnh tài liệu/bài viết, không được đổi tài khoản hay thành viên.
-CREATE POLICY "Editor manage documents" ON public.documents
-FOR ALL USING (public.current_user_role() IN ('editor','super_admin'))
-WITH CHECK (public.current_user_role() IN ('editor','super_admin'));
+CREATE POLICY "Super Admin Manage Clan Info" ON public.clan_info 
+FOR ALL USING (public.is_super_admin() OR auth.role() = 'service_role');
 
-CREATE POLICY "Editor manage posts" ON public.posts
-FOR INSERT WITH CHECK (public.current_user_role() IN ('editor','member','super_admin'));
-
--- Người dùng đã xác thực có thể cập nhật chính hồ sơ của mình ở mức thông tin đồng bộ,
--- nhưng không được tự nâng role vì UPDATE clan_users chỉ Super Admin.
--- Dữ liệu hiện có: liên kết tài khoản cũ với auth.users nếu email trùng.
-UPDATE public.clan_users cu
-SET auth_user_id = au.id
-FROM auth.users au
-WHERE lower(cu.email) = lower(au.email)
-  AND cu.auth_user_id IS NULL;
-
-NOTIFY pgrst, 'reload schema';
+CREATE POLICY "Authenticated Members Create Posts" ON public.posts 
+FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 `;
 
 // Script SQL sửa lỗi tức thì cột burial_coordinates cho database Supabase đang chạy

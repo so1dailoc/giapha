@@ -1,5 +1,4 @@
 import { supabase, isSupabaseConfigured } from './supabase';
-import type { User } from '@supabase/supabase-js';
 import { Member, Branch, EventItem, DocumentItem, ClanUser, ClanInfo, FundRecord, PostItem } from '../types';
 
 /**
@@ -100,108 +99,6 @@ export function dbRowToMember(row: Record<string, any>): Member {
   };
 }
 
-
-
-export async function fetchClanUsersFromSupabase(): Promise<ClanUser[]> {
-  if (!supabase || !isSupabaseConfigured) return [];
-  const { data, error } = await supabase
-    .from('clan_users')
-    .select('*')
-    .order('created_at', { ascending: true });
-  if (error || !data) return [];
-
-  return data.map((row) => ({
-    id: row.id,
-    email: row.email,
-    name: row.name,
-    avatarUrl: row.avatar_url || undefined,
-    role: row.role as ClanUser['role'],
-    memberId: row.member_id || undefined,
-    branchId: row.branch_id || undefined,
-    createdAt: row.created_at,
-    lastLogin: row.last_login || undefined,
-    status: row.status as ClanUser['status'],
-    notes: row.notes || undefined,
-  }));
-}
-
-export async function saveClanUserToSupabase(user: ClanUser): Promise<{ success: boolean; user?: ClanUser; error?: string }> {
-  if (!supabase || !isSupabaseConfigured) return { success: false, error: 'Supabase chưa được cấu hình.' };
-
-  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(user.id)
-    ? user.id
-    : crypto.randomUUID();
-
-  const row = {
-    id: uuid,
-    email: user.email.trim().toLowerCase(),
-    name: user.name.trim(),
-    avatar_url: user.avatarUrl || null,
-    role: user.role,
-    member_id: user.memberId || null,
-    branch_id: user.branchId || null,
-    status: user.status,
-    notes: user.notes || null,
-    last_login: user.lastLogin || null,
-  };
-
-  const { data, error } = await supabase.from('clan_users').upsert(row, { onConflict: 'id' }).select('*').single();
-  if (error || !data) return { success: false, error: error?.message || 'Không thể lưu tài khoản.' };
-
-  return {
-    success: true,
-    user: {
-      id: data.id,
-      email: data.email,
-      name: data.name,
-      avatarUrl: data.avatar_url || undefined,
-      role: data.role as ClanUser['role'],
-      memberId: data.member_id || undefined,
-      branchId: data.branch_id || undefined,
-      createdAt: data.created_at,
-      lastLogin: data.last_login || undefined,
-      status: data.status as ClanUser['status'],
-      notes: data.notes || undefined,
-    },
-  };
-}
-
-export async function deleteClanUserFromSupabase(id: string): Promise<{ success: boolean; error?: string }> {
-  if (!supabase || !isSupabaseConfigured) return { success: false, error: 'Supabase chưa được cấu hình.' };
-  const { error } = await supabase.from('clan_users').delete().eq('id', id);
-  return error ? { success: false, error: error.message } : { success: true };
-}
-
-export async function fetchCurrentClanUser(authUser: User): Promise<ClanUser | null> {
-  if (!supabase || !isSupabaseConfigured) return null;
-
-  const email = authUser.email?.trim().toLowerCase();
-  if (!email) return null;
-
-  const { data, error } = await supabase
-    .from('clan_users')
-    .select('*')
-    .eq('email', email)
-    .eq('status', 'active')
-    .maybeSingle();
-
-  if (error || !data) return null;
-
-  return {
-    id: data.id,
-    email: data.email,
-    name: data.name || authUser.user_metadata?.full_name || email.split('@')[0],
-    avatarUrl: data.avatar_url || authUser.user_metadata?.avatar_url,
-    role: data.role as ClanUser['role'],
-    memberId: data.member_id || undefined,
-    branchId: data.branch_id || undefined,
-    createdAt: data.created_at,
-    lastLogin: data.last_login,
-    status: data.status,
-    notes: data.notes || undefined,
-  };
-}
-
 export interface SaveMemberResult {
   success: boolean;
   error?: string | null;
@@ -273,134 +170,6 @@ export async function deleteMemberFromSupabase(id: string): Promise<{ success: b
 /**
  * Tải danh sách thành viên từ Supabase
  */
-
-
-export async function upsertClanInfoToSupabase(info: ClanInfo) {
-  if (!supabase || !isSupabaseConfigured) return { success: false, error: 'Supabase chưa được cấu hình.' };
-  const { error } = await supabase.from('clan_info').upsert({
-    id: 'main_clan', name: info.name, branch_subtitle: info.branchSubtitle,
-    ancestral_hall: info.ancestralHall, address: info.address, founding_year: info.foundingYear,
-    motto: info.motto, motto_meaning: info.mottoMeaning, updated_at: new Date().toISOString(),
-  });
-  return error ? { success: false, error: error.message } : { success: true };
-}
-
-export async function upsertEventToSupabase(e: EventItem) {
-  if (!supabase || !isSupabaseConfigured) return { success: false, error: 'Supabase chưa được cấu hình.' };
-  const { error } = await supabase.from('events').upsert({
-    id: e.id, title: e.title, type: e.type, member_id: e.memberId || null,
-    lunar_day: e.lunarDay, lunar_month: e.lunarMonth, lunar_year: e.lunarYear || null,
-    description: e.description, location: e.location, responsible_branch_id: e.responsibleBranchId || null,
-  }, { onConflict: 'id' });
-  return error ? { success: false, error: error.message } : { success: true };
-}
-
-export async function deleteEventFromSupabase(id: string) {
-  if (!supabase || !isSupabaseConfigured) return { success: false, error: 'Supabase chưa được cấu hình.' };
-  const { error } = await supabase.from('events').delete().eq('id', id);
-  return error ? { success: false, error: error.message } : { success: true };
-}
-
-export async function upsertDocumentToSupabase(d: DocumentItem) {
-  if (!supabase || !isSupabaseConfigured) return { success: false, error: 'Supabase chưa được cấu hình.' };
-  const { error } = await supabase.from('documents').upsert({
-    id: d.id, title: d.title, category: d.category, category_label: d.categoryLabel,
-    file_url: d.fileUrl, file_type: d.fileType, description: d.description,
-    recorded_date: d.recordedDate || null, dynasty_era: d.dynastyEra || null,
-    author_or_preserver: d.authorOrPreserver || null, tags: d.tags || [], images: d.images || [],
-  }, { onConflict: 'id' });
-  return error ? { success: false, error: error.message } : { success: true };
-}
-
-export async function deleteDocumentFromSupabase(id: string) {
-  if (!supabase || !isSupabaseConfigured) return { success: false, error: 'Supabase chưa được cấu hình.' };
-  const { error } = await supabase.from('documents').delete().eq('id', id);
-  return error ? { success: false, error: error.message } : { success: true };
-}
-
-export async function upsertFundToSupabase(f: FundRecord) {
-  if (!supabase || !isSupabaseConfigured) return { success: false, error: 'Supabase chưa được cấu hình.' };
-  const { error } = await supabase.from('funds').upsert({
-    id: f.id, title: f.title, type: f.type, amount: f.amount,
-    contributor_or_receiver: f.contributorOrReceiver, date: f.date, purpose: f.purpose,
-    branch_name: f.branchName || null, receipt_number: f.receiptNumber || null,
-  }, { onConflict: 'id' });
-  return error ? { success: false, error: error.message } : { success: true };
-}
-
-export async function upsertPostToSupabase(post: PostItem) {
-  if (!supabase || !isSupabaseConfigured) return { success: false, error: 'Supabase chưa được cấu hình.' };
-  const { error } = await supabase.from('posts').upsert({
-    id: post.id, title: post.title, author_name: post.authorName, author_role: post.authorRole,
-    avatar_url: post.avatarUrl || null, created_at: post.createdAt, category: post.category,
-    content: post.content, images: post.images || [], likes_count: post.likesCount, comments_count: post.commentsCount,
-  }, { onConflict: 'id' });
-  return error ? { success: false, error: error.message } : { success: true };
-}
-
-export interface ClanDataSnapshot {
-  clanInfo?: ClanInfo;
-  branches?: Branch[];
-  events?: EventItem[];
-  documents?: DocumentItem[];
-  funds?: FundRecord[];
-  posts?: PostItem[];
-}
-
-export async function fetchClanDataFromSupabase(): Promise<ClanDataSnapshot> {
-  if (!supabase || !isSupabaseConfigured) return {};
-
-  const [clanInfo, branches, events, documents, funds, posts] = await Promise.all([
-    supabase.from('clan_info').select('*').eq('id', 'main_clan').maybeSingle(),
-    supabase.from('branches').select('*').order('name'),
-    supabase.from('events').select('*').order('lunar_month').order('lunar_day'),
-    supabase.from('documents').select('*').order('created_at', { ascending: false }),
-    supabase.from('funds').select('*').order('date', { ascending: false }),
-    supabase.from('posts').select('*').order('created_at', { ascending: false }),
-  ]);
-
-  return {
-    clanInfo: clanInfo.data ? {
-      name: clanInfo.data.name,
-      branchSubtitle: clanInfo.data.branch_subtitle || '',
-      ancestralHall: clanInfo.data.ancestral_hall || '',
-      address: clanInfo.data.address || '',
-      foundingYear: clanInfo.data.founding_year || 0,
-      motto: clanInfo.data.motto || '',
-      mottoMeaning: clanInfo.data.motto_meaning || '',
-    } : undefined,
-    branches: branches.data?.map((b) => ({
-      id: b.id, name: b.name, code: b.code, leaderId: b.leader_id || undefined,
-      description: b.description || undefined, ancestorId: b.ancestor_id || undefined,
-      colorAccent: b.color_accent || undefined,
-    })),
-    events: events.data?.map((e) => ({
-      id: e.id, title: e.title, type: e.type, memberId: e.member_id || undefined,
-      memberName: undefined, lunarDay: e.lunar_day, lunarMonth: e.lunar_month,
-      lunarYear: e.lunar_year || undefined, description: e.description || '',
-      location: e.location || '', responsibleBranchId: e.responsible_branch_id || undefined,
-    })),
-    documents: documents.data?.map((d) => ({
-      id: d.id, title: d.title, category: d.category, categoryLabel: d.category_label,
-      fileUrl: d.file_url, fileType: d.file_type, description: d.description || '',
-      recordedDate: d.recorded_date || undefined, dynastyEra: d.dynasty_era || undefined,
-      authorOrPreserver: d.author_or_preserver || undefined,
-      tags: Array.isArray(d.tags) ? d.tags : [], images: Array.isArray(d.images) ? d.images : [],
-    })),
-    funds: funds.data?.map((f) => ({
-      id: f.id, title: f.title, type: f.type, amount: Number(f.amount) || 0,
-      contributorOrReceiver: f.contributor_or_receiver, date: f.date, purpose: f.purpose,
-      branchName: f.branch_name || undefined, receiptNumber: f.receipt_number || undefined,
-    })),
-    posts: posts.data?.map((post) => ({
-      id: post.id, title: post.title, authorName: post.author_name, authorRole: post.author_role,
-      avatarUrl: post.avatar_url || undefined, createdAt: post.created_at, category: post.category,
-      content: post.content, images: Array.isArray(post.images) ? post.images : [],
-      likesCount: post.likes_count || 0, commentsCount: post.comments_count || 0,
-    })),
-  };
-}
-
 export async function fetchMembersFromSupabase(): Promise<{ members: Member[] | null; error?: string }> {
   if (!supabase || !isSupabaseConfigured) {
     return { members: null };
@@ -472,58 +241,17 @@ export async function seedAllClanDataToSupabase(params: {
     const memberRows = params.members.map(memberToDbRow);
     let memberError = (await supabase.from('members').upsert(memberRows, { onConflict: 'id' })).error;
 
-    if (memberError && memberError.message.toLowerCase().includes('burial_coordinates')) {
+    if (memberError && memberError.message.includes('burial_coordinates')) {
+      // Fallback không có burial_coordinates
       const fallbackMemberRows = memberRows.map(({ burial_coordinates, ...rest }) => rest);
       memberError = (await supabase.from('members').upsert(fallbackMemberRows, { onConflict: 'id' })).error;
     }
-    if (memberError) throw memberError;
 
-    // 4. Lưu sự kiện
-    if (params.events.length) {
-      const { error } = await supabase.from('events').upsert(params.events.map((e) => ({
-        id: e.id, title: e.title, type: e.type, member_id: e.memberId || null,
-        lunar_day: e.lunarDay, lunar_month: e.lunarMonth, lunar_year: e.lunarYear || null,
-        description: e.description, location: e.location,
-      })), { onConflict: 'id' });
-      if (error) throw error;
+    if (memberError) {
+      throw memberError;
     }
 
-    // 5. Lưu tư liệu
-    if (params.documents.length) {
-      const { error } = await supabase.from('documents').upsert(params.documents.map((d) => ({
-        id: d.id, title: d.title, category: d.category, category_label: d.categoryLabel,
-        file_url: d.fileUrl, file_type: d.fileType, description: d.description,
-        dynasty_era: d.dynastyEra || null, author_or_preserver: d.authorOrPreserver || null,
-        tags: d.tags || [], created_at: d.recordedDate || undefined,
-      })), { onConflict: 'id' });
-      if (error) throw error;
-    }
-
-    // 6. Lưu quỹ
-    if (params.funds.length) {
-      const { error } = await supabase.from('funds').upsert(params.funds.map((f) => ({
-        id: f.id, title: f.title, type: f.type, amount: f.amount,
-        contributor_or_receiver: f.contributorOrReceiver, date: f.date,
-        purpose: f.purpose, branch_name: f.branchName || null, receipt_number: f.receiptNumber || null,
-      })), { onConflict: 'id' });
-      if (error) throw error;
-    }
-
-    // 7. Lưu bài viết
-    if (params.posts.length) {
-      const { error } = await supabase.from('posts').upsert(params.posts.map((p) => ({
-        id: p.id, title: p.title, author_name: p.authorName, author_role: p.authorRole,
-        avatar_url: p.avatarUrl || null, created_at: p.createdAt, category: p.category,
-        content: p.content, images: p.images || [], likes_count: p.likesCount, comments_count: p.commentsCount,
-      })), { onConflict: 'id' });
-      if (error) throw error;
-    }
-
-    return {
-      success: true,
-      count: params.members.length + params.branches.length + params.events.length +
-        params.documents.length + params.funds.length + params.posts.length,
-    };
+    return { success: true, count: params.members.length };
   } catch (err: any) {
     return { success: false, count: 0, error: err?.message || 'Lỗi khi đồng bộ lên Supabase' };
   }

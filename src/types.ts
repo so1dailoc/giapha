@@ -134,6 +134,9 @@ export interface FundRecord {
   receiptNumber?: string;
 }
 
+export type TreeViewMode = 'graph_canvas' | 'book_outline';
+export type LayoutAlgorithm = 'family_cluster' | 'flat_generation';
+
 export interface FamilyTreeSettings {
   theme: 'traditional' | 'modern';
   fontFamily?: 'be-vietnam' | 'merriweather' | 'sans';
@@ -141,8 +144,25 @@ export interface FamilyTreeSettings {
   showDates: boolean;
   showDaughters: boolean;
   showAvatars: boolean;
+  showTitles?: boolean; // Thứ bậc (Trưởng, Thứ...), Tự, Thụy
+  showHierarchy?: boolean; // Hiển thị Phái • Chi • Nhánh trên thẻ
+  showBirthPlace?: boolean; // Hiển thị Nơi sinh / An táng
   orientation: 'vertical' | 'horizontal';
   zoomLevel: number;
+  
+  // 5 Optimization Solutions for Dense / Wide Generations:
+  viewMode?: TreeViewMode; // PA 5: Cây Đồ Họa 2D vs Sổ Phả Hệ Dọc
+  layoutAlgorithm?: LayoutAlgorithm; // PA 3: Thuật toán Cụm Gia Đình vs Dàn Đều Hàng Ngang
+  enableCollapsible?: boolean; // PA 1: Nút Thu Gọn / Mở Rộng Nhánh Con [+] / [-]
+  autoCollapseDeepGens?: boolean; // PA 1: Tự động thu gọn từ Đời 7 trở đi
+  enableZigZagRows?: boolean; // PA 4: Xếp so le 2 tầng cho gia đình >= 5 con
+  focusedSubtreeRootId?: string | null; // PA 2: Xem riêng nhánh con cháu của một cụ
+
+  // Phương Án Thẻ Dọc Tên Sổ Dọc & Khoảng Cách Thẻ:
+  enableVerticalCards?: boolean; // Bật phương án thẻ dọc từ đời sâu (tiết kiệm 70% chiều rộng)
+  verticalCardStartGen?: number; // Đời bắt đầu áp dụng thẻ dọc (mặc định: 6)
+  cardHorizontalGap?: number; // Khoảng cách ngang giữa 2 anh em trong cùng nhà (px)
+  interFamilyGap?: number; // Khoảng cách giữa các cụm gia đình khác nhau để chống đè line (px)
 }
 
 export interface RelationshipResult {
@@ -165,5 +185,12 @@ export interface ClanInfo {
   foundingYear: number;
   motto: string;
   mottoMeaning: string;
+  // Cấu hình hiển thị cây phả hệ do Admin chỉ định
+  defaultTreeSettings?: Partial<FamilyTreeSettings>;
+  allowUserViewCustomization?: boolean; // Cho phép người xem tự do chuyển đổi phương án
+  // Thông tin liên hệ cập nhật & bổ sung gia phả (hiển thị trong hồ sơ chi tiết thành viên)
+  contactNotice?: string;
+  contactPhone?: string;
+  contactEmail?: string;
 }
 

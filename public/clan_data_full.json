@@ -1,1049 +1,1118 @@
-import { Member, Branch, EventItem, DocumentItem, PostItem, FundRecord } from '../types';
-
-export const CLAN_INFO = {
-  name: 'GIA PHẢ TỘC VĂN',
-  branchSubtitle: 'Phả Hệ Tộc Văn (Văn Bá • Văn Tấn • Văn Phú) - Gốc tại Quảng Nam',
-  ancestralHall: 'Từ Đường Tộc Văn Bá & Nghĩa Trang Gia Tộc Gò Khoai',
-  address: 'Làng Mỹ Xuyên Tây, nay thuộc Thị trấn Nam Phước, huyện Duy Xuyên, tỉnh Quảng Nam',
-  foundingYear: 1680,
-  motto: 'ẨM THỦY TƯ NGUYÊN - VĂN KHÍ TRƯỜNG TỒN',
-  mottoMeaning: 'Nhớ về cội nguồn Thanh Hóa - Mỹ Xuyên, đoàn kết các chi phái Văn Bá, Văn Tấn, Văn Phú muôn đời bền vững',
-  defaultTreeSettings: {
-    viewMode: 'graph_canvas',
-    layoutAlgorithm: 'family_cluster',
-    autoCollapseDeepGens: true,
-    enableZigZagRows: true,
-    enableVerticalCards: false, // Mặc định dùng thẻ ngang chuẩn đồng nhất cho tất cả các đời
-    verticalCardStartGen: 6,
-    cardHorizontalGap: 30, // Khoảng cách giữa 2 anh em trong cùng gia đình
-    interFamilyGap: 110, // Khoảng cách rộng giữa các cụm gia đình khác nhau để chống đè chéo line
-    showDates: false, // Mặc định chỉ hiển thị Tên và Đời
-    showSpouses: false,
-    showAvatars: false,
-    showTitles: false,
-    showHierarchy: false,
-    showBirthPlace: false,
+{
+  "version": "2023.07.20",
+  "description": "Toàn bộ dữ liệu Gia phả Đại Tộc Văn (Đời 1 đến Đời 9) - Cập nhật từ Bản thảo Gia Phả Tộc Văn",
+  "exportedAt": "2026-09-08T16:06:27.318Z",
+  "clanInfo": {
+    "name": "GIA PHẢ TỘC VĂN",
+    "branchSubtitle": "Phả Hệ Tộc Văn (Văn Bá • Văn Tấn • Văn Phú) - Gốc tại Quảng Nam",
+    "ancestralHall": "Từ Đường Tộc Văn Bá & Nghĩa Trang Gia Tộc Gò Khoai",
+    "address": "Làng Mỹ Xuyên Tây, nay thuộc Thị trấn Nam Phước, huyện Duy Xuyên, tỉnh Quảng Nam",
+    "foundingYear": 1680,
+    "motto": "ẨM THỦY TƯ NGUYÊN - VĂN KHÍ TRƯỜNG TỒN",
+    "mottoMeaning": "Nhớ về cội nguồn Thanh Hóa - Mỹ Xuyên, đoàn kết các chi phái Văn Bá, Văn Tấn, Văn Phú muôn đời bền vững"
   },
-  allowUserViewCustomization: true,
-  contactNotice: 'Gia phả hiện đang được Ban Quản Trị cập nhật liên tục. Nếu có sai sót về niên biểu, danh xưng hoặc cần bổ sung con cháu, phối ngẫu, xin vui lòng liên hệ Ban Quản Trị:',
-  contactPhone: '0905.123.456',
-  contactEmail: 'bqt.giaphatocvan@gmail.com',
-};
-
-export const INITIAL_BRANCHES: Branch[] = [
-  {
-    id: 'branch-vbxt',
-    name: 'Phái II - Xuyên Tây (VBXT)',
-    code: 'PHAI-II-VBXT',
-    leaderId: 'mem-506',
-    description: 'Tộc Văn Bá – Làng cũ Mỹ Xuyên Tây, nay thuộc TT. Nam Phước, huyện Duy Xuyên, Quảng Nam. Thờ phụng Tổ tiên tại Từ Đường Tộc Văn Bá (TT. Nam Phước) và Nghĩa trang Gia tộc Gò Khoai.',
-    ancestorId: 'mem-101',
-    colorAccent: '#dc2626', // Red
-  },
-  {
-    id: 'branch-vtqx',
-    name: 'Phái II - Quế Xuân (VTQX)',
-    code: 'PHAI-II-VTQX',
-    leaderId: 'mem-501',
-    description: 'Chi Tộc Văn Tấn – Quế Xuân, khởi từ ngài Ngũ thế Tiên tổ Văn Tấn Vinh tại làng cũ Xuân Phú, nay thuộc xã Quế Xuân, huyện Quế Sơn, Quảng Nam. Có Nhà thờ Tộc Văn Tấn tại Quế Xuân.',
-    ancestorId: 'mem-501',
-    colorAccent: '#2563eb', // Blue
-  },
-  {
-    id: 'branch-vbdl',
-    name: 'Phái II - Đại Lộc (VBĐL)',
-    code: 'PHAI-II-VBĐL',
-    leaderId: 'mem-504',
-    description: 'Chi Tộc Văn Bá – Đại Lộc (Chi Hà Nha), khởi từ ngài Ngũ thế Tiên tổ Văn Bá Hình tại làng cũ Hà Dục Đông, Hà Dục Tây, nay thuộc Đại Lộc, Quảng Nam. Nhà thờ Tộc tại Hà Nha, Đại Đồng.',
-    ancestorId: 'mem-504',
-    colorAccent: '#d97706', // Amber Gold
-  },
-  {
-    id: 'branch-vpxd',
-    name: 'Phái III - Xuyên Đông (VPXĐ)',
-    code: 'PHAI-III-VPXĐ',
-    leaderId: 'mem-402',
-    description: 'Chi Tộc Văn Phú – Xuyên Đông, khởi từ hai ngài Tuyên tổ Văn Phú Trạch và Văn Phú Súy tại làng cũ Mỹ Xuyên Đông, nay thuộc TT. Nam Phước, Duy Xuyên. Nhà thờ Chi Tộc Văn Phú tại Xuyên Đông.',
-    ancestorId: 'mem-302',
-    colorAccent: '#059669', // Emerald Green
-  },
-  {
-    id: 'branch-vpxt',
-    name: 'Phái IV - Xuyên Tây (VPXT)',
-    code: 'PHAI-IV-VPXT',
-    leaderId: 'mem-404',
-    description: 'Chi Tộc Văn Phú – Xuyên Tây, khởi từ ngài Tuyên tổ Văn Phú Bơi tại làng cũ Mỹ Xuyên Tây, chung Nhà thờ Tộc Văn Phú tại Mỹ Xuyên Đông.',
-    ancestorId: 'mem-303',
-    colorAccent: '#7c3aed', // Purple
-  },
-  {
-    id: 'branch-phai1',
-    name: 'Phái I - Tiền Hiền (Trưởng Phái)',
-    code: 'PHAI-I-VBXT',
-    leaderId: 'mem-101',
-    description: 'Phái I Văn Bá - Xuyên Tây: Con trưởng và cháu đích tôn của ngài Khải tổ mất sớm, mộ táng tại Cồn Đình, năm 1976 cải táng về Nghĩa trang Gia tộc Gò Khoai.',
-    ancestorId: 'mem-101',
-    colorAccent: '#b45309', // Warm Bronze
-  },
-];
-
-export const INITIAL_MEMBERS: Member[] = [
-  // =========================================================================
-  // ĐỜI THỨ 1: Triệu Tổ Khảo Phủ Quân (Thủy Tổ Khai Sáng Toàn Tộc Văn)
-  // =========================================================================
-  {
-    id: 'mem-101',
-    fullName: 'Văn Bá Bạt',
-    courtesyName: '1.0',
-    posthumousName: 'Triệu Tổ Khảo Phủ Quân',
-    gender: 'male',
-    generation: 1,
-    branchId: '',
-    phaiName: '',
-    chiName: '',
-    nhanhName: '',
-    orderInFamily: 1,
-    orderTitle: 'Nhứt thế: Triệu Tổ (1.0)',
-    birthDate: '1680-01-01',
-    birthDateLunar: 'Nguyên Đán',
-    isAlive: false,
-    deathDate: '1755-03-10',
-    deathDateLunar: '10/03 ÂL',
-    birthPlace: 'Làng Mỹ Xuyên, huyện Nông Cống, phủ Hà Trung, tỉnh Thanh Hóa (nay là xã Hà Vinh, huyện Hà Trung, Thanh Hóa)',
-    burialLocation: 'Nghĩa trang Gia tộc tại Gò Khoai, xóm Mỹ Luân, TT. Nam Phước, huyện Duy Xuyên, Quảng Nam (cải táng 1976)',
-    burialCoordinates: { lat: 15.8236, lng: 108.2392 },
-    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    bio: 'Quê ở tỉnh Thanh Hóa, phủ Hà Trung, huyện Nông Cống, làng Mỹ Xuyên, địa diện núi Thần Phù. Nay là xã Hà Vinh, huyện Hà Trung, tỉnh Thanh Hóa. Mộ ông trước kia ở Thanh Hóa, con là ông Văn Bá Liêu sau khi lập nghiệp và ổn định ở Quảng Nam đã về quê cũ đem hài cốt cha trong một quách sành vào cải táng tại Cồn Đình, làng cũ Mỹ Xuyên Tây, nay thuộc Thị trấn Nam Phước, huyện Duy Xuyên. Năm 1976, cải táng lần 2 về nghĩa trang Gia tộc tại Gò Khoai, xóm Mỹ Luân, TT. Nam Phước.',
-    achievements: [
-      'Ngài Triệu Tổ khai sáng cội nguồn Tộc Văn',
-      'Di dời hài cốt từ Thanh Hóa phụng táng tại Gò Khoai, Duy Xuyên, Quảng Nam',
-      'Được toàn thể 4 Phái Tộc Văn ngàn đời thờ phụng trang trọng'
-    ],
-    fatherId: null,
-    motherId: null,
-    spouseIds: [],
-    isRootAncestor: true,
-  },
-
-  // =========================================================================
-  // ĐỜI THỨ 2: Khải Tổ Phủ Quân (Khai Cơ Lập Nghiệp Duy Xuyên)
-  // =========================================================================
-  {
-    id: 'mem-201',
-    fullName: 'Văn Bá Liêu',
-    courtesyName: 'Sử - Trình - Lư (2.0)',
-    posthumousName: 'Khải Tổ Phủ Quân',
-    gender: 'male',
-    generation: 2,
-    branchId: '',
-    phaiName: '',
-    chiName: '',
-    nhanhName: '',
-    orderInFamily: 1,
-    orderTitle: 'Nhị thế: Khải Tổ (2.0)',
-    birthDate: '1710-04-15',
-    birthDateLunar: '15/03 ÂL',
-    isAlive: false,
-    deathDate: '1785-08-12',
-    deathDateLunar: '08/07 ÂL',
-    birthPlace: 'Mỹ Xuyên Tây, TT. Nam Phước, Duy Xuyên, Quảng Nam',
-    burialLocation: 'Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Cồn Đình)',
-    burialCoordinates: { lat: 15.8238, lng: 108.2395 },
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    bio: 'Con ông Văn Bá Bạt. Tên ông thường gọi là: Sử - Trình - Lư. Khởi đầu lập nghiệp vững vàng tại làng cũ Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam. Ngài đã thân hành về lại quê cũ Thanh Hóa mang quách sành đựng hài cốt thân phụ vào an táng tại Cồn Đình, mở rộng cơ nghiệp, lập Từ Đường Tộc Văn Bá tại Mỹ Xuyên Tây.',
-    achievements: [
-      'Khai cơ lập nghiệp tại làng Mỹ Xuyên Tây, Duy Xuyên',
-      'Nghinh hài cốt Triệu Tổ từ Thanh Hóa vào Quảng Nam',
-      'Khởi sinh 4 Phái Tộc Văn lẫy lừng',
-      'Dựng Từ đường Tộc Văn Bá tại Thị trấn Nam Phước'
-    ],
-    fatherId: 'mem-101',
-    motherId: null,
-    spouseIds: ['mem-201-w1', 'mem-201-w2'],
-  },
-  {
-    id: 'mem-201-w1',
-    fullName: 'Huỳnh Thị Bạch',
-    gender: 'female',
-    generation: 2,
-    branchId: '',
-    phaiName: '',
-    orderInFamily: 1,
-    orderTitle: 'Vợ Chánh (Chánh Thất Khải Tổ Tỷ)',
-    isAlive: false,
-    burialLocation: 'Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Cồn Đô)',
-    bio: 'Vợ chánh của ngài Nhị thế Khải tổ Văn Bá Liêu. Mộ trước táng tại Cồn Đô, làng cũ Mỹ Xuyên Tây, nay thuộc Thị trấn Nam Phước. Năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây. Sanh hạ: Con trưởng [Trưởng Nam] (Phái I), Văn Bá Lục (Phái II), Văn Bá Nghi (Phái III).',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-201'],
-  },
-  {
-    id: 'mem-201-w2',
-    fullName: 'Huỳnh Thị Quyến',
-    gender: 'female',
-    generation: 2,
-    branchId: '',
-    phaiName: '',
-    orderInFamily: 2,
-    orderTitle: 'Vợ Thứ (Kế Thất)',
-    isAlive: false,
-    burialLocation: 'Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Cồn Đình)',
-    bio: 'Vợ thứ của ngài Nhị thế Khải tổ Văn Bá Liêu. Mộ trước táng tại Cồn Đình, làng cũ Mỹ Xuyên Tây, nay thuộc Thị trấn Nam Phước. Năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây. Sanh hạ: Văn Phú Đôi (Phái IV).',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-201'],
-  },
-
-  // =========================================================================
-  // ĐỜI THỨ 3: Văn Bá – Xuyên Tây (Tam thế: Thỉ Tổ)
-  // =========================================================================
-  {
-    id: 'mem-300',
-    fullName: 'Văn Bá [Trưởng Nam]',
-    gender: 'male',
-    generation: 3,
-    branchId: 'branch-phai1',
-    phaiName: 'Phái I-VBXT',
-    chiName: 'Chi Trưởng',
-    orderInFamily: 1,
-    orderTitle: 'Tam thế: Thỉ Tổ (Phái I-VBXT)',
-    isAlive: false,
-    burialLocation: 'Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Cồn Đình)',
-    bio: 'Con trưởng của ngài Văn Bá Liêu. Ngài và cháu đích tôn đều mất sớm. Mộ táng tại Cồn Đình, làng cũ Mỹ Xuyên Tây, nay thuộc Thị trấn Nam Phước, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây.',
-    fatherId: 'mem-201',
-    motherId: 'mem-201-w1',
-    spouseIds: [],
-  },
-  {
-    id: 'mem-301',
-    fullName: 'Văn Bá Lục',
-    courtesyName: 'Châu Ký (II.3.002)',
-    posthumousName: 'Thỉ Tổ Phái II Phủ Quân',
-    gender: 'male',
-    generation: 3,
-    branchId: 'branch-vbxt',
-    phaiName: 'Phái II-VBXT',
-    chiName: 'Chi 1 & Chi 2',
-    nhanhName: 'Xuyên Tây',
-    orderInFamily: 2,
-    orderTitle: 'Tam thế: Thỉ Tổ (Phái II-VBXT)',
-    isAlive: false,
-    birthPlace: 'Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam',
-    burialLocation: 'Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ xứ Tân Kiều)',
-    avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
-    bio: 'Thường gọi là Châu Ký. Con thứ hai của ngài Văn Bá Liêu, cháu nội ngài Triệu tổ Văn Bá Bạt. Ngài khởi phát Phái II Tộc Văn Bá – Xuyên Tây. Mộ trước táng tại xứ Tân Kiều, làng cũ Mỹ Xuyên Tây, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây. Sanh hạ: Văn Quang Đạo (Phụng) và Văn Tấn Thành.',
-    achievements: ['Khởi lập Phái II Tộc Văn Bá - Xuyên Tây'],
-    fatherId: 'mem-201',
-    motherId: 'mem-201-w1',
-    spouseIds: ['mem-301-w'],
-  },
-  {
-    id: 'mem-301-w',
-    fullName: 'Bà Thỉ Tổ Tỷ (Phái II)',
-    gender: 'female',
-    generation: 3,
-    branchId: 'branch-vbxt',
-    phaiName: 'Phái II-VBXT',
-    orderInFamily: 1,
-    orderTitle: 'Phối Ngẫu (Không rõ họ tên)',
-    isAlive: false,
-    bio: 'Phu nhân của ngài Thỉ tổ Phái II Văn Bá Lục. Gia phả cổ chưa ghi rõ họ tên. Sanh hạ ngài Văn Quang Đạo và Văn Tấn Thành.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-301'],
-  },
-  {
-    id: 'mem-302',
-    fullName: 'Văn Bá Nghi',
-    courtesyName: 'III.3.003',
-    posthumousName: 'Thỉ Tổ Phái III Phủ Quân',
-    gender: 'male',
-    generation: 3,
-    branchId: 'branch-vpxd',
-    phaiName: 'Phái III-VBXT',
-    chiName: 'Xuyên Đông',
-    nhanhName: 'Khởi Tộc Văn Phú',
-    orderInFamily: 3,
-    orderTitle: 'Tam thế: Thỉ Tổ (Phái III-VBXT)',
-    isAlive: false,
-    birthPlace: 'Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam',
-    burialLocation: 'Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Cồn Đình)',
-    bio: 'Con thứ ba của ngài Văn Bá Liêu, cháu nội ngài Văn Bá Bạt. Khởi đầu Phái Ba. Mộ táng tại Cồn Đình, năm 1976 cải táng về nghĩa trang Gia tộc Gò Khoai. Sanh hạ hai ngài Văn Phú Trạch và Văn Phú Súy, bắt đầu tách từ Tộc Văn Bá – Xuyên Tây thành Chi tộc riêng: Tộc Văn Phú tại làng cũ Mỹ Xuyên Đông, lập Nhà thờ Tộc Văn Phú tại Xuyên Đông.',
-    achievements: ['Khởi tổ Phái III, tiền đề thành lập Tộc Văn Phú - Xuyên Đông'],
-    fatherId: 'mem-201',
-    motherId: 'mem-201-w1',
-    spouseIds: ['mem-302-w'],
-  },
-  {
-    id: 'mem-302-w',
-    fullName: 'Bà Thỉ Tổ Tỷ (Phái III)',
-    gender: 'female',
-    generation: 3,
-    branchId: 'branch-vpxd',
-    phaiName: 'Phái III-VBXT',
-    orderInFamily: 1,
-    orderTitle: 'Phối Ngẫu (Không rõ họ tên)',
-    isAlive: false,
-    bio: 'Phu nhân của ngài Thỉ tổ Phái III Văn Bá Nghi.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-302'],
-  },
-  {
-    id: 'mem-303',
-    fullName: 'Văn Phú Đôi',
-    courtesyName: 'IV.3.004',
-    posthumousName: 'Thỉ Tổ Phái IV Phủ Quân',
-    gender: 'male',
-    generation: 3,
-    branchId: 'branch-vpxt',
-    phaiName: 'Phái IV-VBXT',
-    chiName: 'Xuyên Tây',
-    nhanhName: 'Khởi Tộc Văn Phú Xuyên Tây',
-    orderInFamily: 4,
-    orderTitle: 'Tam thế: Thỉ Tổ (Phái IV-VBXT)',
-    isAlive: false,
-    birthPlace: 'Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam',
-    bio: 'Con thứ tư của ngài Văn Bá Liêu, cháu nội ngài Văn Bá Bạt. Khởi đầu Phái Tư. Sanh hạ ngài Tứ thế Tuyên tổ Văn Phú Bơi tách thành Tộc Văn Phú tại làng cũ Mỹ Xuyên Tây, chung Nhà thờ Tộc Văn Phú tại Mỹ Xuyên Đông.',
-    achievements: ['Khởi tổ Phái IV Tộc Văn'],
-    fatherId: 'mem-201',
-    motherId: 'mem-201-w2',
-    spouseIds: ['mem-303-w'],
-  },
-  {
-    id: 'mem-303-w',
-    fullName: 'Bà Thỉ Tổ Tỷ (Phái IV)',
-    gender: 'female',
-    generation: 3,
-    branchId: 'branch-vpxt',
-    phaiName: 'Phái IV-VBXT',
-    orderInFamily: 1,
-    orderTitle: 'Phối Ngẫu (Không rõ họ tên)',
-    isAlive: false,
-    bio: 'Phu nhân của ngài Thỉ tổ Phái IV Văn Phú Đôi.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-303'],
-  },
-
-  // =========================================================================
-  // ĐỜI THỨ 4: (Tứ thế: Tuyên Tổ)
-  // =========================================================================
-  {
-    id: 'mem-400',
-    fullName: 'Văn Quang Đạo',
-    courtesyName: 'Phụng',
-    gender: 'male',
-    generation: 4,
-    branchId: 'branch-vbxt',
-    phaiName: 'Phái II-VBXT',
-    chiName: 'Xuyên Tây',
-    orderInFamily: 1,
-    orderTitle: 'Tứ thế: Trưởng Nam',
-    isAlive: false,
-    burialLocation: 'Nghĩa trang Gia tộc Gò Khoai, Duy Xuyên',
-    bio: 'Thường gọi là Phụng. Con trưởng của ngài Thỉ tổ Phái II Văn Bá Lục, cháu nội ngài Văn Bá Liêu.',
-    fatherId: 'mem-301',
-    motherId: 'mem-301-w',
-    spouseIds: [],
-  },
-  {
-    id: 'mem-401',
-    fullName: 'Văn Tấn Thành',
-    courtesyName: 'Chỉnh Trai (II.4.001)',
-    posthumousName: 'Tuyên Tổ Phủ Quân',
-    gender: 'male',
-    generation: 4,
-    branchId: 'branch-vbxt',
-    phaiName: 'Phái II-VBXT',
-    chiName: 'Chi 1 & Chi 2',
-    nhanhName: 'Xuyên Tây',
-    orderInFamily: 2,
-    orderTitle: 'Tứ thế: Tuyên Tổ (II.4.001)',
-    isAlive: false,
-    birthPlace: 'Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam',
-    burialLocation: 'Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Cồn Đình)',
-    avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
-    bio: 'Thường gọi là Chỉnh Trai. Con ông Văn Bá Lục, cháu nội ông Văn Bá Liêu. Mộ ông bà song táng tại Cồn Đình, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai. Sanh hạ 6 người con trai mở ra các chi nhánh lớn của Phái II: Văn Tấn Vinh (bắt đầu Phái II Tộc Văn Tấn - Quế Xuân), Văn Tấn Ba (Gia Định), Văn Bá Liễu, Văn Bá Hình (bắt đầu Phái II Tộc Văn Bá - Đại Lộc), Văn Bá Lý, Văn Bá Đình (kế tục Phái II Tộc Văn Bá - Xuyên Tây).',
-    achievements: ['Tuyên tổ sinh 6 người con trai mở rộng địa bàn Tộc Văn khắp Quảng Nam và Nam Bộ'],
-    fatherId: 'mem-301',
-    motherId: 'mem-301-w',
-    spouseIds: ['mem-401-w'],
-  },
-  {
-    id: 'mem-401-w',
-    fullName: 'Nguyễn Thị Nộ',
-    courtesyName: 'Hiệu: Chơn Tình',
-    gender: 'female',
-    generation: 4,
-    branchId: 'branch-vbxt',
-    phaiName: 'Phái II-VBXT',
-    orderInFamily: 1,
-    orderTitle: 'Phối Ngẫu Tuyên Tổ Tỷ',
-    isAlive: false,
-    burialLocation: 'Song táng cùng chồng tại nghĩa trang Gia tộc Gò Khoai, Xuyên Tây',
-    bio: 'Phu nhân của ngài Tứ thế Tuyên tổ Văn Tấn Thành. Hiệu là Chơn Tình. Mộ song táng cùng chồng tại Gò Khoai, Xuyên Tây.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-401'],
-  },
-  {
-    id: 'mem-402',
-    fullName: 'Văn Phú Trạch',
-    courtesyName: 'Lư (III.4.002)',
-    posthumousName: 'Tuyên Tổ Phủ Quân',
-    gender: 'male',
-    generation: 4,
-    branchId: 'branch-vpxd',
-    phaiName: 'Phái III-VPXĐ',
-    chiName: 'Xuyên Đông',
-    orderInFamily: 1,
-    orderTitle: 'Tứ thế: Tuyên Tổ (III.4.002)',
-    isAlive: false,
-    birthPlace: 'Mỹ Xuyên Đông, Duy Xuyên, Quảng Nam',
-    bio: 'Thường gọi là Lư. Con ông Văn Bá Nghi, cháu nội ông Văn Bá Liêu. Cùng với em là Văn Phú Súy tách thành Chi tộc riêng: Tộc Văn Phú – Xuyên Đông. Sanh hạ: Văn Phú Xuyên, Văn Phú Quảng, Văn Phú Thọ, Văn Phú Minh, Văn Phú Định.',
-    achievements: ['Tuyên tổ Chi Tộc Văn Phú - Xuyên Đông'],
-    fatherId: 'mem-302',
-    motherId: 'mem-302-w',
-    spouseIds: ['mem-402-w'],
-  },
-  {
-    id: 'mem-402-w',
-    fullName: 'Nguyễn Thị Đa',
-    gender: 'female',
-    generation: 4,
-    branchId: 'branch-vpxd',
-    phaiName: 'Phái III-VPXĐ',
-    orderInFamily: 1,
-    orderTitle: 'Phu Nhân Tuyên Tổ',
-    isAlive: false,
-    bio: 'Phu nhân của ngài Văn Phú Trạch.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-402'],
-  },
-  {
-    id: 'mem-403',
-    fullName: 'Văn Phú Súy',
-    courtesyName: 'Bò, Soái (III.4.003)',
-    posthumousName: 'Tuyên Tổ Phủ Quân',
-    gender: 'male',
-    generation: 4,
-    branchId: 'branch-vpxd',
-    phaiName: 'Phái III-VPXĐ',
-    chiName: 'Xuyên Đông',
-    orderInFamily: 2,
-    orderTitle: 'Tứ thế: Tuyên Tổ (III.4.003)',
-    isAlive: false,
-    birthPlace: 'Mỹ Xuyên Đông, Duy Xuyên, Quảng Nam',
-    bio: 'Thường gọi là Bò, Soái. Con ông Văn Bá Nghi, cháu nội ông Văn Bá Liêu. Cùng anh lập Chi Tộc Văn Phú – Xuyên Đông. Vợ là bà Phan Thị Khoắc (gia phả do cụ Văn Phú Quý lập ghi tên bà là Phan Thị Trang). Sanh hạ: Văn Phú Doãn, Văn Phú Toàn, Văn Phú Nhiễm.',
-    achievements: ['Tuyên tổ Chi Tộc Văn Phú - Xuyên Đông'],
-    fatherId: 'mem-302',
-    motherId: 'mem-302-w',
-    spouseIds: ['mem-403-w'],
-  },
-  {
-    id: 'mem-403-w',
-    fullName: 'Phan Thị Khoắc',
-    courtesyName: 'Gia phả ghi: Phan Thị Trang',
-    gender: 'female',
-    generation: 4,
-    branchId: 'branch-vpxd',
-    phaiName: 'Phái III-VPXĐ',
-    orderInFamily: 1,
-    orderTitle: 'Phu Nhân Tuyên Tổ',
-    isAlive: false,
-    bio: 'Phu nhân của ngài Văn Phú Súy. Gia phả Tộc Văn Phú Xuyên Đông do cụ Văn Phú Quý lập ghi tên bà là Phan Thị Trang.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-403'],
-  },
-  {
-    id: 'mem-404',
-    fullName: 'Văn Phú Bơi',
-    courtesyName: 'Văn Thượng Chấp (IV.4.004)',
-    posthumousName: 'Tuyên Tổ Phủ Quân',
-    gender: 'male',
-    generation: 4,
-    branchId: 'branch-vpxt',
-    phaiName: 'Phái IV-VPXT',
-    chiName: 'Xuyên Tây',
-    orderInFamily: 1,
-    orderTitle: 'Tứ thế: Tuyên Tổ (IV.4.004)',
-    deathDateLunar: '29/12 ÂL',
-    isAlive: false,
-    birthPlace: 'Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam',
-    bio: 'Thường gọi là Văn Thượng Chấp. Con ông Văn Phú Đôi, cháu nội ông Văn Bá Liêu. Tách từ Tộc Văn Bá – Xuyên Tây thành Chi tộc riêng: Tộc Văn Phú tại làng cũ Mỹ Xuyên Tây, chung Nhà thờ Tộc Văn Phú tại Mỹ Xuyên Đông. Mất ngày 29/12 ÂL. Vợ là Bà Bơi. Sanh hạ: Văn Phú Chiếm, Văn Thị Loan, Văn Thị Xuy, Văn Thị Thiệp.',
-    achievements: ['Tuyên tổ Tộc Văn Phú - Xuyên Tây'],
-    fatherId: 'mem-303',
-    motherId: 'mem-303-w',
-    spouseIds: ['mem-404-w'],
-  },
-  {
-    id: 'mem-404-w',
-    fullName: 'Bà Bơi',
-    gender: 'female',
-    generation: 4,
-    branchId: 'branch-vpxt',
-    phaiName: 'Phái IV-VPXT',
-    orderInFamily: 1,
-    orderTitle: 'Phu Nhân Tuyên Tổ',
-    isAlive: false,
-    bio: 'Phu nhân ngài Tứ thế Tuyên tổ Văn Phú Bơi. Sanh hạ 1 con trai (Văn Phú Chiếm) và 3 con gái (Văn Thị Loan, Văn Thị Xuy, Văn Thị Thiệp).',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-404'],
-  },
-
-  // =========================================================================
-  // ĐỜI THỨ 5: (Ngũ thế: Tiên Tổ)
-  // =========================================================================
-  {
-    id: 'mem-501',
-    fullName: 'Văn Tấn Vinh',
-    courtesyName: 'II.5.001',
-    posthumousName: 'Tiên Tổ Phủ Quân',
-    gender: 'male',
-    generation: 5,
-    branchId: 'branch-vtqx',
-    phaiName: 'Phái II-VTQX',
-    chiName: 'Quế Xuân',
-    nhanhName: 'Khởi Tộc Văn Tấn',
-    orderInFamily: 1,
-    orderTitle: 'Ngũ thế: Tiên Tổ (II.5.001)',
-    deathDateLunar: '04/01 ÂL',
-    isAlive: false,
-    birthPlace: 'Làng Xuân Phú, Quế Xuân, Quế Sơn, Quảng Nam',
-    burialLocation: 'Mộ táng tại làng Xuân Phú, Quế Xuân',
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    bio: 'Con ông Văn Tấn Thành, cháu nội ông Văn Bá Lục. Bắt đầu: Phái II – Chi Tộc Văn Tấn – Quế Xuân (VTQX) tại làng cũ Xuân Phú, nay thuộc xã Quế Xuân, huyện Quế Sơn, tỉnh Quảng Nam. Mộ táng tại làng Xuân Phú. Mất ngày 04/1 ÂL. Vợ là bà Trần Thị Luận (mất 13/8 ÂL). Sanh hạ: Văn Tấn Ba (Văn Tấn Hoa).',
-    achievements: ['Khởi tổ Chi Tộc Văn Tấn - Quế Xuân (VTQX)'],
-    fatherId: 'mem-401',
-    motherId: 'mem-401-w',
-    spouseIds: ['mem-501-w'],
-  },
-  {
-    id: 'mem-501-w',
-    fullName: 'Trần Thị Luận',
-    gender: 'female',
-    generation: 5,
-    branchId: 'branch-vtqx',
-    phaiName: 'Phái II-VTQX',
-    orderInFamily: 1,
-    orderTitle: 'Phu Nhân Tiên Tổ',
-    deathDateLunar: '13/08 ÂL',
-    isAlive: false,
-    bio: 'Phu nhân ngài Ngũ thế Tiên tổ Văn Tấn Vinh. Mất ngày 13/8 Âm lịch.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-501'],
-  },
-  {
-    id: 'mem-502',
-    fullName: 'Văn Tấn Ba',
-    courtesyName: 'II.5.002',
-    gender: 'male',
-    generation: 5,
-    branchId: 'branch-vtqx',
-    phaiName: 'Phái II-VTQX',
-    orderInFamily: 2,
-    orderTitle: 'Ngũ thế: Tiên Tổ (II.5.002)',
-    isAlive: false,
-    burialLocation: 'Mộ táng tại thành Gia Định (chưa kết nối được)',
-    bio: 'Con ông Văn Tấn Thành, cháu nội ông Văn Bá Lục. Mộ táng tại thành Gia Định, hiện gia phả đang lưu giữ ghi chú để tiếp tục kết nối các chi nhánh phương Nam.',
-    fatherId: 'mem-401',
-    motherId: 'mem-401-w',
-    spouseIds: [],
-  },
-  {
-    id: 'mem-503',
-    fullName: 'Văn Bá Liễu',
-    courtesyName: 'II.5.003',
-    gender: 'male',
-    generation: 5,
-    branchId: 'branch-vbxt',
-    phaiName: 'Phái II-VBXT',
-    orderInFamily: 3,
-    orderTitle: 'Ngũ thế: Tiên Tổ (II.5.003)',
-    isAlive: false,
-    bio: 'Con ông Văn Tấn Thành, cháu nội ông Văn Bá Lục. Thất lạc, mất tích không rõ thông tin đời sau.',
-    fatherId: 'mem-401',
-    motherId: 'mem-401-w',
-    spouseIds: [],
-  },
-  {
-    id: 'mem-504',
-    fullName: 'Văn Bá Hình',
-    courtesyName: 'II.5.004',
-    posthumousName: 'Tiên Tổ Phủ Quân',
-    gender: 'male',
-    generation: 5,
-    branchId: 'branch-vbdl',
-    phaiName: 'Phái II-VBĐL',
-    chiName: 'Chi HÀ NHA',
-    nhanhName: 'Khởi Tộc Văn Bá Đại Lộc',
-    orderInFamily: 4,
-    orderTitle: 'Ngũ thế: Tiên Tổ (II.5.004)',
-    isAlive: false,
-    birthPlace: 'Huyện Đại Lộc, tỉnh Quảng Nam',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    bio: 'Con ông Văn Tấn Thành, cháu nội ông Văn Bá Lục. Bắt đầu: Phái II – Chi Tộc Văn Bá – Đại Lộc (VBĐL) ở làng cũ Hà Dục Đông, Hà Dục Tây và Nam Phước, nay là xã Đại Thạnh và xã Đại Tân, huyện Đại Lộc, tỉnh Quảng Nam. Vợ là bà Trần Thị Cử. Sanh hạ: Văn Bá Thể.',
-    achievements: ['Khởi tổ Chi Tộc Văn Bá - Đại Lộc (VBĐL)'],
-    fatherId: 'mem-401',
-    motherId: 'mem-401-w',
-    spouseIds: ['mem-504-w'],
-  },
-  {
-    id: 'mem-504-w',
-    fullName: 'Trần Thị Cử',
-    gender: 'female',
-    generation: 5,
-    branchId: 'branch-vbdl',
-    phaiName: 'Phái II-VBĐL',
-    orderInFamily: 1,
-    orderTitle: 'Phu Nhân Tiên Tổ',
-    isAlive: false,
-    bio: 'Phu nhân của ngài Văn Bá Hình. Sanh hạ ngài Văn Bá Thể.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-504'],
-  },
-  {
-    id: 'mem-505',
-    fullName: 'Văn Bá Lý',
-    courtesyName: 'II.5.005',
-    gender: 'male',
-    generation: 5,
-    branchId: 'branch-vbxt',
-    phaiName: 'Phái II-VBXT',
-    orderInFamily: 5,
-    orderTitle: 'Ngũ thế: Tiên Tổ (II.5.005)',
-    isAlive: false,
-    bio: 'Con ông Văn Tấn Thành, cháu nội ông Văn Bá Lục. Mất tích không rõ.',
-    fatherId: 'mem-401',
-    motherId: 'mem-401-w',
-    spouseIds: [],
-  },
-  {
-    id: 'mem-506',
-    fullName: 'Văn Bá Đình',
-    courtesyName: 'Tiểu Triều (II.5.006)',
-    posthumousName: 'Tiên Tổ Phủ Quân',
-    gender: 'male',
-    generation: 5,
-    branchId: 'branch-vbxt',
-    phaiName: 'Phái II-VBXT',
-    chiName: 'Chi 1 & Chi 2',
-    nhanhName: 'Kế tục Xuyên Tây',
-    orderInFamily: 6,
-    orderTitle: 'Ngũ thế: Tiên Tổ (II.5.006)',
-    isAlive: false,
-    birthPlace: 'Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam',
-    burialLocation: 'Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ xứ Bàu Sen)',
-    avatarUrl: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
-    bio: 'Thường gọi là Tiểu Triều. Con ông Văn Tấn Thành, cháu nội ông Văn Bá Lục. Ngài kế tục gia phả Tộc Văn Bá – Xuyên Tây và thờ phụng Tổ tiên từ ngài Triệu tổ xuống tại Nhà thờ Tộc Văn Bá TT. Nam Phước. Mộ trước táng tại Bàu Sen, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai. Vợ là bà Trần Thị Hút (hiệu Thôn Khí, mất ngày 15/3 ÂL). Sanh hạ 5 con trai: Văn Bá Đồng, Văn Bá Trung (bắt đầu Chi 1), Văn Bá Trinh (mộ táng Gia Định), Văn Bá Trang, Văn Bá Đài (bắt đầu Chi 2).',
-    achievements: ['Kế tục Tộc Văn Bá - Xuyên Tây, sinh dưỡng hai vị tổ Chi 1 và Chi 2'],
-    fatherId: 'mem-401',
-    motherId: 'mem-401-w',
-    spouseIds: ['mem-506-w'],
-  },
-  {
-    id: 'mem-506-w',
-    fullName: 'Trần Thị Hút',
-    courtesyName: 'Hiệu: Thôn Khí',
-    gender: 'female',
-    generation: 5,
-    branchId: 'branch-vbxt',
-    phaiName: 'Phái II-VBXT',
-    orderInFamily: 1,
-    orderTitle: 'Phu Nhân Tiên Tổ Tỷ',
-    deathDateLunar: '15/03 ÂL',
-    isAlive: false,
-    burialLocation: 'Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Bàu Sen)',
-    bio: 'Phu nhân của ngài Văn Bá Đình. Hiệu Thôn Khí. Mất ngày 15/3 Âm lịch. Mộ trước táng tại Bàu Sen, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-506'],
-  },
-  {
-    id: 'mem-507',
-    fullName: 'Văn Phú Xuyên',
-    courtesyName: 'Bích (III.5.007)',
-    gender: 'male',
-    generation: 5,
-    branchId: 'branch-vpxd',
-    phaiName: 'Phái III-VPXĐ',
-    chiName: 'Xuyên Đông',
-    orderInFamily: 1,
-    orderTitle: 'Ngũ thế: Tiên Tổ (III.5.007)',
-    isAlive: false,
-    birthPlace: 'Mỹ Xuyên Đông, Duy Xuyên, Quảng Nam',
-    bio: 'Thường gọi là Bích. Con ông Văn Phú Trạch, cháu nội ông Văn Bá Nghi. Vợ là bà Nguyễn Thị Bông. Sanh hạ: Văn Phú Thắng, Văn Phú Lương, Văn Phú Hạnh, Văn Phú Huệ, Văn Thị Hưng.',
-    fatherId: 'mem-402',
-    motherId: 'mem-402-w',
-    spouseIds: ['mem-507-w'],
-  },
-  {
-    id: 'mem-507-w',
-    fullName: 'Nguyễn Thị Bông',
-    gender: 'female',
-    generation: 5,
-    branchId: 'branch-vpxd',
-    phaiName: 'Phái III-VPXĐ',
-    orderInFamily: 1,
-    orderTitle: 'Phu Nhân Tiên Tổ',
-    isAlive: false,
-    bio: 'Phu nhân cụ Văn Phú Xuyên.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-507'],
-  },
-  {
-    id: 'mem-508',
-    fullName: 'Văn Phú Quảng',
-    courtesyName: 'III.5.008',
-    gender: 'male',
-    generation: 5,
-    branchId: 'branch-vpxd',
-    phaiName: 'Phái III-VPXĐ',
-    orderInFamily: 2,
-    orderTitle: 'Ngũ thế: Tiên Tổ (III.5.008)',
-    isAlive: false,
-    bio: 'Con ông Văn Phú Trạch, cháu nội ông Văn Bá Nghi. Mất tích không rõ.',
-    fatherId: 'mem-402',
-    motherId: 'mem-402-w',
-    spouseIds: [],
-  },
-  {
-    id: 'mem-509',
-    fullName: 'Văn Phú Thọ',
-    courtesyName: 'Miên (III.5.009)',
-    gender: 'male',
-    generation: 5,
-    branchId: 'branch-vpxd',
-    phaiName: 'Phái III-VPXĐ',
-    chiName: 'Xuyên Đông',
-    orderInFamily: 3,
-    orderTitle: 'Ngũ thế: Tiên Tổ (III.5.009)',
-    isAlive: false,
-    birthPlace: 'Mỹ Xuyên Đông, Duy Xuyên, Quảng Nam',
-    bio: 'Thường gọi là Miên. Con ông Văn Phú Trạch, cháu nội ông Văn Bá Nghi. Vợ là bà Nguyễn Thị Cho (Châu). Sanh hạ đông đúc: Văn Phú Thiện, Văn Phú Thiều, Văn Phú Tụy, Văn Phú Liễu (Kim), Văn Phú Được, Văn Thị Mai, Văn Thị Trước, Văn Thị Liệp, Văn Thị Miên.',
-    fatherId: 'mem-402',
-    motherId: 'mem-402-w',
-    spouseIds: ['mem-509-w'],
-  },
-  {
-    id: 'mem-509-w',
-    fullName: 'Nguyễn Thị Cho',
-    courtesyName: 'Châu',
-    gender: 'female',
-    generation: 5,
-    branchId: 'branch-vpxd',
-    phaiName: 'Phái III-VPXĐ',
-    orderInFamily: 1,
-    orderTitle: 'Phu Nhân Tiên Tổ',
-    isAlive: false,
-    bio: 'Phu nhân cụ Văn Phú Thọ.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-509'],
-  },
-  {
-    id: 'mem-512',
-    fullName: 'Văn Phú Doãn',
-    courtesyName: 'III.5.012',
-    gender: 'male',
-    generation: 5,
-    branchId: 'branch-vpxd',
-    phaiName: 'Phái III-VPXĐ',
-    chiName: 'Xuyên Đông',
-    orderInFamily: 1,
-    orderTitle: 'Ngũ thế: Tiên Tổ (III.5.012)',
-    isAlive: false,
-    birthPlace: 'Mỹ Xuyên Đông, Duy Xuyên, Quảng Nam',
-    bio: 'Con ông Văn Phú Súy, cháu nội ông Văn Bá Nghi. Vợ là bà Huỳnh Thị Chẩn (Chân). Sanh hạ: Văn Phú Biều, Văn Phú Trường, Văn Phú Trung, Văn Phú Chiếm, Văn Phú Bảng, Văn Phú Khôi, Văn Phú Lực, Văn Thị Huệ.',
-    fatherId: 'mem-403',
-    motherId: 'mem-403-w',
-    spouseIds: ['mem-512-w'],
-  },
-  {
-    id: 'mem-512-w',
-    fullName: 'Huỳnh Thị Chẩn',
-    courtesyName: 'Chân',
-    gender: 'female',
-    generation: 5,
-    branchId: 'branch-vpxd',
-    phaiName: 'Phái III-VPXĐ',
-    orderInFamily: 1,
-    orderTitle: 'Phu Nhân Tiên Tổ',
-    isAlive: false,
-    bio: 'Phu nhân cụ Văn Phú Doãn.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-512'],
-  },
-  {
-    id: 'mem-513',
-    fullName: 'Văn Phú Toàn',
-    courtesyName: 'An (III.5.013)',
-    gender: 'male',
-    generation: 5,
-    branchId: 'branch-vpxd',
-    phaiName: 'Phái III-VPXĐ',
-    chiName: 'Xuyên Đông',
-    orderInFamily: 2,
-    orderTitle: 'Ngũ thế: Tiên Tổ (III.5.013)',
-    deathDateLunar: '18/01 ÂL',
-    isAlive: false,
-    birthPlace: 'Mỹ Xuyên Đông, Duy Xuyên, Quảng Nam',
-    burialLocation: 'Lão Sum Viên',
-    bio: 'Thường gọi là An. Con ông Văn Phú Súy, cháu nội ông Văn Bá Nghi. Mất ngày 18/1 ÂL, mộ táng tại Lão Sum Viên. Vợ là bà Nguyễn Thị Tiểu (Liễu) mất ngày 14/8 ÂL. Sanh hạ 9 người con: Văn Phú Hội, Văn Phú Xá, Văn Phú Hiệp, Văn Phú Dư, Văn Phú Dũ, Văn Phú Kế, Văn Thị Tề, Văn Thị Đề, Văn Thị Chiêm.',
-    fatherId: 'mem-403',
-    motherId: 'mem-403-w',
-    spouseIds: ['mem-513-w'],
-  },
-  {
-    id: 'mem-513-w',
-    fullName: 'Nguyễn Thị Tiểu',
-    courtesyName: 'Liễu',
-    gender: 'female',
-    generation: 5,
-    branchId: 'branch-vpxd',
-    phaiName: 'Phái III-VPXĐ',
-    orderInFamily: 1,
-    orderTitle: 'Phu Nhân Tiên Tổ',
-    deathDateLunar: '14/08 ÂL',
-    isAlive: false,
-    bio: 'Phu nhân cụ Văn Phú Toàn. Mất ngày 14/8 Âm lịch.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-513'],
-  },
-  {
-    id: 'mem-515',
-    fullName: 'Văn Phú Chiếm',
-    courtesyName: 'IV.5.015',
-    gender: 'male',
-    generation: 5,
-    branchId: 'branch-vpxt',
-    phaiName: 'Phái IV-VPXT',
-    chiName: 'Xuyên Tây',
-    orderInFamily: 1,
-    orderTitle: 'Ngũ thế: Tiên Tổ (IV.5.015)',
-    isAlive: false,
-    birthPlace: 'Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam',
-    bio: 'Con ông Văn Phú Bơi, cháu nội ông Văn Phú Đôi. Vợ là bà Huỳnh Thị Kiềm (Khâm). Sanh hạ: Văn Phú Mính, Văn Thị Đơn (Sách), Văn Thị Mình (Đắc).',
-    fatherId: 'mem-404',
-    motherId: 'mem-404-w',
-    spouseIds: ['mem-515-w'],
-  },
-  {
-    id: 'mem-515-w',
-    fullName: 'Huỳnh Thị Kiềm',
-    courtesyName: 'Khâm',
-    gender: 'female',
-    generation: 5,
-    branchId: 'branch-vpxt',
-    phaiName: 'Phái IV-VPXT',
-    orderInFamily: 1,
-    orderTitle: 'Phu Nhân Tiên Tổ',
-    isAlive: false,
-    bio: 'Phu nhân cụ Văn Phú Chiếm.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-515'],
-  },
-
-  // =========================================================================
-  // ĐỜI THỨ 6: (Văn Tấn – Văn Bá – Văn Phú)
-  // =========================================================================
-  {
-    id: 'mem-601',
-    fullName: 'Văn Tấn Ba',
-    courtesyName: 'II.6.001',
-    gender: 'male',
-    generation: 6,
-    branchId: 'branch-vtqx',
-    phaiName: 'Phái II-VTQX',
-    chiName: 'Quế Xuân',
-    orderInFamily: 1,
-    orderTitle: 'Đời thứ 6: Phái II-VTQX (II.6.001)',
-    deathDateLunar: '11/06 ÂL',
-    isAlive: false,
-    burialLocation: 'Thành Gia Định',
-    bio: 'Con ông Văn Tấn Vinh, cháu nội ông Văn Tấn Thành. Mất ngày 11-6 ÂL, mộ táng tại thành Gia Định. Vợ là bà Nguyễn Thị Đà (mất 10-5 ÂL, mộ táng tại Cồn Đình, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây). Sanh hạ: Văn Tấn Trung.',
-    fatherId: 'mem-501',
-    motherId: 'mem-501-w',
-    spouseIds: ['mem-601-w'],
-  },
-  {
-    id: 'mem-601-w',
-    fullName: 'Nguyễn Thị Đà',
-    gender: 'female',
-    generation: 6,
-    branchId: 'branch-vtqx',
-    phaiName: 'Phái II-VTQX',
-    orderInFamily: 1,
-    orderTitle: 'Phu Nhân (Mộ Gò Khoai)',
-    deathDateLunar: '10/05 ÂL',
-    isAlive: false,
-    burialLocation: 'Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Cồn Đình)',
-    bio: 'Phu nhân cụ Văn Tấn Ba. Mất ngày 10-5 ÂL. Mộ trước táng tại Cồn Đình, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-601'],
-  },
-  {
-    id: 'mem-602',
-    fullName: 'Văn Bá Thể',
-    courtesyName: 'II.6.002',
-    gender: 'male',
-    generation: 6,
-    branchId: 'branch-vbdl',
-    phaiName: 'Phái II-VBĐL',
-    chiName: 'Chi HÀ NHA',
-    orderInFamily: 1,
-    orderTitle: 'Đời thứ 6: Phái II-VBĐL (II.6.002)',
-    isAlive: false,
-    birthPlace: 'Hà Nha, xã Đại Đồng, huyện Đại Lộc, Quảng Nam',
-    bio: 'Con ông Văn Bá Hình, cháu nội ông Văn Tấn Thành. Bắt đầu: Phái II-VBĐL-Chi HÀ NHA (Đại Đồng, huyện Đại Lộc). Vợ là bà Trần Thị Ngân (Ngàn). Sanh hạ 4 con trai: Văn Bá Hạnh (Văn Công Hạnh), Văn Bá Trọng, Văn Bá Đạt, Văn Bá Tạo.',
-    fatherId: 'mem-504',
-    motherId: 'mem-504-w',
-    spouseIds: ['mem-602-w'],
-  },
-  {
-    id: 'mem-602-w',
-    fullName: 'Trần Thị Ngân',
-    courtesyName: 'Ngàn',
-    gender: 'female',
-    generation: 6,
-    branchId: 'branch-vbdl',
-    phaiName: 'Phái II-VBĐL',
-    orderInFamily: 1,
-    orderTitle: 'Phu Nhân',
-    isAlive: false,
-    bio: 'Phu nhân cụ Văn Bá Thể.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-602'],
-  },
-  {
-    id: 'mem-603',
-    fullName: 'Văn Bá Trung',
-    courtesyName: 'Duy Hiếu (II.6.003)',
-    gender: 'male',
-    generation: 6,
-    branchId: 'branch-vbxt',
-    phaiName: 'Phái II-VBXT',
-    chiName: 'Chi 1',
-    nhanhName: 'Nhánh 3',
-    orderInFamily: 1,
-    orderTitle: 'Bắt đầu Phái II-VBXT-Chi 1 (II.6.003)',
-    isAlive: false,
-    birthPlace: 'Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam',
-    burialLocation: 'Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Cồn Đô)',
-    avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
-    bio: 'Thường gọi là Duy Hiếu. Con ông Văn Bá Đình, cháu nội ông Văn Tấn Thành. Khởi đầu Phái II-VBXT-Chi 1. Mộ táng tại Cồn Đô, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây. Vợ là bà Huỳnh Thị Ngưỡng (mộ xứ Tân Kiều, năm 1976 cải táng về Gò Khoai). Sanh hạ 4 con trai: Văn Bá Chánh, Văn Bá Trực, Văn Bá Cực, Văn Bá Viên.',
-    achievements: ['Tổ khởi phát Phái II-VBXT-Chi 1'],
-    fatherId: 'mem-506',
-    motherId: 'mem-506-w',
-    spouseIds: ['mem-603-w'],
-  },
-  {
-    id: 'mem-603-w',
-    fullName: 'Huỳnh Thị Ngưỡng',
-    gender: 'female',
-    generation: 6,
-    branchId: 'branch-vbxt',
-    phaiName: 'Phái II-VBXT',
-    chiName: 'Chi 1',
-    orderInFamily: 1,
-    orderTitle: 'Phu Nhân (Mộ Gò Khoai)',
-    isAlive: false,
-    burialLocation: 'Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ xứ Tân Kiều)',
-    bio: 'Phu nhân cụ Văn Bá Trung. Mộ táng tại xứ Tân Kiều, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-603'],
-  },
-  {
-    id: 'mem-604',
-    fullName: 'Văn Bá Đài',
-    courtesyName: 'Lầu Cát (II.6.004)',
-    gender: 'male',
-    generation: 6,
-    branchId: 'branch-vbxt',
-    phaiName: 'Phái II-VBXT',
-    chiName: 'Chi 2',
-    orderInFamily: 2,
-    orderTitle: 'Bắt đầu Phái II-VBXT-Chi 2 (II.6.004)',
-    isAlive: false,
-    birthPlace: 'Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam',
-    burialLocation: 'Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Bàu Sen)',
-    bio: 'Thường gọi là Lầu Cát. Con ông Văn Bá Đình, cháu nội ông Văn Tấn Thành. Khởi đầu Phái II-VBXT-Chi 2. Mộ táng tại Bàu Sen, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây. Vợ là bà Nguyễn Thị Đích (mất ngày 16-2 ÂL, mộ Bàu Sen cải táng về Gò Khoai). Sanh hạ 5 trai 1 gái: Văn Bá Kiều, Văn Bá Hiều, Văn Bá Họp, Văn Bá Hân, Văn Bá Hòa, Văn Thị Tọa.',
-    achievements: ['Tổ khởi phát Phái II-VBXT-Chi 2'],
-    fatherId: 'mem-506',
-    motherId: 'mem-506-w',
-    spouseIds: ['mem-604-w'],
-  },
-  {
-    id: 'mem-604-w',
-    fullName: 'Nguyễn Thị Đích',
-    gender: 'female',
-    generation: 6,
-    branchId: 'branch-vbxt',
-    phaiName: 'Phái II-VBXT',
-    chiName: 'Chi 2',
-    orderInFamily: 1,
-    orderTitle: 'Phu Nhân (Giỗ 16/2 ÂL)',
-    deathDateLunar: '16/02 ÂL',
-    isAlive: false,
-    burialLocation: 'Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Bàu Sen)',
-    bio: 'Phu nhân cụ Văn Bá Đài. Mất ngày 16-2 ÂL. Mộ táng tại Bàu Sen, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-604'],
-  },
-  {
-    id: 'mem-605',
-    fullName: 'Văn Phú Thắng',
-    courtesyName: 'III.6.005',
-    gender: 'male',
-    generation: 6,
-    branchId: 'branch-vpxd',
-    phaiName: 'Phái III-VPXĐ',
-    chiName: 'Xuyên Đông',
-    orderInFamily: 1,
-    orderTitle: 'Đời thứ 6: Phái III-VPXĐ (III.6.005)',
-    isAlive: false,
-    birthPlace: 'Mỹ Xuyên Đông, Duy Xuyên, Quảng Nam',
-    bio: 'Con ông Văn Phú Xuyên, cháu nội ông Văn Phú Trạch. Vợ là bà Văn Thị Sừ (Sử). Sanh hạ: Văn Phú Thuật, Văn Phú Khánh, Văn Thị Nôn, Văn Thị An, Văn Thị Châm, Văn Thị Nhân (Nhiêm, Nhiên).',
-    fatherId: 'mem-507',
-    motherId: 'mem-507-w',
-    spouseIds: ['mem-605-w'],
-  },
-  {
-    id: 'mem-605-w',
-    fullName: 'Văn Thị Sừ',
-    courtesyName: 'Sử',
-    gender: 'female',
-    generation: 6,
-    branchId: 'branch-vpxd',
-    phaiName: 'Phái III-VPXĐ',
-    orderInFamily: 1,
-    orderTitle: 'Phu Nhân',
-    isAlive: false,
-    bio: 'Phu nhân cụ Văn Phú Thắng.',
-    fatherId: null,
-    motherId: null,
-    spouseIds: ['mem-605'],
-  },
-
-  // =========================================================================
-  // ĐỜI THỨ 7, 8 & 9 (Trích xuất đầy đủ từ Bản thảo GIA PHẢ TỘC VĂN - Cập nhật 20/7/2023)
-  // Tổng cộng: 282 thành viên chi tiết
-  // =========================================================================
-  {
+  "branches": [
+    {
+      "id": "branch-vbxt",
+      "name": "Phái II - Xuyên Tây (VBXT)",
+      "code": "PHAI-II-VBXT",
+      "leaderId": "mem-506",
+      "description": "Tộc Văn Bá – Làng cũ Mỹ Xuyên Tây, nay thuộc TT. Nam Phước, huyện Duy Xuyên, Quảng Nam. Thờ phụng Tổ tiên tại Từ Đường Tộc Văn Bá (TT. Nam Phước) và Nghĩa trang Gia tộc Gò Khoai.",
+      "ancestorId": "mem-101",
+      "colorAccent": "#dc2626"
+    },
+    {
+      "id": "branch-vtqx",
+      "name": "Phái II - Quế Xuân (VTQX)",
+      "code": "PHAI-II-VTQX",
+      "leaderId": "mem-501",
+      "description": "Chi Tộc Văn Tấn – Quế Xuân, khởi từ ngài Ngũ thế Tiên tổ Văn Tấn Vinh tại làng cũ Xuân Phú, nay thuộc xã Quế Xuân, huyện Quế Sơn, Quảng Nam. Có Nhà thờ Tộc Văn Tấn tại Quế Xuân.",
+      "ancestorId": "mem-501",
+      "colorAccent": "#2563eb"
+    },
+    {
+      "id": "branch-vbdl",
+      "name": "Phái II - Đại Lộc (VBĐL)",
+      "code": "PHAI-II-VBĐL",
+      "leaderId": "mem-504",
+      "description": "Chi Tộc Văn Bá – Đại Lộc (Chi Hà Nha), khởi từ ngài Ngũ thế Tiên tổ Văn Bá Hình tại làng cũ Hà Dục Đông, Hà Dục Tây, nay thuộc Đại Lộc, Quảng Nam. Nhà thờ Tộc tại Hà Nha, Đại Đồng.",
+      "ancestorId": "mem-504",
+      "colorAccent": "#d97706"
+    },
+    {
+      "id": "branch-vpxd",
+      "name": "Phái III - Xuyên Đông (VPXĐ)",
+      "code": "PHAI-III-VPXĐ",
+      "leaderId": "mem-402",
+      "description": "Chi Tộc Văn Phú – Xuyên Đông, khởi từ hai ngài Tuyên tổ Văn Phú Trạch và Văn Phú Súy tại làng cũ Mỹ Xuyên Đông, nay thuộc TT. Nam Phước, Duy Xuyên. Nhà thờ Chi Tộc Văn Phú tại Xuyên Đông.",
+      "ancestorId": "mem-302",
+      "colorAccent": "#059669"
+    },
+    {
+      "id": "branch-vpxt",
+      "name": "Phái IV - Xuyên Tây (VPXT)",
+      "code": "PHAI-IV-VPXT",
+      "leaderId": "mem-404",
+      "description": "Chi Tộc Văn Phú – Xuyên Tây, khởi từ ngài Tuyên tổ Văn Phú Bơi tại làng cũ Mỹ Xuyên Tây, chung Nhà thờ Tộc Văn Phú tại Mỹ Xuyên Đông.",
+      "ancestorId": "mem-303",
+      "colorAccent": "#7c3aed"
+    },
+    {
+      "id": "branch-phai1",
+      "name": "Phái I - Tiền Hiền (Trưởng Phái)",
+      "code": "PHAI-I-VBXT",
+      "leaderId": "mem-101",
+      "description": "Phái I Văn Bá - Xuyên Tây: Con trưởng và cháu đích tôn của ngài Khải tổ mất sớm, mộ táng tại Cồn Đình, năm 1976 cải táng về Nghĩa trang Gia tộc Gò Khoai.",
+      "ancestorId": "mem-101",
+      "colorAccent": "#b45309"
+    }
+  ],
+  "members": [
+    {
+      "id": "mem-101",
+      "fullName": "Văn Bá Bạt",
+      "courtesyName": "1.0",
+      "posthumousName": "Triệu Tổ Khảo Phủ Quân",
+      "gender": "male",
+      "generation": 1,
+      "branchId": "",
+      "phaiName": "",
+      "chiName": "",
+      "nhanhName": "",
+      "orderInFamily": 1,
+      "orderTitle": "Nhứt thế: Triệu Tổ (1.0)",
+      "birthDate": "1680-01-01",
+      "birthDateLunar": "Nguyên Đán",
+      "isAlive": false,
+      "deathDate": "1755-03-10",
+      "deathDateLunar": "10/03 ÂL",
+      "birthPlace": "Làng Mỹ Xuyên, huyện Nông Cống, phủ Hà Trung, tỉnh Thanh Hóa (nay là xã Hà Vinh, huyện Hà Trung, Thanh Hóa)",
+      "burialLocation": "Nghĩa trang Gia tộc tại Gò Khoai, xóm Mỹ Luân, TT. Nam Phước, huyện Duy Xuyên, Quảng Nam (cải táng 1976)",
+      "burialCoordinates": {
+        "lat": 15.8236,
+        "lng": 108.2392
+      },
+      "avatarUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80",
+      "bio": "Quê ở tỉnh Thanh Hóa, phủ Hà Trung, huyện Nông Cống, làng Mỹ Xuyên, địa diện núi Thần Phù. Nay là xã Hà Vinh, huyện Hà Trung, tỉnh Thanh Hóa. Mộ ông trước kia ở Thanh Hóa, con là ông Văn Bá Liêu sau khi lập nghiệp và ổn định ở Quảng Nam đã về quê cũ đem hài cốt cha trong một quách sành vào cải táng tại Cồn Đình, làng cũ Mỹ Xuyên Tây, nay thuộc Thị trấn Nam Phước, huyện Duy Xuyên. Năm 1976, cải táng lần 2 về nghĩa trang Gia tộc tại Gò Khoai, xóm Mỹ Luân, TT. Nam Phước.",
+      "achievements": [
+        "Ngài Triệu Tổ khai sáng cội nguồn Tộc Văn",
+        "Di dời hài cốt từ Thanh Hóa phụng táng tại Gò Khoai, Duy Xuyên, Quảng Nam",
+        "Được toàn thể 4 Phái Tộc Văn ngàn đời thờ phụng trang trọng"
+      ],
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [],
+      "isRootAncestor": true
+    },
+    {
+      "id": "mem-201",
+      "fullName": "Văn Bá Liêu",
+      "courtesyName": "Sử - Trình - Lư (2.0)",
+      "posthumousName": "Khải Tổ Phủ Quân",
+      "gender": "male",
+      "generation": 2,
+      "branchId": "",
+      "phaiName": "",
+      "chiName": "",
+      "nhanhName": "",
+      "orderInFamily": 1,
+      "orderTitle": "Nhị thế: Khải Tổ (2.0)",
+      "birthDate": "1710-04-15",
+      "birthDateLunar": "15/03 ÂL",
+      "isAlive": false,
+      "deathDate": "1785-08-12",
+      "deathDateLunar": "08/07 ÂL",
+      "birthPlace": "Mỹ Xuyên Tây, TT. Nam Phước, Duy Xuyên, Quảng Nam",
+      "burialLocation": "Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Cồn Đình)",
+      "burialCoordinates": {
+        "lat": 15.8238,
+        "lng": 108.2395
+      },
+      "avatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+      "bio": "Con ông Văn Bá Bạt. Tên ông thường gọi là: Sử - Trình - Lư. Khởi đầu lập nghiệp vững vàng tại làng cũ Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam. Ngài đã thân hành về lại quê cũ Thanh Hóa mang quách sành đựng hài cốt thân phụ vào an táng tại Cồn Đình, mở rộng cơ nghiệp, lập Từ Đường Tộc Văn Bá tại Mỹ Xuyên Tây.",
+      "achievements": [
+        "Khai cơ lập nghiệp tại làng Mỹ Xuyên Tây, Duy Xuyên",
+        "Nghinh hài cốt Triệu Tổ từ Thanh Hóa vào Quảng Nam",
+        "Khởi sinh 4 Phái Tộc Văn lẫy lừng",
+        "Dựng Từ đường Tộc Văn Bá tại Thị trấn Nam Phước"
+      ],
+      "fatherId": "mem-101",
+      "motherId": null,
+      "spouseIds": [
+        "mem-201-w1",
+        "mem-201-w2"
+      ]
+    },
+    {
+      "id": "mem-201-w1",
+      "fullName": "Huỳnh Thị Bạch",
+      "gender": "female",
+      "generation": 2,
+      "branchId": "",
+      "phaiName": "",
+      "orderInFamily": 1,
+      "orderTitle": "Vợ Chánh (Chánh Thất Khải Tổ Tỷ)",
+      "isAlive": false,
+      "burialLocation": "Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Cồn Đô)",
+      "bio": "Vợ chánh của ngài Nhị thế Khải tổ Văn Bá Liêu. Mộ trước táng tại Cồn Đô, làng cũ Mỹ Xuyên Tây, nay thuộc Thị trấn Nam Phước. Năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây. Sanh hạ: Con trưởng [Trưởng Nam] (Phái I), Văn Bá Lục (Phái II), Văn Bá Nghi (Phái III).",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-201"
+      ]
+    },
+    {
+      "id": "mem-201-w2",
+      "fullName": "Huỳnh Thị Quyến",
+      "gender": "female",
+      "generation": 2,
+      "branchId": "",
+      "phaiName": "",
+      "orderInFamily": 2,
+      "orderTitle": "Vợ Thứ (Kế Thất)",
+      "isAlive": false,
+      "burialLocation": "Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Cồn Đình)",
+      "bio": "Vợ thứ của ngài Nhị thế Khải tổ Văn Bá Liêu. Mộ trước táng tại Cồn Đình, làng cũ Mỹ Xuyên Tây, nay thuộc Thị trấn Nam Phước. Năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây. Sanh hạ: Văn Phú Đôi (Phái IV).",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-201"
+      ]
+    },
+    {
+      "id": "mem-300",
+      "fullName": "Văn Bá [Trưởng Nam]",
+      "gender": "male",
+      "generation": 3,
+      "branchId": "branch-phai1",
+      "phaiName": "Phái I-VBXT",
+      "chiName": "Chi Trưởng",
+      "orderInFamily": 1,
+      "orderTitle": "Tam thế: Thỉ Tổ (Phái I-VBXT)",
+      "isAlive": false,
+      "burialLocation": "Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Cồn Đình)",
+      "bio": "Con trưởng của ngài Văn Bá Liêu. Ngài và cháu đích tôn đều mất sớm. Mộ táng tại Cồn Đình, làng cũ Mỹ Xuyên Tây, nay thuộc Thị trấn Nam Phước, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây.",
+      "fatherId": "mem-201",
+      "motherId": "mem-201-w1",
+      "spouseIds": []
+    },
+    {
+      "id": "mem-301",
+      "fullName": "Văn Bá Lục",
+      "courtesyName": "Châu Ký (II.3.002)",
+      "posthumousName": "Thỉ Tổ Phái II Phủ Quân",
+      "gender": "male",
+      "generation": 3,
+      "branchId": "branch-vbxt",
+      "phaiName": "Phái II-VBXT",
+      "chiName": "Chi 1 & Chi 2",
+      "nhanhName": "Xuyên Tây",
+      "orderInFamily": 2,
+      "orderTitle": "Tam thế: Thỉ Tổ (Phái II-VBXT)",
+      "isAlive": false,
+      "birthPlace": "Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam",
+      "burialLocation": "Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ xứ Tân Kiều)",
+      "avatarUrl": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80",
+      "bio": "Thường gọi là Châu Ký. Con thứ hai của ngài Văn Bá Liêu, cháu nội ngài Triệu tổ Văn Bá Bạt. Ngài khởi phát Phái II Tộc Văn Bá – Xuyên Tây. Mộ trước táng tại xứ Tân Kiều, làng cũ Mỹ Xuyên Tây, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây. Sanh hạ: Văn Quang Đạo (Phụng) và Văn Tấn Thành.",
+      "achievements": [
+        "Khởi lập Phái II Tộc Văn Bá - Xuyên Tây"
+      ],
+      "fatherId": "mem-201",
+      "motherId": "mem-201-w1",
+      "spouseIds": [
+        "mem-301-w"
+      ]
+    },
+    {
+      "id": "mem-301-w",
+      "fullName": "Bà Thỉ Tổ Tỷ (Phái II)",
+      "gender": "female",
+      "generation": 3,
+      "branchId": "branch-vbxt",
+      "phaiName": "Phái II-VBXT",
+      "orderInFamily": 1,
+      "orderTitle": "Phối Ngẫu (Không rõ họ tên)",
+      "isAlive": false,
+      "bio": "Phu nhân của ngài Thỉ tổ Phái II Văn Bá Lục. Gia phả cổ chưa ghi rõ họ tên. Sanh hạ ngài Văn Quang Đạo và Văn Tấn Thành.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-301"
+      ]
+    },
+    {
+      "id": "mem-302",
+      "fullName": "Văn Bá Nghi",
+      "courtesyName": "III.3.003",
+      "posthumousName": "Thỉ Tổ Phái III Phủ Quân",
+      "gender": "male",
+      "generation": 3,
+      "branchId": "branch-vpxd",
+      "phaiName": "Phái III-VBXT",
+      "chiName": "Xuyên Đông",
+      "nhanhName": "Khởi Tộc Văn Phú",
+      "orderInFamily": 3,
+      "orderTitle": "Tam thế: Thỉ Tổ (Phái III-VBXT)",
+      "isAlive": false,
+      "birthPlace": "Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam",
+      "burialLocation": "Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Cồn Đình)",
+      "bio": "Con thứ ba của ngài Văn Bá Liêu, cháu nội ngài Văn Bá Bạt. Khởi đầu Phái Ba. Mộ táng tại Cồn Đình, năm 1976 cải táng về nghĩa trang Gia tộc Gò Khoai. Sanh hạ hai ngài Văn Phú Trạch và Văn Phú Súy, bắt đầu tách từ Tộc Văn Bá – Xuyên Tây thành Chi tộc riêng: Tộc Văn Phú tại làng cũ Mỹ Xuyên Đông, lập Nhà thờ Tộc Văn Phú tại Xuyên Đông.",
+      "achievements": [
+        "Khởi tổ Phái III, tiền đề thành lập Tộc Văn Phú - Xuyên Đông"
+      ],
+      "fatherId": "mem-201",
+      "motherId": "mem-201-w1",
+      "spouseIds": [
+        "mem-302-w"
+      ]
+    },
+    {
+      "id": "mem-302-w",
+      "fullName": "Bà Thỉ Tổ Tỷ (Phái III)",
+      "gender": "female",
+      "generation": 3,
+      "branchId": "branch-vpxd",
+      "phaiName": "Phái III-VBXT",
+      "orderInFamily": 1,
+      "orderTitle": "Phối Ngẫu (Không rõ họ tên)",
+      "isAlive": false,
+      "bio": "Phu nhân của ngài Thỉ tổ Phái III Văn Bá Nghi.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-302"
+      ]
+    },
+    {
+      "id": "mem-303",
+      "fullName": "Văn Phú Đôi",
+      "courtesyName": "IV.3.004",
+      "posthumousName": "Thỉ Tổ Phái IV Phủ Quân",
+      "gender": "male",
+      "generation": 3,
+      "branchId": "branch-vpxt",
+      "phaiName": "Phái IV-VBXT",
+      "chiName": "Xuyên Tây",
+      "nhanhName": "Khởi Tộc Văn Phú Xuyên Tây",
+      "orderInFamily": 4,
+      "orderTitle": "Tam thế: Thỉ Tổ (Phái IV-VBXT)",
+      "isAlive": false,
+      "birthPlace": "Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam",
+      "bio": "Con thứ tư của ngài Văn Bá Liêu, cháu nội ngài Văn Bá Bạt. Khởi đầu Phái Tư. Sanh hạ ngài Tứ thế Tuyên tổ Văn Phú Bơi tách thành Tộc Văn Phú tại làng cũ Mỹ Xuyên Tây, chung Nhà thờ Tộc Văn Phú tại Mỹ Xuyên Đông.",
+      "achievements": [
+        "Khởi tổ Phái IV Tộc Văn"
+      ],
+      "fatherId": "mem-201",
+      "motherId": "mem-201-w2",
+      "spouseIds": [
+        "mem-303-w"
+      ]
+    },
+    {
+      "id": "mem-303-w",
+      "fullName": "Bà Thỉ Tổ Tỷ (Phái IV)",
+      "gender": "female",
+      "generation": 3,
+      "branchId": "branch-vpxt",
+      "phaiName": "Phái IV-VBXT",
+      "orderInFamily": 1,
+      "orderTitle": "Phối Ngẫu (Không rõ họ tên)",
+      "isAlive": false,
+      "bio": "Phu nhân của ngài Thỉ tổ Phái IV Văn Phú Đôi.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-303"
+      ]
+    },
+    {
+      "id": "mem-400",
+      "fullName": "Văn Quang Đạo",
+      "courtesyName": "Phụng",
+      "gender": "male",
+      "generation": 4,
+      "branchId": "branch-vbxt",
+      "phaiName": "Phái II-VBXT",
+      "chiName": "Xuyên Tây",
+      "orderInFamily": 1,
+      "orderTitle": "Tứ thế: Trưởng Nam",
+      "isAlive": false,
+      "burialLocation": "Nghĩa trang Gia tộc Gò Khoai, Duy Xuyên",
+      "bio": "Thường gọi là Phụng. Con trưởng của ngài Thỉ tổ Phái II Văn Bá Lục, cháu nội ngài Văn Bá Liêu.",
+      "fatherId": "mem-301",
+      "motherId": "mem-301-w",
+      "spouseIds": []
+    },
+    {
+      "id": "mem-401",
+      "fullName": "Văn Tấn Thành",
+      "courtesyName": "Chỉnh Trai (II.4.001)",
+      "posthumousName": "Tuyên Tổ Phủ Quân",
+      "gender": "male",
+      "generation": 4,
+      "branchId": "branch-vbxt",
+      "phaiName": "Phái II-VBXT",
+      "chiName": "Chi 1 & Chi 2",
+      "nhanhName": "Xuyên Tây",
+      "orderInFamily": 2,
+      "orderTitle": "Tứ thế: Tuyên Tổ (II.4.001)",
+      "isAlive": false,
+      "birthPlace": "Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam",
+      "burialLocation": "Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Cồn Đình)",
+      "avatarUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
+      "bio": "Thường gọi là Chỉnh Trai. Con ông Văn Bá Lục, cháu nội ông Văn Bá Liêu. Mộ ông bà song táng tại Cồn Đình, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai. Sanh hạ 6 người con trai mở ra các chi nhánh lớn của Phái II: Văn Tấn Vinh (bắt đầu Phái II Tộc Văn Tấn - Quế Xuân), Văn Tấn Ba (Gia Định), Văn Bá Liễu, Văn Bá Hình (bắt đầu Phái II Tộc Văn Bá - Đại Lộc), Văn Bá Lý, Văn Bá Đình (kế tục Phái II Tộc Văn Bá - Xuyên Tây).",
+      "achievements": [
+        "Tuyên tổ sinh 6 người con trai mở rộng địa bàn Tộc Văn khắp Quảng Nam và Nam Bộ"
+      ],
+      "fatherId": "mem-301",
+      "motherId": "mem-301-w",
+      "spouseIds": [
+        "mem-401-w"
+      ]
+    },
+    {
+      "id": "mem-401-w",
+      "fullName": "Nguyễn Thị Nộ",
+      "courtesyName": "Hiệu: Chơn Tình",
+      "gender": "female",
+      "generation": 4,
+      "branchId": "branch-vbxt",
+      "phaiName": "Phái II-VBXT",
+      "orderInFamily": 1,
+      "orderTitle": "Phối Ngẫu Tuyên Tổ Tỷ",
+      "isAlive": false,
+      "burialLocation": "Song táng cùng chồng tại nghĩa trang Gia tộc Gò Khoai, Xuyên Tây",
+      "bio": "Phu nhân của ngài Tứ thế Tuyên tổ Văn Tấn Thành. Hiệu là Chơn Tình. Mộ song táng cùng chồng tại Gò Khoai, Xuyên Tây.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-401"
+      ]
+    },
+    {
+      "id": "mem-402",
+      "fullName": "Văn Phú Trạch",
+      "courtesyName": "Lư (III.4.002)",
+      "posthumousName": "Tuyên Tổ Phủ Quân",
+      "gender": "male",
+      "generation": 4,
+      "branchId": "branch-vpxd",
+      "phaiName": "Phái III-VPXĐ",
+      "chiName": "Xuyên Đông",
+      "orderInFamily": 1,
+      "orderTitle": "Tứ thế: Tuyên Tổ (III.4.002)",
+      "isAlive": false,
+      "birthPlace": "Mỹ Xuyên Đông, Duy Xuyên, Quảng Nam",
+      "bio": "Thường gọi là Lư. Con ông Văn Bá Nghi, cháu nội ông Văn Bá Liêu. Cùng với em là Văn Phú Súy tách thành Chi tộc riêng: Tộc Văn Phú – Xuyên Đông. Sanh hạ: Văn Phú Xuyên, Văn Phú Quảng, Văn Phú Thọ, Văn Phú Minh, Văn Phú Định.",
+      "achievements": [
+        "Tuyên tổ Chi Tộc Văn Phú - Xuyên Đông"
+      ],
+      "fatherId": "mem-302",
+      "motherId": "mem-302-w",
+      "spouseIds": [
+        "mem-402-w"
+      ]
+    },
+    {
+      "id": "mem-402-w",
+      "fullName": "Nguyễn Thị Đa",
+      "gender": "female",
+      "generation": 4,
+      "branchId": "branch-vpxd",
+      "phaiName": "Phái III-VPXĐ",
+      "orderInFamily": 1,
+      "orderTitle": "Phu Nhân Tuyên Tổ",
+      "isAlive": false,
+      "bio": "Phu nhân của ngài Văn Phú Trạch.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-402"
+      ]
+    },
+    {
+      "id": "mem-403",
+      "fullName": "Văn Phú Súy",
+      "courtesyName": "Bò, Soái (III.4.003)",
+      "posthumousName": "Tuyên Tổ Phủ Quân",
+      "gender": "male",
+      "generation": 4,
+      "branchId": "branch-vpxd",
+      "phaiName": "Phái III-VPXĐ",
+      "chiName": "Xuyên Đông",
+      "orderInFamily": 2,
+      "orderTitle": "Tứ thế: Tuyên Tổ (III.4.003)",
+      "isAlive": false,
+      "birthPlace": "Mỹ Xuyên Đông, Duy Xuyên, Quảng Nam",
+      "bio": "Thường gọi là Bò, Soái. Con ông Văn Bá Nghi, cháu nội ông Văn Bá Liêu. Cùng anh lập Chi Tộc Văn Phú – Xuyên Đông. Vợ là bà Phan Thị Khoắc (gia phả do cụ Văn Phú Quý lập ghi tên bà là Phan Thị Trang). Sanh hạ: Văn Phú Doãn, Văn Phú Toàn, Văn Phú Nhiễm.",
+      "achievements": [
+        "Tuyên tổ Chi Tộc Văn Phú - Xuyên Đông"
+      ],
+      "fatherId": "mem-302",
+      "motherId": "mem-302-w",
+      "spouseIds": [
+        "mem-403-w"
+      ]
+    },
+    {
+      "id": "mem-403-w",
+      "fullName": "Phan Thị Khoắc",
+      "courtesyName": "Gia phả ghi: Phan Thị Trang",
+      "gender": "female",
+      "generation": 4,
+      "branchId": "branch-vpxd",
+      "phaiName": "Phái III-VPXĐ",
+      "orderInFamily": 1,
+      "orderTitle": "Phu Nhân Tuyên Tổ",
+      "isAlive": false,
+      "bio": "Phu nhân của ngài Văn Phú Súy. Gia phả Tộc Văn Phú Xuyên Đông do cụ Văn Phú Quý lập ghi tên bà là Phan Thị Trang.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-403"
+      ]
+    },
+    {
+      "id": "mem-404",
+      "fullName": "Văn Phú Bơi",
+      "courtesyName": "Văn Thượng Chấp (IV.4.004)",
+      "posthumousName": "Tuyên Tổ Phủ Quân",
+      "gender": "male",
+      "generation": 4,
+      "branchId": "branch-vpxt",
+      "phaiName": "Phái IV-VPXT",
+      "chiName": "Xuyên Tây",
+      "orderInFamily": 1,
+      "orderTitle": "Tứ thế: Tuyên Tổ (IV.4.004)",
+      "deathDateLunar": "29/12 ÂL",
+      "isAlive": false,
+      "birthPlace": "Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam",
+      "bio": "Thường gọi là Văn Thượng Chấp. Con ông Văn Phú Đôi, cháu nội ông Văn Bá Liêu. Tách từ Tộc Văn Bá – Xuyên Tây thành Chi tộc riêng: Tộc Văn Phú tại làng cũ Mỹ Xuyên Tây, chung Nhà thờ Tộc Văn Phú tại Mỹ Xuyên Đông. Mất ngày 29/12 ÂL. Vợ là Bà Bơi. Sanh hạ: Văn Phú Chiếm, Văn Thị Loan, Văn Thị Xuy, Văn Thị Thiệp.",
+      "achievements": [
+        "Tuyên tổ Tộc Văn Phú - Xuyên Tây"
+      ],
+      "fatherId": "mem-303",
+      "motherId": "mem-303-w",
+      "spouseIds": [
+        "mem-404-w"
+      ]
+    },
+    {
+      "id": "mem-404-w",
+      "fullName": "Bà Bơi",
+      "gender": "female",
+      "generation": 4,
+      "branchId": "branch-vpxt",
+      "phaiName": "Phái IV-VPXT",
+      "orderInFamily": 1,
+      "orderTitle": "Phu Nhân Tuyên Tổ",
+      "isAlive": false,
+      "bio": "Phu nhân ngài Tứ thế Tuyên tổ Văn Phú Bơi. Sanh hạ 1 con trai (Văn Phú Chiếm) và 3 con gái (Văn Thị Loan, Văn Thị Xuy, Văn Thị Thiệp).",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-404"
+      ]
+    },
+    {
+      "id": "mem-501",
+      "fullName": "Văn Tấn Vinh",
+      "courtesyName": "II.5.001",
+      "posthumousName": "Tiên Tổ Phủ Quân",
+      "gender": "male",
+      "generation": 5,
+      "branchId": "branch-vtqx",
+      "phaiName": "Phái II-VTQX",
+      "chiName": "Quế Xuân",
+      "nhanhName": "Khởi Tộc Văn Tấn",
+      "orderInFamily": 1,
+      "orderTitle": "Ngũ thế: Tiên Tổ (II.5.001)",
+      "deathDateLunar": "04/01 ÂL",
+      "isAlive": false,
+      "birthPlace": "Làng Xuân Phú, Quế Xuân, Quế Sơn, Quảng Nam",
+      "burialLocation": "Mộ táng tại làng Xuân Phú, Quế Xuân",
+      "avatarUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+      "bio": "Con ông Văn Tấn Thành, cháu nội ông Văn Bá Lục. Bắt đầu: Phái II – Chi Tộc Văn Tấn – Quế Xuân (VTQX) tại làng cũ Xuân Phú, nay thuộc xã Quế Xuân, huyện Quế Sơn, tỉnh Quảng Nam. Mộ táng tại làng Xuân Phú. Mất ngày 04/1 ÂL. Vợ là bà Trần Thị Luận (mất 13/8 ÂL). Sanh hạ: Văn Tấn Ba (Văn Tấn Hoa).",
+      "achievements": [
+        "Khởi tổ Chi Tộc Văn Tấn - Quế Xuân (VTQX)"
+      ],
+      "fatherId": "mem-401",
+      "motherId": "mem-401-w",
+      "spouseIds": [
+        "mem-501-w"
+      ]
+    },
+    {
+      "id": "mem-501-w",
+      "fullName": "Trần Thị Luận",
+      "gender": "female",
+      "generation": 5,
+      "branchId": "branch-vtqx",
+      "phaiName": "Phái II-VTQX",
+      "orderInFamily": 1,
+      "orderTitle": "Phu Nhân Tiên Tổ",
+      "deathDateLunar": "13/08 ÂL",
+      "isAlive": false,
+      "bio": "Phu nhân ngài Ngũ thế Tiên tổ Văn Tấn Vinh. Mất ngày 13/8 Âm lịch.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-501"
+      ]
+    },
+    {
+      "id": "mem-502",
+      "fullName": "Văn Tấn Ba",
+      "courtesyName": "II.5.002",
+      "gender": "male",
+      "generation": 5,
+      "branchId": "branch-vtqx",
+      "phaiName": "Phái II-VTQX",
+      "orderInFamily": 2,
+      "orderTitle": "Ngũ thế: Tiên Tổ (II.5.002)",
+      "isAlive": false,
+      "burialLocation": "Mộ táng tại thành Gia Định (chưa kết nối được)",
+      "bio": "Con ông Văn Tấn Thành, cháu nội ông Văn Bá Lục. Mộ táng tại thành Gia Định, hiện gia phả đang lưu giữ ghi chú để tiếp tục kết nối các chi nhánh phương Nam.",
+      "fatherId": "mem-401",
+      "motherId": "mem-401-w",
+      "spouseIds": []
+    },
+    {
+      "id": "mem-503",
+      "fullName": "Văn Bá Liễu",
+      "courtesyName": "II.5.003",
+      "gender": "male",
+      "generation": 5,
+      "branchId": "branch-vbxt",
+      "phaiName": "Phái II-VBXT",
+      "orderInFamily": 3,
+      "orderTitle": "Ngũ thế: Tiên Tổ (II.5.003)",
+      "isAlive": false,
+      "bio": "Con ông Văn Tấn Thành, cháu nội ông Văn Bá Lục. Thất lạc, mất tích không rõ thông tin đời sau.",
+      "fatherId": "mem-401",
+      "motherId": "mem-401-w",
+      "spouseIds": []
+    },
+    {
+      "id": "mem-504",
+      "fullName": "Văn Bá Hình",
+      "courtesyName": "II.5.004",
+      "posthumousName": "Tiên Tổ Phủ Quân",
+      "gender": "male",
+      "generation": 5,
+      "branchId": "branch-vbdl",
+      "phaiName": "Phái II-VBĐL",
+      "chiName": "Chi HÀ NHA",
+      "nhanhName": "Khởi Tộc Văn Bá Đại Lộc",
+      "orderInFamily": 4,
+      "orderTitle": "Ngũ thế: Tiên Tổ (II.5.004)",
+      "isAlive": false,
+      "birthPlace": "Huyện Đại Lộc, tỉnh Quảng Nam",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "bio": "Con ông Văn Tấn Thành, cháu nội ông Văn Bá Lục. Bắt đầu: Phái II – Chi Tộc Văn Bá – Đại Lộc (VBĐL) ở làng cũ Hà Dục Đông, Hà Dục Tây và Nam Phước, nay là xã Đại Thạnh và xã Đại Tân, huyện Đại Lộc, tỉnh Quảng Nam. Vợ là bà Trần Thị Cử. Sanh hạ: Văn Bá Thể.",
+      "achievements": [
+        "Khởi tổ Chi Tộc Văn Bá - Đại Lộc (VBĐL)"
+      ],
+      "fatherId": "mem-401",
+      "motherId": "mem-401-w",
+      "spouseIds": [
+        "mem-504-w"
+      ]
+    },
+    {
+      "id": "mem-504-w",
+      "fullName": "Trần Thị Cử",
+      "gender": "female",
+      "generation": 5,
+      "branchId": "branch-vbdl",
+      "phaiName": "Phái II-VBĐL",
+      "orderInFamily": 1,
+      "orderTitle": "Phu Nhân Tiên Tổ",
+      "isAlive": false,
+      "bio": "Phu nhân của ngài Văn Bá Hình. Sanh hạ ngài Văn Bá Thể.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-504"
+      ]
+    },
+    {
+      "id": "mem-505",
+      "fullName": "Văn Bá Lý",
+      "courtesyName": "II.5.005",
+      "gender": "male",
+      "generation": 5,
+      "branchId": "branch-vbxt",
+      "phaiName": "Phái II-VBXT",
+      "orderInFamily": 5,
+      "orderTitle": "Ngũ thế: Tiên Tổ (II.5.005)",
+      "isAlive": false,
+      "bio": "Con ông Văn Tấn Thành, cháu nội ông Văn Bá Lục. Mất tích không rõ.",
+      "fatherId": "mem-401",
+      "motherId": "mem-401-w",
+      "spouseIds": []
+    },
+    {
+      "id": "mem-506",
+      "fullName": "Văn Bá Đình",
+      "courtesyName": "Tiểu Triều (II.5.006)",
+      "posthumousName": "Tiên Tổ Phủ Quân",
+      "gender": "male",
+      "generation": 5,
+      "branchId": "branch-vbxt",
+      "phaiName": "Phái II-VBXT",
+      "chiName": "Chi 1 & Chi 2",
+      "nhanhName": "Kế tục Xuyên Tây",
+      "orderInFamily": 6,
+      "orderTitle": "Ngũ thế: Tiên Tổ (II.5.006)",
+      "isAlive": false,
+      "birthPlace": "Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam",
+      "burialLocation": "Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ xứ Bàu Sen)",
+      "avatarUrl": "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80",
+      "bio": "Thường gọi là Tiểu Triều. Con ông Văn Tấn Thành, cháu nội ông Văn Bá Lục. Ngài kế tục gia phả Tộc Văn Bá – Xuyên Tây và thờ phụng Tổ tiên từ ngài Triệu tổ xuống tại Nhà thờ Tộc Văn Bá TT. Nam Phước. Mộ trước táng tại Bàu Sen, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai. Vợ là bà Trần Thị Hút (hiệu Thôn Khí, mất ngày 15/3 ÂL). Sanh hạ 5 con trai: Văn Bá Đồng, Văn Bá Trung (bắt đầu Chi 1), Văn Bá Trinh (mộ táng Gia Định), Văn Bá Trang, Văn Bá Đài (bắt đầu Chi 2).",
+      "achievements": [
+        "Kế tục Tộc Văn Bá - Xuyên Tây, sinh dưỡng hai vị tổ Chi 1 và Chi 2"
+      ],
+      "fatherId": "mem-401",
+      "motherId": "mem-401-w",
+      "spouseIds": [
+        "mem-506-w"
+      ]
+    },
+    {
+      "id": "mem-506-w",
+      "fullName": "Trần Thị Hút",
+      "courtesyName": "Hiệu: Thôn Khí",
+      "gender": "female",
+      "generation": 5,
+      "branchId": "branch-vbxt",
+      "phaiName": "Phái II-VBXT",
+      "orderInFamily": 1,
+      "orderTitle": "Phu Nhân Tiên Tổ Tỷ",
+      "deathDateLunar": "15/03 ÂL",
+      "isAlive": false,
+      "burialLocation": "Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Bàu Sen)",
+      "bio": "Phu nhân của ngài Văn Bá Đình. Hiệu Thôn Khí. Mất ngày 15/3 Âm lịch. Mộ trước táng tại Bàu Sen, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-506"
+      ]
+    },
+    {
+      "id": "mem-507",
+      "fullName": "Văn Phú Xuyên",
+      "courtesyName": "Bích (III.5.007)",
+      "gender": "male",
+      "generation": 5,
+      "branchId": "branch-vpxd",
+      "phaiName": "Phái III-VPXĐ",
+      "chiName": "Xuyên Đông",
+      "orderInFamily": 1,
+      "orderTitle": "Ngũ thế: Tiên Tổ (III.5.007)",
+      "isAlive": false,
+      "birthPlace": "Mỹ Xuyên Đông, Duy Xuyên, Quảng Nam",
+      "bio": "Thường gọi là Bích. Con ông Văn Phú Trạch, cháu nội ông Văn Bá Nghi. Vợ là bà Nguyễn Thị Bông. Sanh hạ: Văn Phú Thắng, Văn Phú Lương, Văn Phú Hạnh, Văn Phú Huệ, Văn Thị Hưng.",
+      "fatherId": "mem-402",
+      "motherId": "mem-402-w",
+      "spouseIds": [
+        "mem-507-w"
+      ]
+    },
+    {
+      "id": "mem-507-w",
+      "fullName": "Nguyễn Thị Bông",
+      "gender": "female",
+      "generation": 5,
+      "branchId": "branch-vpxd",
+      "phaiName": "Phái III-VPXĐ",
+      "orderInFamily": 1,
+      "orderTitle": "Phu Nhân Tiên Tổ",
+      "isAlive": false,
+      "bio": "Phu nhân cụ Văn Phú Xuyên.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-507"
+      ]
+    },
+    {
+      "id": "mem-508",
+      "fullName": "Văn Phú Quảng",
+      "courtesyName": "III.5.008",
+      "gender": "male",
+      "generation": 5,
+      "branchId": "branch-vpxd",
+      "phaiName": "Phái III-VPXĐ",
+      "orderInFamily": 2,
+      "orderTitle": "Ngũ thế: Tiên Tổ (III.5.008)",
+      "isAlive": false,
+      "bio": "Con ông Văn Phú Trạch, cháu nội ông Văn Bá Nghi. Mất tích không rõ.",
+      "fatherId": "mem-402",
+      "motherId": "mem-402-w",
+      "spouseIds": []
+    },
+    {
+      "id": "mem-509",
+      "fullName": "Văn Phú Thọ",
+      "courtesyName": "Miên (III.5.009)",
+      "gender": "male",
+      "generation": 5,
+      "branchId": "branch-vpxd",
+      "phaiName": "Phái III-VPXĐ",
+      "chiName": "Xuyên Đông",
+      "orderInFamily": 3,
+      "orderTitle": "Ngũ thế: Tiên Tổ (III.5.009)",
+      "isAlive": false,
+      "birthPlace": "Mỹ Xuyên Đông, Duy Xuyên, Quảng Nam",
+      "bio": "Thường gọi là Miên. Con ông Văn Phú Trạch, cháu nội ông Văn Bá Nghi. Vợ là bà Nguyễn Thị Cho (Châu). Sanh hạ đông đúc: Văn Phú Thiện, Văn Phú Thiều, Văn Phú Tụy, Văn Phú Liễu (Kim), Văn Phú Được, Văn Thị Mai, Văn Thị Trước, Văn Thị Liệp, Văn Thị Miên.",
+      "fatherId": "mem-402",
+      "motherId": "mem-402-w",
+      "spouseIds": [
+        "mem-509-w"
+      ]
+    },
+    {
+      "id": "mem-509-w",
+      "fullName": "Nguyễn Thị Cho",
+      "courtesyName": "Châu",
+      "gender": "female",
+      "generation": 5,
+      "branchId": "branch-vpxd",
+      "phaiName": "Phái III-VPXĐ",
+      "orderInFamily": 1,
+      "orderTitle": "Phu Nhân Tiên Tổ",
+      "isAlive": false,
+      "bio": "Phu nhân cụ Văn Phú Thọ.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-509"
+      ]
+    },
+    {
+      "id": "mem-512",
+      "fullName": "Văn Phú Doãn",
+      "courtesyName": "III.5.012",
+      "gender": "male",
+      "generation": 5,
+      "branchId": "branch-vpxd",
+      "phaiName": "Phái III-VPXĐ",
+      "chiName": "Xuyên Đông",
+      "orderInFamily": 1,
+      "orderTitle": "Ngũ thế: Tiên Tổ (III.5.012)",
+      "isAlive": false,
+      "birthPlace": "Mỹ Xuyên Đông, Duy Xuyên, Quảng Nam",
+      "bio": "Con ông Văn Phú Súy, cháu nội ông Văn Bá Nghi. Vợ là bà Huỳnh Thị Chẩn (Chân). Sanh hạ: Văn Phú Biều, Văn Phú Trường, Văn Phú Trung, Văn Phú Chiếm, Văn Phú Bảng, Văn Phú Khôi, Văn Phú Lực, Văn Thị Huệ.",
+      "fatherId": "mem-403",
+      "motherId": "mem-403-w",
+      "spouseIds": [
+        "mem-512-w"
+      ]
+    },
+    {
+      "id": "mem-512-w",
+      "fullName": "Huỳnh Thị Chẩn",
+      "courtesyName": "Chân",
+      "gender": "female",
+      "generation": 5,
+      "branchId": "branch-vpxd",
+      "phaiName": "Phái III-VPXĐ",
+      "orderInFamily": 1,
+      "orderTitle": "Phu Nhân Tiên Tổ",
+      "isAlive": false,
+      "bio": "Phu nhân cụ Văn Phú Doãn.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-512"
+      ]
+    },
+    {
+      "id": "mem-513",
+      "fullName": "Văn Phú Toàn",
+      "courtesyName": "An (III.5.013)",
+      "gender": "male",
+      "generation": 5,
+      "branchId": "branch-vpxd",
+      "phaiName": "Phái III-VPXĐ",
+      "chiName": "Xuyên Đông",
+      "orderInFamily": 2,
+      "orderTitle": "Ngũ thế: Tiên Tổ (III.5.013)",
+      "deathDateLunar": "18/01 ÂL",
+      "isAlive": false,
+      "birthPlace": "Mỹ Xuyên Đông, Duy Xuyên, Quảng Nam",
+      "burialLocation": "Lão Sum Viên",
+      "bio": "Thường gọi là An. Con ông Văn Phú Súy, cháu nội ông Văn Bá Nghi. Mất ngày 18/1 ÂL, mộ táng tại Lão Sum Viên. Vợ là bà Nguyễn Thị Tiểu (Liễu) mất ngày 14/8 ÂL. Sanh hạ 9 người con: Văn Phú Hội, Văn Phú Xá, Văn Phú Hiệp, Văn Phú Dư, Văn Phú Dũ, Văn Phú Kế, Văn Thị Tề, Văn Thị Đề, Văn Thị Chiêm.",
+      "fatherId": "mem-403",
+      "motherId": "mem-403-w",
+      "spouseIds": [
+        "mem-513-w"
+      ]
+    },
+    {
+      "id": "mem-513-w",
+      "fullName": "Nguyễn Thị Tiểu",
+      "courtesyName": "Liễu",
+      "gender": "female",
+      "generation": 5,
+      "branchId": "branch-vpxd",
+      "phaiName": "Phái III-VPXĐ",
+      "orderInFamily": 1,
+      "orderTitle": "Phu Nhân Tiên Tổ",
+      "deathDateLunar": "14/08 ÂL",
+      "isAlive": false,
+      "bio": "Phu nhân cụ Văn Phú Toàn. Mất ngày 14/8 Âm lịch.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-513"
+      ]
+    },
+    {
+      "id": "mem-515",
+      "fullName": "Văn Phú Chiếm",
+      "courtesyName": "IV.5.015",
+      "gender": "male",
+      "generation": 5,
+      "branchId": "branch-vpxt",
+      "phaiName": "Phái IV-VPXT",
+      "chiName": "Xuyên Tây",
+      "orderInFamily": 1,
+      "orderTitle": "Ngũ thế: Tiên Tổ (IV.5.015)",
+      "isAlive": false,
+      "birthPlace": "Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam",
+      "bio": "Con ông Văn Phú Bơi, cháu nội ông Văn Phú Đôi. Vợ là bà Huỳnh Thị Kiềm (Khâm). Sanh hạ: Văn Phú Mính, Văn Thị Đơn (Sách), Văn Thị Mình (Đắc).",
+      "fatherId": "mem-404",
+      "motherId": "mem-404-w",
+      "spouseIds": [
+        "mem-515-w"
+      ]
+    },
+    {
+      "id": "mem-515-w",
+      "fullName": "Huỳnh Thị Kiềm",
+      "courtesyName": "Khâm",
+      "gender": "female",
+      "generation": 5,
+      "branchId": "branch-vpxt",
+      "phaiName": "Phái IV-VPXT",
+      "orderInFamily": 1,
+      "orderTitle": "Phu Nhân Tiên Tổ",
+      "isAlive": false,
+      "bio": "Phu nhân cụ Văn Phú Chiếm.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-515"
+      ]
+    },
+    {
+      "id": "mem-601",
+      "fullName": "Văn Tấn Ba",
+      "courtesyName": "II.6.001",
+      "gender": "male",
+      "generation": 6,
+      "branchId": "branch-vtqx",
+      "phaiName": "Phái II-VTQX",
+      "chiName": "Quế Xuân",
+      "orderInFamily": 1,
+      "orderTitle": "Đời thứ 6: Phái II-VTQX (II.6.001)",
+      "deathDateLunar": "11/06 ÂL",
+      "isAlive": false,
+      "burialLocation": "Thành Gia Định",
+      "bio": "Con ông Văn Tấn Vinh, cháu nội ông Văn Tấn Thành. Mất ngày 11-6 ÂL, mộ táng tại thành Gia Định. Vợ là bà Nguyễn Thị Đà (mất 10-5 ÂL, mộ táng tại Cồn Đình, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây). Sanh hạ: Văn Tấn Trung.",
+      "fatherId": "mem-501",
+      "motherId": "mem-501-w",
+      "spouseIds": [
+        "mem-601-w"
+      ]
+    },
+    {
+      "id": "mem-601-w",
+      "fullName": "Nguyễn Thị Đà",
+      "gender": "female",
+      "generation": 6,
+      "branchId": "branch-vtqx",
+      "phaiName": "Phái II-VTQX",
+      "orderInFamily": 1,
+      "orderTitle": "Phu Nhân (Mộ Gò Khoai)",
+      "deathDateLunar": "10/05 ÂL",
+      "isAlive": false,
+      "burialLocation": "Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Cồn Đình)",
+      "bio": "Phu nhân cụ Văn Tấn Ba. Mất ngày 10-5 ÂL. Mộ trước táng tại Cồn Đình, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-601"
+      ]
+    },
+    {
+      "id": "mem-602",
+      "fullName": "Văn Bá Thể",
+      "courtesyName": "II.6.002",
+      "gender": "male",
+      "generation": 6,
+      "branchId": "branch-vbdl",
+      "phaiName": "Phái II-VBĐL",
+      "chiName": "Chi HÀ NHA",
+      "orderInFamily": 1,
+      "orderTitle": "Đời thứ 6: Phái II-VBĐL (II.6.002)",
+      "isAlive": false,
+      "birthPlace": "Hà Nha, xã Đại Đồng, huyện Đại Lộc, Quảng Nam",
+      "bio": "Con ông Văn Bá Hình, cháu nội ông Văn Tấn Thành. Bắt đầu: Phái II-VBĐL-Chi HÀ NHA (Đại Đồng, huyện Đại Lộc). Vợ là bà Trần Thị Ngân (Ngàn). Sanh hạ 4 con trai: Văn Bá Hạnh (Văn Công Hạnh), Văn Bá Trọng, Văn Bá Đạt, Văn Bá Tạo.",
+      "fatherId": "mem-504",
+      "motherId": "mem-504-w",
+      "spouseIds": [
+        "mem-602-w"
+      ]
+    },
+    {
+      "id": "mem-602-w",
+      "fullName": "Trần Thị Ngân",
+      "courtesyName": "Ngàn",
+      "gender": "female",
+      "generation": 6,
+      "branchId": "branch-vbdl",
+      "phaiName": "Phái II-VBĐL",
+      "orderInFamily": 1,
+      "orderTitle": "Phu Nhân",
+      "isAlive": false,
+      "bio": "Phu nhân cụ Văn Bá Thể.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-602"
+      ]
+    },
+    {
+      "id": "mem-603",
+      "fullName": "Văn Bá Trung",
+      "courtesyName": "Duy Hiếu (II.6.003)",
+      "gender": "male",
+      "generation": 6,
+      "branchId": "branch-vbxt",
+      "phaiName": "Phái II-VBXT",
+      "chiName": "Chi 1",
+      "nhanhName": "Nhánh 3",
+      "orderInFamily": 1,
+      "orderTitle": "Bắt đầu Phái II-VBXT-Chi 1 (II.6.003)",
+      "isAlive": false,
+      "birthPlace": "Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam",
+      "burialLocation": "Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Cồn Đô)",
+      "avatarUrl": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80",
+      "bio": "Thường gọi là Duy Hiếu. Con ông Văn Bá Đình, cháu nội ông Văn Tấn Thành. Khởi đầu Phái II-VBXT-Chi 1. Mộ táng tại Cồn Đô, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây. Vợ là bà Huỳnh Thị Ngưỡng (mộ xứ Tân Kiều, năm 1976 cải táng về Gò Khoai). Sanh hạ 4 con trai: Văn Bá Chánh, Văn Bá Trực, Văn Bá Cực, Văn Bá Viên.",
+      "achievements": [
+        "Tổ khởi phát Phái II-VBXT-Chi 1"
+      ],
+      "fatherId": "mem-506",
+      "motherId": "mem-506-w",
+      "spouseIds": [
+        "mem-603-w"
+      ]
+    },
+    {
+      "id": "mem-603-w",
+      "fullName": "Huỳnh Thị Ngưỡng",
+      "gender": "female",
+      "generation": 6,
+      "branchId": "branch-vbxt",
+      "phaiName": "Phái II-VBXT",
+      "chiName": "Chi 1",
+      "orderInFamily": 1,
+      "orderTitle": "Phu Nhân (Mộ Gò Khoai)",
+      "isAlive": false,
+      "burialLocation": "Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ xứ Tân Kiều)",
+      "bio": "Phu nhân cụ Văn Bá Trung. Mộ táng tại xứ Tân Kiều, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-603"
+      ]
+    },
+    {
+      "id": "mem-604",
+      "fullName": "Văn Bá Đài",
+      "courtesyName": "Lầu Cát (II.6.004)",
+      "gender": "male",
+      "generation": 6,
+      "branchId": "branch-vbxt",
+      "phaiName": "Phái II-VBXT",
+      "chiName": "Chi 2",
+      "orderInFamily": 2,
+      "orderTitle": "Bắt đầu Phái II-VBXT-Chi 2 (II.6.004)",
+      "isAlive": false,
+      "birthPlace": "Mỹ Xuyên Tây, Duy Xuyên, Quảng Nam",
+      "burialLocation": "Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Bàu Sen)",
+      "bio": "Thường gọi là Lầu Cát. Con ông Văn Bá Đình, cháu nội ông Văn Tấn Thành. Khởi đầu Phái II-VBXT-Chi 2. Mộ táng tại Bàu Sen, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây. Vợ là bà Nguyễn Thị Đích (mất ngày 16-2 ÂL, mộ Bàu Sen cải táng về Gò Khoai). Sanh hạ 5 trai 1 gái: Văn Bá Kiều, Văn Bá Hiều, Văn Bá Họp, Văn Bá Hân, Văn Bá Hòa, Văn Thị Tọa.",
+      "achievements": [
+        "Tổ khởi phát Phái II-VBXT-Chi 2"
+      ],
+      "fatherId": "mem-506",
+      "motherId": "mem-506-w",
+      "spouseIds": [
+        "mem-604-w"
+      ]
+    },
+    {
+      "id": "mem-604-w",
+      "fullName": "Nguyễn Thị Đích",
+      "gender": "female",
+      "generation": 6,
+      "branchId": "branch-vbxt",
+      "phaiName": "Phái II-VBXT",
+      "chiName": "Chi 2",
+      "orderInFamily": 1,
+      "orderTitle": "Phu Nhân (Giỗ 16/2 ÂL)",
+      "deathDateLunar": "16/02 ÂL",
+      "isAlive": false,
+      "burialLocation": "Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây (cải táng 1976 từ Bàu Sen)",
+      "bio": "Phu nhân cụ Văn Bá Đài. Mất ngày 16-2 ÂL. Mộ táng tại Bàu Sen, năm 1976 cải táng về nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-604"
+      ]
+    },
+    {
+      "id": "mem-605",
+      "fullName": "Văn Phú Thắng",
+      "courtesyName": "III.6.005",
+      "gender": "male",
+      "generation": 6,
+      "branchId": "branch-vpxd",
+      "phaiName": "Phái III-VPXĐ",
+      "chiName": "Xuyên Đông",
+      "orderInFamily": 1,
+      "orderTitle": "Đời thứ 6: Phái III-VPXĐ (III.6.005)",
+      "isAlive": false,
+      "birthPlace": "Mỹ Xuyên Đông, Duy Xuyên, Quảng Nam",
+      "bio": "Con ông Văn Phú Xuyên, cháu nội ông Văn Phú Trạch. Vợ là bà Văn Thị Sừ (Sử). Sanh hạ: Văn Phú Thuật, Văn Phú Khánh, Văn Thị Nôn, Văn Thị An, Văn Thị Châm, Văn Thị Nhân (Nhiêm, Nhiên).",
+      "fatherId": "mem-507",
+      "motherId": "mem-507-w",
+      "spouseIds": [
+        "mem-605-w"
+      ]
+    },
+    {
+      "id": "mem-605-w",
+      "fullName": "Văn Thị Sừ",
+      "courtesyName": "Sử",
+      "gender": "female",
+      "generation": 6,
+      "branchId": "branch-vpxd",
+      "phaiName": "Phái III-VPXĐ",
+      "orderInFamily": 1,
+      "orderTitle": "Phu Nhân",
+      "isAlive": false,
+      "bio": "Phu nhân cụ Văn Phú Thắng.",
+      "fatherId": null,
+      "motherId": null,
+      "spouseIds": [
+        "mem-605"
+      ]
+    },
+    {
       "id": "mem-701",
       "fullName": "Văn Tấn Trung",
       "courtesyName": "II.7.001",
@@ -1061,12 +1130,12 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-601",
       "motherId": "mem-601-w",
       "spouseIds": [
-          "mem-701-w1",
-          "mem-701-w2",
-          "mem-701-w3"
+        "mem-701-w1",
+        "mem-701-w2",
+        "mem-701-w3"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-701-w1",
       "fullName": "Nguyễn Thị Hoãn",
       "gender": "female",
@@ -1082,10 +1151,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-701"
+        "mem-701"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-701-w2",
       "fullName": "Đặng Thị Trước",
       "gender": "female",
@@ -1101,10 +1170,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-701"
+        "mem-701"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-701-w3",
       "fullName": "Đặng Thị Cách",
       "gender": "female",
@@ -1120,10 +1189,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-701"
+        "mem-701"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-801-01",
       "fullName": "Văn vô danh",
       "gender": "male",
@@ -1136,8 +1205,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-701",
       "motherId": "mem-701-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-801-02",
       "fullName": "Văn Tấn Quận",
       "gender": "male",
@@ -1151,8 +1220,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-701",
       "motherId": "mem-701-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-801-03",
       "fullName": "Văn Tấn Trâu",
       "gender": "male",
@@ -1166,8 +1235,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-701",
       "motherId": "mem-701-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-801-04",
       "fullName": "Văn Thị Tường",
       "gender": "female",
@@ -1180,8 +1249,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-701",
       "motherId": "mem-701-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-801-05",
       "fullName": "Văn Thị Huyên",
       "gender": "female",
@@ -1194,8 +1263,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-701",
       "motherId": "mem-701-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-801",
       "fullName": "Văn Tấn Hiến",
       "courtesyName": "Biên (II.8.001)",
@@ -1213,10 +1282,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-701",
       "motherId": "mem-701-w1",
       "spouseIds": [
-          "mem-801-w"
+        "mem-801-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-801-07",
       "fullName": "Văn Thị Tai",
       "courtesyName": "Tư",
@@ -1230,8 +1299,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-701",
       "motherId": "mem-701-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-801-08",
       "fullName": "Văn Thị Thái",
       "gender": "female",
@@ -1244,8 +1313,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-701",
       "motherId": "mem-701-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-801-09",
       "fullName": "Văn Tấn Ân",
       "gender": "male",
@@ -1258,8 +1327,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-701",
       "motherId": "mem-701-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-801-10",
       "fullName": "Văn Tấn Trân",
       "gender": "male",
@@ -1273,8 +1342,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-701",
       "motherId": "mem-701-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-801-w",
       "fullName": "Đặng Thị Đặc",
       "gender": "female",
@@ -1288,10 +1357,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-801"
+        "mem-801"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-901-01",
       "fullName": "Văn vô danh",
       "gender": "male",
@@ -1304,8 +1373,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-801",
       "motherId": "mem-801-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-901-02",
       "fullName": "Văn Tấn Anh",
       "gender": "male",
@@ -1320,8 +1389,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-801",
       "motherId": "mem-801-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-901-03",
       "fullName": "Văn Tấn Khao",
       "gender": "male",
@@ -1336,8 +1405,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-801",
       "motherId": "mem-801-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-901-04",
       "fullName": "Văn Tấn Tình",
       "gender": "male",
@@ -1352,8 +1421,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-801",
       "motherId": "mem-801-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-901-05",
       "fullName": "Văn Tấn Trí",
       "gender": "male",
@@ -1367,8 +1436,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-801",
       "motherId": "mem-801-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-901-06",
       "fullName": "Văn Tấn Hân",
       "gender": "male",
@@ -1382,8 +1451,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-801",
       "motherId": "mem-801-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-802",
       "fullName": "Văn Tấn Tuệ",
       "courtesyName": "Huệ (II.8.002)",
@@ -1401,10 +1470,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-701",
       "motherId": "mem-701-w2",
       "spouseIds": [
-          "mem-802-w"
+        "mem-802-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-802-w",
       "fullName": "Phạm Thị Lữ",
       "gender": "female",
@@ -1420,10 +1489,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-802"
+        "mem-802"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-801-12",
       "fullName": "Văn Tấn Tài",
       "courtesyName": "Từ",
@@ -1437,8 +1506,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-701",
       "motherId": "mem-701-w2",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-902-01",
       "fullName": "Văn Thị Duy",
       "courtesyName": "Quy",
@@ -1452,8 +1521,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-802",
       "motherId": "mem-802-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-902-02",
       "fullName": "Văn Thị Diêu",
       "courtesyName": "Văn Tấn Diệu",
@@ -1469,8 +1538,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-802",
       "motherId": "mem-802-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-902-03",
       "fullName": "Văn Tấn Tuấn",
       "courtesyName": "Tuân",
@@ -1484,8 +1553,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-802",
       "motherId": "mem-802-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-902-04",
       "fullName": "Văn Thị Bốn",
       "courtesyName": "Bà Bốn",
@@ -1499,8 +1568,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-802",
       "motherId": "mem-802-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-902-05",
       "fullName": "Văn Tấn Hoa",
       "gender": "male",
@@ -1513,8 +1582,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-802",
       "motherId": "mem-802-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-902-06",
       "fullName": "Văn Thị Sáu",
       "courtesyName": "Bà Sáu",
@@ -1528,8 +1597,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-802",
       "motherId": "mem-802-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-902-07",
       "fullName": "Văn Thị Suy",
       "courtesyName": "Súy, Súng",
@@ -1544,8 +1613,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-802",
       "motherId": "mem-802-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-902-08",
       "fullName": "Văn Thị Ý",
       "gender": "female",
@@ -1559,8 +1628,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-802",
       "motherId": "mem-802-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-902-09",
       "fullName": "Văn Thị Giã",
       "courtesyName": "Dã",
@@ -1575,8 +1644,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-802",
       "motherId": "mem-802-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-803",
       "fullName": "Văn Tấn Điệt",
       "courtesyName": "Chiêm, Diệt, Chí (II.8.003)",
@@ -1592,8 +1661,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-701",
       "motherId": "mem-701-w3",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-903-01",
       "fullName": "Văn Tấn Điện",
       "courtesyName": "Ông Điện",
@@ -1607,8 +1676,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-803",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-702",
       "fullName": "Văn Bá Hạnh",
       "courtesyName": "Văn Công Hạnh (II.7.002)",
@@ -1625,10 +1694,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-602",
       "motherId": "mem-602-w",
       "spouseIds": [
-          "mem-702-w"
+        "mem-702-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-702-w",
       "fullName": "Huỳnh Thị Thao",
       "courtesyName": "Thiết",
@@ -1644,10 +1713,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-702"
+        "mem-702"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-804",
       "fullName": "Văn Bá Phước",
       "courtesyName": "II.8.004",
@@ -1663,11 +1732,11 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-702",
       "motherId": "mem-702-w",
       "spouseIds": [
-          "mem-804-w1",
-          "mem-804-w2"
+        "mem-804-w1",
+        "mem-804-w2"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-804-w1",
       "fullName": "Nguyễn Thị Ba",
       "gender": "female",
@@ -1681,10 +1750,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-804"
+        "mem-804"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-804-w2",
       "fullName": "Nguyễn Thị Bính",
       "gender": "female",
@@ -1698,10 +1767,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-804"
+        "mem-804"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-904-1",
       "fullName": "Văn Bá Thọ",
       "gender": "male",
@@ -1715,8 +1784,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-804",
       "motherId": "mem-804-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-904-2",
       "fullName": "Văn Bá Lễ",
       "gender": "male",
@@ -1730,8 +1799,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-804",
       "motherId": "mem-804-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-904-3",
       "fullName": "Văn Bá Hoạch",
       "gender": "male",
@@ -1745,8 +1814,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-804",
       "motherId": "mem-804-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-904-4",
       "fullName": "Văn Bá Quý",
       "gender": "male",
@@ -1760,8 +1829,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-804",
       "motherId": "mem-804-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-904-5",
       "fullName": "Văn Bá Quyến",
       "gender": "male",
@@ -1775,8 +1844,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-804",
       "motherId": "mem-804-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-904-6",
       "fullName": "Văn Thị Quế",
       "gender": "female",
@@ -1790,8 +1859,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-804",
       "motherId": "mem-804-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-904-7",
       "fullName": "Văn Thị Lan",
       "gender": "female",
@@ -1805,8 +1874,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-804",
       "motherId": "mem-804-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-904-8",
       "fullName": "Văn Thị Huấn",
       "gender": "female",
@@ -1820,8 +1889,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-804",
       "motherId": "mem-804-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-904-9",
       "fullName": "Văn Thị Dụ",
       "gender": "female",
@@ -1835,8 +1904,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-804",
       "motherId": "mem-804-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-904-10",
       "fullName": "Văn Thị Nghị",
       "gender": "female",
@@ -1850,8 +1919,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-804",
       "motherId": "mem-804-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-904-11",
       "fullName": "Văn Thị An",
       "gender": "female",
@@ -1865,8 +1934,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-804",
       "motherId": "mem-804-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-904-12",
       "fullName": "Văn Thị Hát",
       "gender": "female",
@@ -1880,8 +1949,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-804",
       "motherId": "mem-804-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-904-13",
       "fullName": "Văn Thị Thới",
       "gender": "female",
@@ -1895,8 +1964,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-804",
       "motherId": "mem-804-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-904-14",
       "fullName": "Văn Thị Thuyết",
       "gender": "female",
@@ -1910,8 +1979,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-804",
       "motherId": "mem-804-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-904-15",
       "fullName": "Văn Thị Nhỏ",
       "gender": "female",
@@ -1925,8 +1994,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-804",
       "motherId": "mem-804-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-802-02",
       "fullName": "Văn Bá Nguyên",
       "gender": "male",
@@ -1939,8 +2008,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-702",
       "motherId": "mem-702-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-802-03",
       "fullName": "Văn Bá Trinh",
       "gender": "male",
@@ -1953,8 +2022,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-702",
       "motherId": "mem-702-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-805",
       "fullName": "Văn Bá Tường",
       "courtesyName": "II.8.005",
@@ -1970,10 +2039,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-702",
       "motherId": "mem-702-w",
       "spouseIds": [
-          "mem-805-w"
+        "mem-805-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-802-05",
       "fullName": "Văn Bá Bảo",
       "gender": "male",
@@ -1986,8 +2055,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-702",
       "motherId": "mem-702-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-802-06",
       "fullName": "Văn Bá Hiên",
       "gender": "male",
@@ -2000,8 +2069,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-702",
       "motherId": "mem-702-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-802-07",
       "fullName": "Văn Thị Huệ",
       "gender": "female",
@@ -2014,8 +2083,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-702",
       "motherId": "mem-702-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-802-08",
       "fullName": "Văn Thị Kế",
       "gender": "female",
@@ -2028,8 +2097,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-702",
       "motherId": "mem-702-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-805-w",
       "fullName": "Nguyễn Thị Lộc",
       "gender": "female",
@@ -2043,10 +2112,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-805"
+        "mem-805"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-905-1",
       "fullName": "Văn Bá Hưu",
       "gender": "male",
@@ -2060,8 +2129,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-805",
       "motherId": "mem-805-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-905-2",
       "fullName": "Văn Bá Hân",
       "gender": "male",
@@ -2075,8 +2144,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-805",
       "motherId": "mem-805-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-905-3",
       "fullName": "Văn Bá Duyên",
       "courtesyName": "Diên",
@@ -2091,8 +2160,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-805",
       "motherId": "mem-805-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-905-4",
       "fullName": "Văn Bá Tráng",
       "gender": "male",
@@ -2106,8 +2175,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-805",
       "motherId": "mem-805-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-905-5",
       "fullName": "Văn Thị Khâm",
       "gender": "female",
@@ -2121,8 +2190,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-805",
       "motherId": "mem-805-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-905-6",
       "fullName": "Văn Thị Khi",
       "gender": "female",
@@ -2136,8 +2205,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-805",
       "motherId": "mem-805-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-905-7",
       "fullName": "Văn Thị Diệu",
       "gender": "female",
@@ -2151,8 +2220,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-805",
       "motherId": "mem-805-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-703",
       "fullName": "Văn Bá Chánh",
       "courtesyName": "II.7.003",
@@ -2169,10 +2238,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-603",
       "motherId": "mem-603-w",
       "spouseIds": [
-          "mem-703-w"
+        "mem-703-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-703-w",
       "fullName": "Nguyễn Thị An",
       "gender": "female",
@@ -2188,10 +2257,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-703"
+        "mem-703"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-803-1",
       "fullName": "Văn Bá Thuyên",
       "gender": "male",
@@ -2205,8 +2274,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-703",
       "motherId": "mem-703-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-803-2",
       "fullName": "Văn Bá Thăng",
       "gender": "male",
@@ -2220,8 +2289,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-703",
       "motherId": "mem-703-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-803-3",
       "fullName": "Văn Thị Diễn",
       "gender": "female",
@@ -2235,8 +2304,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-703",
       "motherId": "mem-703-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-803-4",
       "fullName": "Văn Thị Quyến",
       "gender": "female",
@@ -2250,8 +2319,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-703",
       "motherId": "mem-703-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-803-5",
       "fullName": "Văn Thị Đóa",
       "gender": "female",
@@ -2265,8 +2334,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-703",
       "motherId": "mem-703-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-803-6",
       "fullName": "Văn Thị Súy",
       "gender": "female",
@@ -2280,8 +2349,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-703",
       "motherId": "mem-703-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-704",
       "fullName": "Văn Bá Trực",
       "courtesyName": "II.7.004",
@@ -2298,10 +2367,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-603",
       "motherId": "mem-603-w",
       "spouseIds": [
-          "mem-704-w"
+        "mem-704-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-704-w",
       "fullName": "Nguyễn Thị Dịch",
       "gender": "female",
@@ -2317,10 +2386,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-704"
+        "mem-704"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-804-01",
       "fullName": "Văn Bá Dinh",
       "gender": "male",
@@ -2334,8 +2403,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-704",
       "motherId": "mem-704-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-804-02",
       "fullName": "Văn Bá Môn",
       "gender": "male",
@@ -2349,8 +2418,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-704",
       "motherId": "mem-704-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-804-03",
       "fullName": "Văn Bá Chót",
       "gender": "male",
@@ -2364,8 +2433,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-704",
       "motherId": "mem-704-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-806",
       "fullName": "Văn Bá Bạt",
       "courtesyName": "Bạc (II.8.006)",
@@ -2383,10 +2452,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-704",
       "motherId": "mem-704-w",
       "spouseIds": [
-          "mem-806-w"
+        "mem-806-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-807",
       "fullName": "Văn Bá Trích",
       "courtesyName": "II.8.007",
@@ -2405,10 +2474,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-704",
       "motherId": "mem-704-w",
       "spouseIds": [
-          "mem-807-w"
+        "mem-807-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-804-06",
       "fullName": "Văn Thị Bót",
       "gender": "female",
@@ -2422,8 +2491,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-704",
       "motherId": "mem-704-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-804-07",
       "fullName": "Văn Thị Bích",
       "gender": "female",
@@ -2437,8 +2506,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-704",
       "motherId": "mem-704-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-806-w",
       "fullName": "Văn Phú Thị Thiềm",
       "gender": "female",
@@ -2455,10 +2524,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-806"
+        "mem-806"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-906-1",
       "fullName": "Văn Bá Thâm",
       "gender": "male",
@@ -2473,8 +2542,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-806",
       "motherId": "mem-806-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-906-2",
       "fullName": "Văn Bá Hoài",
       "gender": "male",
@@ -2489,8 +2558,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-806",
       "motherId": "mem-806-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-906-3",
       "fullName": "Văn Bá Điền",
       "gender": "male",
@@ -2505,8 +2574,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-806",
       "motherId": "mem-806-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-906-4",
       "fullName": "Văn Thị Mới",
       "gender": "female",
@@ -2521,8 +2590,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-806",
       "motherId": "mem-806-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-807-w",
       "fullName": "Lê Thị Yến",
       "gender": "female",
@@ -2539,10 +2608,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-807"
+        "mem-807"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-907-1",
       "fullName": "Văn Bá Mai",
       "gender": "male",
@@ -2557,8 +2626,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-807",
       "motherId": "mem-807-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-907-2",
       "fullName": "Văn Bá Nhung",
       "gender": "male",
@@ -2573,8 +2642,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-807",
       "motherId": "mem-807-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-907-3",
       "fullName": "Văn Bá Nhân",
       "courtesyName": "Nhẩn",
@@ -2590,8 +2659,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-807",
       "motherId": "mem-807-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-907-4",
       "fullName": "Văn Bá Nhi",
       "gender": "male",
@@ -2606,8 +2675,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-807",
       "motherId": "mem-807-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-907-5",
       "fullName": "Văn Thị Ý",
       "gender": "female",
@@ -2622,8 +2691,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-807",
       "motherId": "mem-807-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-907-6",
       "fullName": "Văn Thị Trưa",
       "gender": "female",
@@ -2638,8 +2707,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-807",
       "motherId": "mem-807-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-907-7",
       "fullName": "Văn Thị Bữa",
       "gender": "female",
@@ -2654,8 +2723,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-807",
       "motherId": "mem-807-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-705-cuc",
       "fullName": "Văn Bá Cực",
       "courtesyName": "II.7.005",
@@ -2672,10 +2741,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-603",
       "motherId": "mem-603-w",
       "spouseIds": [
-          "mem-705-w"
+        "mem-705-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-705-w",
       "fullName": "Nguyễn Thị Tư",
       "gender": "female",
@@ -2691,10 +2760,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-705-cuc"
+        "mem-705-cuc"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-808",
       "fullName": "Văn Bá Chấn",
       "courtesyName": "Trừng, Phấn (II.8.008)",
@@ -2711,10 +2780,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-705-cuc",
       "motherId": "mem-705-w",
       "spouseIds": [
-          "mem-808-w"
+        "mem-808-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-808-w",
       "fullName": "Nguyễn Thị Tam",
       "gender": "female",
@@ -2729,10 +2798,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-808"
+        "mem-808"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-908-1",
       "fullName": "Văn Bá Yến",
       "courtesyName": "Yếu",
@@ -2747,8 +2816,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-808",
       "motherId": "mem-808-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-908-2",
       "fullName": "Văn Bá Liệt",
       "courtesyName": "Liếc",
@@ -2763,8 +2832,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-808",
       "motherId": "mem-808-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-908-3",
       "fullName": "Văn Bá Tại",
       "gender": "male",
@@ -2778,8 +2847,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-808",
       "motherId": "mem-808-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-908-4",
       "fullName": "Văn Thị Tiến",
       "gender": "female",
@@ -2793,8 +2862,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-808",
       "motherId": "mem-808-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-908-5",
       "fullName": "Văn Thị Tính",
       "courtesyName": "Tỉnh",
@@ -2809,8 +2878,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-808",
       "motherId": "mem-808-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-908-6",
       "fullName": "Văn Thị Lanh",
       "gender": "female",
@@ -2824,8 +2893,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-808",
       "motherId": "mem-808-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-809",
       "fullName": "Văn Bá Đệ",
       "courtesyName": "II.8.009",
@@ -2843,10 +2912,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-705-cuc",
       "motherId": "mem-705-w",
       "spouseIds": [
-          "mem-809-w"
+        "mem-809-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-809-w",
       "fullName": "Nguyễn Thị Lắm",
       "courtesyName": "Lẫm",
@@ -2864,10 +2933,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-809"
+        "mem-809"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-909-1",
       "fullName": "Văn Bá Đông",
       "gender": "male",
@@ -2882,8 +2951,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-809",
       "motherId": "mem-809-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-909-2",
       "fullName": "Văn Bá Tây",
       "gender": "male",
@@ -2898,8 +2967,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-809",
       "motherId": "mem-809-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-909-3",
       "fullName": "Văn Thị Quỳ",
       "gender": "female",
@@ -2914,8 +2983,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-809",
       "motherId": "mem-809-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-909-4",
       "fullName": "Văn Thị Trì",
       "gender": "female",
@@ -2930,8 +2999,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-809",
       "motherId": "mem-809-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-909-5",
       "fullName": "Văn Thị Dời",
       "courtesyName": "Di",
@@ -2947,8 +3016,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-809",
       "motherId": "mem-809-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-706-vien",
       "fullName": "Văn Bá Viên",
       "courtesyName": "II.7.006",
@@ -2964,8 +3033,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-603",
       "motherId": "mem-603-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-707-hieu",
       "fullName": "Văn Bá Hiều",
       "courtesyName": "II.7.007",
@@ -2982,10 +3051,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-604",
       "motherId": "mem-604-w",
       "spouseIds": [
-          "mem-707-hieu-w"
+        "mem-707-hieu-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-707-hieu-w",
       "fullName": "Nguyễn Thị Điện",
       "gender": "female",
@@ -3001,10 +3070,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-707-hieu"
+        "mem-707-hieu"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-810",
       "fullName": "Văn Bá Thuyên",
       "courtesyName": "II.8.010",
@@ -3021,10 +3090,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-707-hieu",
       "motherId": "mem-707-hieu-w",
       "spouseIds": [
-          "mem-810-w"
+        "mem-810-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-811",
       "fullName": "Văn Bá Sự",
       "courtesyName": "II.8.011",
@@ -3041,8 +3110,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-707-hieu",
       "motherId": "mem-707-hieu-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-812",
       "fullName": "Văn Bá Uyển",
       "courtesyName": "Yễn (II.8.012)",
@@ -3059,10 +3128,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-707-hieu",
       "motherId": "mem-707-hieu-w",
       "spouseIds": [
-          "mem-812-w"
+        "mem-812-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-807-04",
       "fullName": "Văn Bá Ẩm",
       "gender": "male",
@@ -3078,8 +3147,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-707-hieu",
       "motherId": "mem-707-hieu-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-807-05",
       "fullName": "Văn Bá Dược",
       "gender": "male",
@@ -3093,8 +3162,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-707-hieu",
       "motherId": "mem-707-hieu-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-807-06",
       "fullName": "Văn Bá Duyệt",
       "gender": "male",
@@ -3108,8 +3177,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-707-hieu",
       "motherId": "mem-707-hieu-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-807-07",
       "fullName": "Văn Thị Nhựt",
       "gender": "female",
@@ -3123,8 +3192,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-707-hieu",
       "motherId": "mem-707-hieu-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-807-08",
       "fullName": "Văn Thị Yến",
       "gender": "female",
@@ -3138,8 +3207,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-707-hieu",
       "motherId": "mem-707-hieu-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-810-w",
       "fullName": "Nguyễn Thị Sính",
       "gender": "female",
@@ -3154,10 +3223,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-810"
+        "mem-810"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-910-1",
       "fullName": "Văn Bá Hiền",
       "gender": "male",
@@ -3171,8 +3240,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-810",
       "motherId": "mem-810-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-910-2",
       "fullName": "Văn Bá Hiệp",
       "gender": "male",
@@ -3186,8 +3255,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-810",
       "motherId": "mem-810-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-910-3",
       "fullName": "Văn Bá Ý",
       "gender": "male",
@@ -3201,8 +3270,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-810",
       "motherId": "mem-810-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-910-4",
       "fullName": "Văn Thị Huế",
       "courtesyName": "Huề",
@@ -3217,8 +3286,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-810",
       "motherId": "mem-810-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-910-5",
       "fullName": "Văn Thị Quá",
       "gender": "female",
@@ -3232,8 +3301,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-810",
       "motherId": "mem-810-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-812-w",
       "fullName": "Nguyễn Thị Đào",
       "gender": "female",
@@ -3249,10 +3318,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-812"
+        "mem-812"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-912-1",
       "fullName": "Văn Bá Múa",
       "gender": "male",
@@ -3266,8 +3335,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-812",
       "motherId": "mem-812-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-912-2",
       "fullName": "Văn Bá Miệng",
       "gender": "male",
@@ -3281,8 +3350,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-812",
       "motherId": "mem-812-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-912-3",
       "fullName": "Văn Bá Trừng",
       "gender": "male",
@@ -3296,8 +3365,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-812",
       "motherId": "mem-812-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-912-4",
       "fullName": "Văn Bá Ưa",
       "gender": "male",
@@ -3311,8 +3380,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-812",
       "motherId": "mem-812-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-912-5",
       "fullName": "Văn Thị Thụy",
       "gender": "female",
@@ -3326,8 +3395,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-812",
       "motherId": "mem-812-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-912-6",
       "fullName": "Văn Thị Hồi",
       "gender": "female",
@@ -3341,8 +3410,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-812",
       "motherId": "mem-812-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-912-7",
       "fullName": "Văn Thị Mật",
       "gender": "female",
@@ -3356,8 +3425,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-812",
       "motherId": "mem-812-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-912-8",
       "fullName": "Văn Thị Éo",
       "gender": "female",
@@ -3371,8 +3440,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-812",
       "motherId": "mem-812-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-912-9",
       "fullName": "Văn Thị Thuận",
       "gender": "female",
@@ -3386,8 +3455,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-812",
       "motherId": "mem-812-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-708-hop",
       "fullName": "Văn Bá Họp",
       "courtesyName": "II.7.008",
@@ -3406,10 +3475,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-604",
       "motherId": "mem-604-w",
       "spouseIds": [
-          "mem-708-hop-w"
+        "mem-708-hop-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-708-hop-w",
       "fullName": "Văn Phú Thị Huyến",
       "gender": "female",
@@ -3427,10 +3496,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-708-hop"
+        "mem-708-hop"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-808-hop-1",
       "fullName": "Văn Bá Đảng",
       "gender": "male",
@@ -3444,8 +3513,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-708-hop",
       "motherId": "mem-708-hop-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-808-hop-2",
       "fullName": "Văn Bá Điểm",
       "gender": "male",
@@ -3460,8 +3529,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-708-hop",
       "motherId": "mem-708-hop-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-808-hop-3",
       "fullName": "Văn Bá Viên",
       "courtesyName": "Diên",
@@ -3476,8 +3545,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-708-hop",
       "motherId": "mem-708-hop-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-808-hop-4",
       "fullName": "Văn Bá Cứ",
       "courtesyName": "Thiệp",
@@ -3492,8 +3561,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-708-hop",
       "motherId": "mem-708-hop-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-808-hop-5",
       "fullName": "Văn Bá Dụng",
       "gender": "male",
@@ -3507,8 +3576,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-708-hop",
       "motherId": "mem-708-hop-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-808-hop-6",
       "fullName": "Văn Thị Thái",
       "gender": "female",
@@ -3522,8 +3591,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-708-hop",
       "motherId": "mem-708-hop-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-709",
       "fullName": "Văn Phú Khánh",
       "courtesyName": "III.7.009",
@@ -3538,8 +3607,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-605",
       "motherId": "mem-605-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-809-khanh-1",
       "fullName": "Văn Phú Đắc",
       "gender": "male",
@@ -3552,8 +3621,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-709",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-809-khanh-2",
       "fullName": "Văn Phú Lộc",
       "gender": "male",
@@ -3566,8 +3635,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-709",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-809-khanh-3",
       "fullName": "Văn Phú Non",
       "gender": "male",
@@ -3580,8 +3649,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-709",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-710",
       "fullName": "Văn Phú Lục",
       "courtesyName": "III.7.010",
@@ -3596,10 +3665,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-710-w"
+        "mem-710-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-710-w",
       "fullName": "Hồ Thị Thọ",
       "gender": "female",
@@ -3613,10 +3682,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-710"
+        "mem-710"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-810-luc-1",
       "fullName": "Văn Phú Tồn",
       "gender": "male",
@@ -3629,8 +3698,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-710",
       "motherId": "mem-710-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-810-luc-2",
       "fullName": "Văn Phú Ưu",
       "courtesyName": "Hạ",
@@ -3644,8 +3713,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-710",
       "motherId": "mem-710-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-810-luc-3",
       "fullName": "Văn Phú Nguyên",
       "gender": "male",
@@ -3658,8 +3727,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-710",
       "motherId": "mem-710-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-810-luc-4",
       "fullName": "Văn Phú Hựu",
       "gender": "male",
@@ -3672,8 +3741,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-710",
       "motherId": "mem-710-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-810-luc-5",
       "fullName": "Văn Phú Hảo",
       "gender": "male",
@@ -3686,8 +3755,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-710",
       "motherId": "mem-710-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-810-luc-6",
       "fullName": "Văn Phú Phụ",
       "gender": "male",
@@ -3700,8 +3769,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-710",
       "motherId": "mem-710-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-810-luc-7",
       "fullName": "Văn Thị vô danh",
       "gender": "female",
@@ -3714,8 +3783,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-710",
       "motherId": "mem-710-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-810-luc-8",
       "fullName": "Văn Thị Trinh",
       "gender": "female",
@@ -3728,8 +3797,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-710",
       "motherId": "mem-710-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-810-luc-9",
       "fullName": "Văn Thị Màu",
       "gender": "female",
@@ -3742,8 +3811,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-710",
       "motherId": "mem-710-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-810-luc-10",
       "fullName": "Văn Thị Quyến",
       "courtesyName": "Quyên",
@@ -3757,8 +3826,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-710",
       "motherId": "mem-710-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-810-luc-11",
       "fullName": "Văn Thị Diệu",
       "courtesyName": "Diện",
@@ -3772,8 +3841,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-710",
       "motherId": "mem-710-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-711",
       "fullName": "Văn Phú Hoan",
       "courtesyName": "III.7.011",
@@ -3788,10 +3857,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-711-w"
+        "mem-711-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-711-w",
       "fullName": "Nguyễn Thị Giáo",
       "gender": "female",
@@ -3805,10 +3874,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-711"
+        "mem-711"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-811-hoan-1",
       "fullName": "Văn Phú Sách",
       "gender": "male",
@@ -3821,8 +3890,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-711",
       "motherId": "mem-711-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-811-hoan-2",
       "fullName": "Văn Phú Lược",
       "gender": "male",
@@ -3835,8 +3904,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-711",
       "motherId": "mem-711-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-811-hoan-3",
       "fullName": "Văn Phú Mưu",
       "gender": "male",
@@ -3849,8 +3918,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-711",
       "motherId": "mem-711-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-811-hoan-4",
       "fullName": "Văn Thị Khoa",
       "gender": "female",
@@ -3863,8 +3932,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-711",
       "motherId": "mem-711-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-712",
       "fullName": "Văn Phú Hượt",
       "courtesyName": "III.7.012",
@@ -3879,8 +3948,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-812-huot-1",
       "fullName": "Văn Phú Thanh",
       "courtesyName": "Thạnh",
@@ -3894,8 +3963,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-712",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-812-huot-2",
       "fullName": "Văn Thị Nhuận",
       "gender": "female",
@@ -3908,8 +3977,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-712",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-713",
       "fullName": "Văn Phú Trứ",
       "courtesyName": "Niên, Trú (III.7.013)",
@@ -3924,10 +3993,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-713-w"
+        "mem-713-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-713-w",
       "fullName": "Nguyễn Thị Xử",
       "gender": "female",
@@ -3941,10 +4010,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-713"
+        "mem-713"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-813-tru-1",
       "fullName": "Văn Phú vô danh",
       "gender": "male",
@@ -3957,8 +4026,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-713",
       "motherId": "mem-713-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-813-tru-2",
       "fullName": "Văn Phú Sức",
       "gender": "male",
@@ -3971,8 +4040,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-713",
       "motherId": "mem-713-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-813-tru-3",
       "fullName": "Văn Phú Đương",
       "gender": "male",
@@ -3985,8 +4054,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-713",
       "motherId": "mem-713-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-813-tru-4",
       "fullName": "Văn Phú Quần",
       "gender": "male",
@@ -3999,8 +4068,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-713",
       "motherId": "mem-713-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-813-tru-5",
       "fullName": "Văn Thị Bỉ",
       "gender": "female",
@@ -4013,8 +4082,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-713",
       "motherId": "mem-713-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-813-tru-6",
       "fullName": "Văn Thị Mạnh",
       "gender": "female",
@@ -4027,8 +4096,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-713",
       "motherId": "mem-713-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-714",
       "fullName": "Văn Phú Thi",
       "courtesyName": "Tứ (III.7.014)",
@@ -4043,10 +4112,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-714-w"
+        "mem-714-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-714-w",
       "fullName": "Huỳnh Thị Sĩ",
       "gender": "female",
@@ -4060,10 +4129,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-714"
+        "mem-714"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-814-thi-1",
       "fullName": "Văn Phú Thảo",
       "courtesyName": "Phụ",
@@ -4077,8 +4146,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-714",
       "motherId": "mem-714-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-814-thi-2",
       "fullName": "Văn Phú Trường",
       "courtesyName": "Tường",
@@ -4092,8 +4161,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-714",
       "motherId": "mem-714-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-814-thi-3",
       "fullName": "Văn Phú Thiểu",
       "gender": "male",
@@ -4106,8 +4175,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-714",
       "motherId": "mem-714-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-814-thi-4",
       "fullName": "Văn Phú Thạch",
       "courtesyName": "Trạch",
@@ -4121,8 +4190,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-714",
       "motherId": "mem-714-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-814-thi-5",
       "fullName": "Văn Thị Sa",
       "courtesyName": "Tộ",
@@ -4136,8 +4205,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-714",
       "motherId": "mem-714-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-814-thi-6",
       "fullName": "Văn Thị Huân",
       "gender": "female",
@@ -4150,8 +4219,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-714",
       "motherId": "mem-714-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-814-thi-7",
       "fullName": "Văn Phú Nhuận",
       "gender": "male",
@@ -4164,8 +4233,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-714",
       "motherId": "mem-714-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-814-thi-8",
       "fullName": "Văn Phú Nghĩa",
       "gender": "male",
@@ -4178,8 +4247,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-714",
       "motherId": "mem-714-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-814-thi-9",
       "fullName": "Văn Thị Ngâm",
       "courtesyName": "Ngân",
@@ -4193,8 +4262,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-714",
       "motherId": "mem-714-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-814-thi-10",
       "fullName": "Văn Thị Linh",
       "gender": "female",
@@ -4207,8 +4276,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-714",
       "motherId": "mem-714-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-715",
       "fullName": "Văn Phú Chiếu",
       "courtesyName": "Mỹ (III.7.015)",
@@ -4223,10 +4292,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-715-w"
+        "mem-715-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-715-w",
       "fullName": "Nguyễn Thị Sử",
       "courtesyName": "Sở",
@@ -4241,10 +4310,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-715"
+        "mem-715"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-815-chieu-1",
       "fullName": "Văn Phú Nghị",
       "gender": "male",
@@ -4257,8 +4326,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-715",
       "motherId": "mem-715-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-815-chieu-2",
       "fullName": "Văn Phú Nghi",
       "gender": "male",
@@ -4271,8 +4340,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-715",
       "motherId": "mem-715-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-716",
       "fullName": "Văn Phú Nhơn",
       "courtesyName": "III.7.016",
@@ -4287,10 +4356,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-716-w"
+        "mem-716-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-716-w",
       "fullName": "Nguyễn Thị Đóa",
       "gender": "female",
@@ -4304,10 +4373,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-716"
+        "mem-716"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-816-nhon-1",
       "fullName": "Văn Phú Nghiễm",
       "gender": "male",
@@ -4320,8 +4389,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-716",
       "motherId": "mem-716-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-816-nhon-2",
       "fullName": "Văn Phú Triết",
       "gender": "male",
@@ -4334,8 +4403,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-716",
       "motherId": "mem-716-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-816-nhon-3",
       "fullName": "Văn Phú Trị",
       "gender": "male",
@@ -4348,8 +4417,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-716",
       "motherId": "mem-716-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-816-nhon-4",
       "fullName": "Văn Phú Bảo",
       "gender": "male",
@@ -4362,8 +4431,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-716",
       "motherId": "mem-716-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-816-nhon-5",
       "fullName": "Văn Thị Lựu",
       "courtesyName": "Văn Phú Lựu",
@@ -4377,8 +4446,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-716",
       "motherId": "mem-716-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-717",
       "fullName": "Văn Phú Yến",
       "courtesyName": "Tứ, Trị (III.7.017)",
@@ -4394,10 +4463,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-717-w"
+        "mem-717-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-717-w",
       "fullName": "Nguyễn Thị Trụ",
       "courtesyName": "Trú",
@@ -4413,10 +4482,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-717"
+        "mem-717"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-817-yen-1",
       "fullName": "Văn Phú Hy",
       "gender": "male",
@@ -4429,8 +4498,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-717",
       "motherId": "mem-717-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-817-yen-2",
       "fullName": "Văn Phú Hưu",
       "gender": "male",
@@ -4443,8 +4512,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-717",
       "motherId": "mem-717-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-817-yen-3",
       "fullName": "Văn Phú Hảo",
       "gender": "male",
@@ -4457,8 +4526,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-717",
       "motherId": "mem-717-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-817-yen-4",
       "fullName": "Văn Phú Phụ",
       "gender": "male",
@@ -4471,8 +4540,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-717",
       "motherId": "mem-717-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-817-yen-5",
       "fullName": "Văn Phú Minh",
       "courtesyName": "Ninh",
@@ -4486,8 +4555,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-717",
       "motherId": "mem-717-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-817-yen-6",
       "fullName": "Văn Phú Thứ",
       "gender": "male",
@@ -4500,8 +4569,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-717",
       "motherId": "mem-717-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-817-yen-7",
       "fullName": "Văn Phú Lợi",
       "gender": "male",
@@ -4514,8 +4583,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-717",
       "motherId": "mem-717-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-817-yen-8",
       "fullName": "Văn Phú Lãnh",
       "courtesyName": "Lanh",
@@ -4529,8 +4598,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-717",
       "motherId": "mem-717-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-817-yen-9",
       "fullName": "Văn Phú Huệ",
       "gender": "male",
@@ -4543,8 +4612,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-717",
       "motherId": "mem-717-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-718",
       "fullName": "Văn Phú Hưng",
       "courtesyName": "III.7.018",
@@ -4559,8 +4628,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-818-hung-1",
       "fullName": "Văn Phú Đà",
       "gender": "male",
@@ -4573,8 +4642,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-718",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-818-hung-2",
       "fullName": "Văn Phú Điển",
       "gender": "male",
@@ -4587,8 +4656,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-718",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-818-hung-3",
       "fullName": "Văn Phú Quảng",
       "gender": "male",
@@ -4601,8 +4670,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-718",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-818-hung-4",
       "fullName": "Văn Phú Sanh",
       "gender": "male",
@@ -4615,8 +4684,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-718",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-719",
       "fullName": "Văn Phú Khoa",
       "courtesyName": "III.7.019",
@@ -4631,11 +4700,11 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-719-w1",
-          "mem-719-w2"
+        "mem-719-w1",
+        "mem-719-w2"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-719-w1",
       "fullName": "Nguyễn Thị Quyên",
       "gender": "female",
@@ -4649,10 +4718,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-719"
+        "mem-719"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-719-w2",
       "fullName": "Huỳnh Thị Toại",
       "gender": "female",
@@ -4666,10 +4735,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-719"
+        "mem-719"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-819-cheo",
       "fullName": "Văn Phú Cheo",
       "gender": "male",
@@ -4682,8 +4751,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-719",
       "motherId": "mem-719-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-720",
       "fullName": "Văn Phú Kim",
       "courtesyName": "Sâm, Pháp (III.7.020)",
@@ -4700,10 +4769,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-720-w"
+        "mem-720-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-720-w",
       "fullName": "Nguyễn Thị Diện",
       "gender": "female",
@@ -4719,10 +4788,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-720"
+        "mem-720"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-820-kim-1",
       "fullName": "Văn Phú Kiểm",
       "gender": "male",
@@ -4735,8 +4804,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-720",
       "motherId": "mem-720-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-820-kim-2",
       "fullName": "Văn Phú Bì",
       "courtesyName": "Chữ, Liệt",
@@ -4750,8 +4819,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-720",
       "motherId": "mem-720-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-820-kim-3",
       "fullName": "Văn Phú Thừa",
       "gender": "male",
@@ -4764,8 +4833,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-720",
       "motherId": "mem-720-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-820-kim-4",
       "fullName": "Văn Thị Kiến",
       "courtesyName": "Văn Phú Kiếm",
@@ -4779,8 +4848,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-720",
       "motherId": "mem-720-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-820-kim-5",
       "fullName": "Văn Thị Hiệp",
       "courtesyName": "Cận",
@@ -4794,8 +4863,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-720",
       "motherId": "mem-720-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-820-kim-6",
       "fullName": "Văn Thị Bổn",
       "courtesyName": "Văn Phú Bốn",
@@ -4809,8 +4878,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-720",
       "motherId": "mem-720-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-820-kim-7",
       "fullName": "Văn Thị Vì",
       "courtesyName": "Dơi",
@@ -4824,8 +4893,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-720",
       "motherId": "mem-720-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-820-kim-8",
       "fullName": "Văn Thị Hiềm",
       "gender": "female",
@@ -4838,8 +4907,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-720",
       "motherId": "mem-720-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-820-kim-9",
       "fullName": "Văn Thị Thảng",
       "gender": "female",
@@ -4852,8 +4921,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-720",
       "motherId": "mem-720-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-721",
       "fullName": "Văn Phú Trùm",
       "courtesyName": "Lên, Thăng (III.7.021)",
@@ -4868,10 +4937,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-721-w"
+        "mem-721-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-721-w",
       "fullName": "Nguyễn Thị An",
       "courtesyName": "Võ Thị An",
@@ -4886,10 +4955,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-721"
+        "mem-721"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-821-liem",
       "fullName": "Văn Phú Liễm",
       "gender": "male",
@@ -4902,8 +4971,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-721",
       "motherId": "mem-721-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-722",
       "fullName": "Văn Phú Thượng",
       "courtesyName": "III.7.022",
@@ -4918,10 +4987,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-722-w"
+        "mem-722-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-722-w",
       "fullName": "Mai Thị Hân",
       "gender": "female",
@@ -4935,10 +5004,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-722"
+        "mem-722"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-822-thuong-1",
       "fullName": "Văn Phú Minh",
       "gender": "male",
@@ -4951,8 +5020,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-722",
       "motherId": "mem-722-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-822-thuong-2",
       "fullName": "Văn Phú Quá",
       "gender": "male",
@@ -4965,8 +5034,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-722",
       "motherId": "mem-722-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-822-thuong-3",
       "fullName": "Văn Phú Dương",
       "gender": "male",
@@ -4979,8 +5048,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-722",
       "motherId": "mem-722-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-822-thuong-4",
       "fullName": "Văn Phú Tựu",
       "gender": "male",
@@ -4993,8 +5062,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-722",
       "motherId": "mem-722-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-822-thuong-5",
       "fullName": "Văn Phú Nho",
       "gender": "male",
@@ -5007,8 +5076,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-722",
       "motherId": "mem-722-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-822-thuong-6",
       "fullName": "Văn Thị Lẫn",
       "gender": "female",
@@ -5021,8 +5090,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-722",
       "motherId": "mem-722-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-822-thuong-7",
       "fullName": "Văn Thị Liên",
       "gender": "female",
@@ -5035,8 +5104,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-722",
       "motherId": "mem-722-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-822-thuong-8",
       "fullName": "Văn Thị Đặc",
       "courtesyName": "Được",
@@ -5050,8 +5119,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-722",
       "motherId": "mem-722-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-822-thuong-9",
       "fullName": "Văn Thị Lạ",
       "gender": "female",
@@ -5064,8 +5133,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-722",
       "motherId": "mem-722-w",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-723",
       "fullName": "Văn Phú Kim",
       "courtesyName": "Văn, Kiêm (III.7.023)",
@@ -5080,8 +5149,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-823-kim-1",
       "fullName": "Văn Thị Văn",
       "gender": "female",
@@ -5094,8 +5163,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-723",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-823-kim-2",
       "fullName": "Văn Phú Chất",
       "gender": "male",
@@ -5108,8 +5177,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-723",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-823-kim-3",
       "fullName": "Văn Thị Mười",
       "gender": "female",
@@ -5122,8 +5191,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-723",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-823-kim-4",
       "fullName": "Văn Thị Quán",
       "gender": "female",
@@ -5136,8 +5205,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-723",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-823-kim-5",
       "fullName": "Văn Thị Tụy",
       "gender": "female",
@@ -5150,8 +5219,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-723",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-823-kim-6",
       "fullName": "Văn Thị Nhậm",
       "gender": "female",
@@ -5164,8 +5233,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-723",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-724",
       "fullName": "Văn Phú Công",
       "courtesyName": "III.7.024",
@@ -5180,8 +5249,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-824-cong-1",
       "fullName": "Văn Thị Bàn",
       "gender": "female",
@@ -5194,8 +5263,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-724",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-824-cong-2",
       "fullName": "Văn Phú Nhậm",
       "gender": "male",
@@ -5208,8 +5277,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-724",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-824-cong-3",
       "fullName": "Văn Thị Thạch",
       "gender": "female",
@@ -5222,8 +5291,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-724",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-824-cong-4",
       "fullName": "Văn Thị Biện",
       "gender": "female",
@@ -5236,8 +5305,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-724",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-725",
       "fullName": "Văn Phú Niệm",
       "courtesyName": "Học (III.7.025)",
@@ -5254,11 +5323,11 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-725-w1",
-          "mem-725-w2"
+        "mem-725-w1",
+        "mem-725-w2"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-725-w1",
       "fullName": "Trần Thị Quyến",
       "courtesyName": "Kính",
@@ -5275,10 +5344,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-725"
+        "mem-725"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-725-w2",
       "fullName": "Huỳnh Thị Niên",
       "gender": "female",
@@ -5292,10 +5361,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-725"
+        "mem-725"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-825-niem-1",
       "fullName": "Văn Phú Trữ",
       "gender": "male",
@@ -5308,8 +5377,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-725",
       "motherId": "mem-725-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-825-niem-2",
       "fullName": "Văn Phú Ân",
       "gender": "male",
@@ -5322,8 +5391,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-725",
       "motherId": "mem-725-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-825-niem-3",
       "fullName": "Văn Phú Nhiệm",
       "gender": "male",
@@ -5336,8 +5405,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-725",
       "motherId": "mem-725-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-825-niem-4",
       "fullName": "Văn Thị Học",
       "gender": "female",
@@ -5350,8 +5419,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-725",
       "motherId": "mem-725-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-825-niem-5",
       "fullName": "Văn Thị Tuyên",
       "gender": "female",
@@ -5364,8 +5433,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-725",
       "motherId": "mem-725-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-825-niem-6",
       "fullName": "Văn Thị Lừa",
       "courtesyName": "Hoán",
@@ -5379,8 +5448,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-725",
       "motherId": "mem-725-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-825-niem-7",
       "fullName": "Văn Thị Hội",
       "gender": "female",
@@ -5393,8 +5462,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-725",
       "motherId": "mem-725-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-825-niem-8",
       "fullName": "Văn Thị Huyến",
       "gender": "female",
@@ -5407,8 +5476,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-725",
       "motherId": "mem-725-w1",
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-726",
       "fullName": "Văn Phú Đề",
       "courtesyName": "IV.7.026",
@@ -5424,8 +5493,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-826-dieu",
       "fullName": "Văn Phú Điều",
       "gender": "male",
@@ -5439,8 +5508,8 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-726",
       "motherId": null,
       "spouseIds": []
-  },
-  {
+    },
+    {
       "id": "mem-727",
       "fullName": "Văn Phú Ngân",
       "courtesyName": "IV.7.027",
@@ -5457,10 +5526,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-727-w"
+        "mem-727-w"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-727-w",
       "fullName": "Lê Thị Loan",
       "courtesyName": "Lan",
@@ -5477,10 +5546,10 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": null,
       "motherId": null,
       "spouseIds": [
-          "mem-727"
+        "mem-727"
       ]
-  },
-  {
+    },
+    {
       "id": "mem-827-thang",
       "fullName": "Văn Phú Thăng",
       "courtesyName": "Văn Phú Siêu Thăng",
@@ -5495,272 +5564,219 @@ export const INITIAL_MEMBERS: Member[] = [
       "fatherId": "mem-727",
       "motherId": "mem-727-w",
       "spouseIds": []
-  },
-];
-
-export const INITIAL_EVENTS: EventItem[] = [
-  {
-    id: 'evt-1',
-    title: 'Đại Lễ Giỗ Tổ & Tế Xuân Tộc Văn (Mùng 10 Tháng 3 ÂL)',
-    type: 'death_anniversary',
-    memberId: 'mem-101',
-    memberName: 'Triệu Tổ Văn Bá Bạt',
-    lunarDay: 10,
-    lunarMonth: 3,
-    solarDateThisYear: '2026-04-26',
-    daysLeft: 49,
-    description: 'Đại lễ Tế Xuân cổ truyền quy tụ con cháu bốn Phái (Văn Bá, Văn Tấn, Văn Phú) về Từ đường Tộc Văn Bá tại Thị trấn Nam Phước và dâng hương tại Nghĩa trang Gia tộc Gò Khoai.',
-    location: 'Từ Đường Tộc Văn Bá, TT. Nam Phước, Duy Xuyên, Quảng Nam',
-    responsibleBranchId: 'branch-vbxt',
-  },
-  {
-    id: 'evt-2',
-    title: 'Lễ Giỗ Bà Tiên Tổ Trần Thị Hút (Hiệu Thôn Khí)',
-    type: 'death_anniversary',
-    memberId: 'mem-506-w',
-    memberName: 'Trần Thị Hút (Phu nhân cụ Văn Bá Đình)',
-    lunarDay: 15,
-    lunarMonth: 3,
-    solarDateThisYear: '2026-05-01',
-    daysLeft: 54,
-    description: 'Lễ giỗ hàng năm của Cụ Bà Trần Thị Hút, mẹ sinh của tổ Chi 1 (Văn Bá Trung) và Chi 2 (Văn Bá Đài). Con cháu nội ngoại Phái II-VBXT thành kính chuẩn bị phẩm vật cúng dâng.',
-    location: 'Từ Đường Tộc Văn Bá, TT. Nam Phước',
-    responsibleBranchId: 'branch-vbxt',
-  },
-  {
-    id: 'evt-3',
-    title: 'Lễ Tảo Mộ Tiết Thanh Minh tại Nghĩa Trang Gia Tộc Gò Khoai',
-    type: 'tomb_cleaning',
-    lunarDay: 5,
-    lunarMonth: 3,
-    solarDateThisYear: '2026-04-21',
-    daysLeft: 44,
-    description: 'Con cháu khắp nơi tụ hội về Nghĩa trang Gia tộc Gò Khoai (xóm Mỹ Luân, TT. Nam Phước) để thắp hương, dọn cỏ, chỉnh trang mộ phần ngài Triệu Tổ Văn Bá Bạt và chư vị Tiên linh.',
-    location: 'Nghĩa trang Gia tộc Gò Khoai, TT. Nam Phước, Duy Xuyên',
-    responsibleBranchId: 'branch-vbxt',
-  },
-  {
-    id: 'evt-4',
-    title: 'Lễ Giỗ Cụ Bà Nguyễn Thị Đích (Phu nhân Cụ Văn Bá Đài)',
-    type: 'death_anniversary',
-    memberId: 'mem-604-w',
-    memberName: 'Nguyễn Thị Đích',
-    lunarDay: 16,
-    lunarMonth: 2,
-    solarDateThisYear: '2026-04-03',
-    daysLeft: 26,
-    description: 'Lễ giỗ Cụ Bà do con cháu Phái II-VBXT-Chi 2 phụng cúng tại Từ đường chi tộc.',
-    location: 'Từ Đường Chi 2, TT. Nam Phước',
-    responsibleBranchId: 'branch-vbxt',
-  },
-  {
-    id: 'evt-5',
-    title: 'Lễ Giỗ Cụ Tiên Tổ Văn Tấn Vinh (Làng Xuân Phú)',
-    type: 'death_anniversary',
-    memberId: 'mem-501',
-    memberName: 'Văn Tấn Vinh',
-    lunarDay: 4,
-    lunarMonth: 1,
-    solarDateThisYear: '2027-02-10',
-    daysLeft: 156,
-    description: 'Lễ tưởng niệm ngài Khởi tổ Chi Tộc Văn Tấn Quế Xuân (VTQX) tại Nhà thờ Tộc Văn Tấn xã Quế Xuân, Quế Sơn.',
-    location: 'Nhà thờ Tộc Văn Tấn, xã Quế Xuân, huyện Quế Sơn, Quảng Nam',
-    responsibleBranchId: 'branch-vtqx',
-  },
-  {
-    id: 'evt-6',
-    title: 'Lễ Giỗ Cụ Văn Phú Toàn (Tại Lão Sum Viên)',
-    type: 'death_anniversary',
-    memberId: 'mem-513',
-    memberName: 'Văn Phú Toàn',
-    lunarDay: 18,
-    lunarMonth: 1,
-    solarDateThisYear: '2027-02-24',
-    daysLeft: 170,
-    description: 'Lễ giỗ Cụ Văn Phú Toàn do con cháu Phái III-VPXĐ phụng cúng tại Nhà thờ Tộc Văn Phú làng Mỹ Xuyên Đông.',
-    location: 'Nhà thờ Tộc Văn Phú, làng Mỹ Xuyên Đông, Duy Xuyên',
-    responsibleBranchId: 'branch-vpxd',
-  },
-];
-
-export const INITIAL_DOCUMENTS: DocumentItem[] = [
-  {
-    id: 'doc-1',
-    title: 'Bản thảo Gia Phả Tộc Văn (Cập nhật 20/7/2023)',
-    category: 'pha_ky',
-    categoryLabel: 'Phả hệ toàn tộc',
-    fileUrl: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=800&auto=format&fit=crop&q=80',
-    fileType: 'pdf',
-    description: 'Bộ gia phả đồ sộ ghi chép từ Đời thứ 1 (ngài Triệu Tổ Văn Bá Bạt) đến Đời thứ 14, bao gồm các Phái: Văn Bá Xuyên Tây, Văn Tấn Quế Xuân, Văn Bá Đại Lộc, Văn Phú Xuyên Đông và Xuyên Tây.',
-    recordedDate: '2023-07-20',
-    dynastyEra: 'Hiện đại - Cập nhật 2023',
-    authorOrPreserver: 'Hội đồng Gia tộc Tộc Văn biên soạn',
-    tags: ['Gia phả toàn tộc', 'Văn Bá', 'Văn Tấn', 'Văn Phú'],
-    images: [
-      {
-        id: 'img-1-1',
-        url: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=800&auto=format&fit=crop&q=80',
-        caption: 'Bìa cuốn Đại phả hệ Tộc Văn - Công trình sưu khảo và biên tập công phu qua nhiều thế hệ con cháu bốn Phái.',
-      },
-      {
-        id: 'img-1-2',
-        url: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=800&auto=format&fit=crop&q=80',
-        caption: 'Trang mở đầu ghi chép công đức ngài Triệu Tổ Văn Bá Bạt cùng sắc chỉ khai canh khai khẩn vùng đất Mỹ Xuyên Tây.',
-      },
-      {
-        id: 'img-1-3',
-        url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&auto=format&fit=crop&q=80',
-        caption: 'Sơ đồ cây phả hệ phân bổ 4 Phái lớn: Văn Bá Xuyên Tây, Văn Tấn Quế Xuân, Văn Bá Đại Lộc và Văn Phú.',
-      },
-    ],
-  },
-  {
-    id: 'doc-2',
-    title: 'Gia Phả Tộc Văn Lập Ngày 28/3/1960 (Bộ 4 Bản Gốc)',
-    category: 'pha_ky',
-    categoryLabel: 'Gia phả cổ truyền 1960',
-    fileUrl: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=800&auto=format&fit=crop&q=80',
-    fileType: 'pdf',
-    description: 'Gia phả Tộc Văn lập ngày 28/3/1960 chia thành 04 bản: 01 bản Phái Nhì Chi Nhất (Quế Sơn giữ), 01 bản Phái Nhì Chi Nhì (Xuyên Tây giữ), 01 bản Phái Ba (Xuyên Đông giữ), 01 bản Phái Tư (Xuyên Tây giữ). Tất cả các Phái đều phụng nghinh về thờ phụng.',
-    recordedDate: '1960-03-28',
-    dynastyEra: 'Năm Canh Tý 1960',
-    authorOrPreserver: 'Cháu đời 11 & 12 bốn Phái đồng phụng sao',
-    tags: ['Gia phả 1960', 'Tư liệu quý', '4 Bản gốc'],
-    images: [
-      {
-        id: 'img-2-1',
-        url: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=800&auto=format&fit=crop&q=80',
-        caption: 'Bản sao gia phả Canh Tý 1960 bằng mực tàu trên giấy dó cổ, do các vị trưởng lão đời 11 và 12 đồng thủ bút.',
-      },
-      {
-        id: 'img-2-2',
-        url: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=800&auto=format&fit=crop&q=80',
-        caption: 'Dấu ấn kiềm và chữ ký của đại diện 4 Phái tại lễ cung nghinh gia phả về Từ Đường Tộc Văn Bá.',
-      },
-    ],
-  },
-  {
-    id: 'doc-3',
-    title: 'Bản Dập Văn Bia Mộ Ngài Triệu Tổ Văn Bá Bạt tại Gò Khoai (1976)',
-    category: 'sac_phong',
-    categoryLabel: 'Văn bia mộ tổ',
-    fileUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&auto=format&fit=crop&q=80',
-    fileType: 'image',
-    description: 'Bản dập và ảnh chụp toàn văn bia đá khắc năm 1976 khi di dời mộ ngài Triệu Tổ và các tiền hiền về Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây.',
-    recordedDate: '1976-11-15',
-    dynastyEra: 'Năm Bính Thìn 1976',
-    authorOrPreserver: 'Hội đồng Trưởng tộc Văn Bá',
-    tags: ['Bia mộ', 'Triệu Tổ', 'Gò Khoai'],
-    images: [
-      {
-        id: 'img-3-1',
-        url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&auto=format&fit=crop&q=80',
-        caption: 'Bản dập rập mực thác bản văn bia bằng đá Thanh, khắc chữ Hán chân phương ghi rõ hành trạng ngài Triệu Tổ.',
-      },
-      {
-        id: 'img-3-2',
-        url: 'https://images.unsplash.com/photo-1507842229451-79b1be886a27?w=800&auto=format&fit=crop&q=80',
-        caption: 'Quang cảnh khu lăng mộ ngài Triệu Tổ Văn Bá Bạt tại vị trí trung tâm Nghĩa trang Gia tộc Gò Khoai.',
-      },
-      {
-        id: 'img-3-3',
-        url: 'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?w=800&auto=format&fit=crop&q=80',
-        caption: 'Văn tế cổ và bản dịch quốc ngữ khắc trên bia phụ kế bên nhằm lưu truyền cho hậu bối.',
-      },
-    ],
-  },
-  {
-    id: 'doc-4',
-    title: 'Mỹ Xuyên Tây: Lịch Sử, Địa Lý và Văn Hóa (Xuất bản T3-2020)',
-    category: 'huong_uoc',
-    categoryLabel: 'Địa chí & Lịch sử dòng tộc',
-    fileUrl: 'https://images.unsplash.com/photo-1507842229451-79b1be886a27?w=800&auto=format&fit=crop&q=80',
-    fileType: 'doc',
-    description: 'Tài liệu nghiên cứu lịch sử lập làng Mỹ Xuyên Tây, hành trình đưa hài cốt Triệu Tổ từ Thanh Hóa vào Quảng Nam, và lịch sử Nghĩa trang Gò Khoai xưa và nay.',
-    recordedDate: '2020-03-01',
-    dynastyEra: 'Xuất bản Tháng 3/2020',
-    authorOrPreserver: 'Ban Liên Lạc & Nghiên cứu Lịch sử Văn Tộc',
-    tags: ['Địa chí', 'Mỹ Xuyên Tây', 'Lịch sử'],
-    images: [
-      {
-        id: 'img-4-1',
-        url: 'https://images.unsplash.com/photo-1507842229451-79b1be886a27?w=800&auto=format&fit=crop&q=80',
-        caption: 'Bản đồ cổ địa giới làng Mỹ Xuyên Tây và các cồn bãi nơi tổ tiên khai phá ven sông Thu Bồn.',
-      },
-    ],
-  },
-];
-
-export const INITIAL_POSTS: PostItem[] = [
-  {
-    id: 'post-1',
-    title: 'Thông báo Lễ Tảo Mộ Tiết Thanh Minh 2026 tại Nghĩa Trang Gia Tộc Gò Khoai',
-    authorName: 'Ban Khánh Tiết Tộc Văn Bá',
-    authorRole: 'Trưởng Ban Khánh Tiết',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    createdAt: '05/09/2026',
-    category: 'thong_bao',
-    content: 'Kính gửi toàn thể con cháu nội ngoại bốn Phái (Văn Bá, Văn Tấn, Văn Phú). Đúng tiết Thanh Minh năm nay, Hội đồng gia tộc tổ chức dọn cỏ, chỉnh trang khuôn viên bia mộ ngài Triệu Tổ và các cụ Tiên tổ tại Nghĩa trang Gò Khoai, TT. Nam Phước. Kính mời bà con bố trí tề tựu đông đủ.',
-    likesCount: 68,
-    commentsCount: 24,
-  },
-  {
-    id: 'post-2',
-    title: 'Vinh danh con cháu Tộc Văn đạt thành tích xuất sắc và nhận Quỹ Khuyến học năm 2026',
-    authorName: 'Hội Đồng Khuyến Học Tộc Văn',
-    authorRole: 'Ban Khuyến Học',
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    createdAt: '28/08/2026',
-    category: 'khuyen_hoc',
-    content: 'Thay mặt Hội đồng Tộc Văn, xin chúc mừng các cháu thuộc Phái II-VBXT, Phái II-VTQX, Phái II-VBĐL, Phái III-VPXĐ và Phái IV-VPXT đã đỗ đạt đại học và đạt học sinh giỏi năm học vừa qua. Buổi trao học bổng sẽ diễn ra trang trọng tại Từ đường Tộc Văn Bá.',
-    likesCount: 55,
-    commentsCount: 18,
-  },
-];
-
-export const INITIAL_FUNDS: FundRecord[] = [
-  {
-    id: 'fund-1',
-    title: 'Công đức tu bổ tường rào & bia đá Nghĩa trang Gia tộc Gò Khoai',
-    type: 'income',
-    amount: 35000000,
-    contributorOrReceiver: 'Con cháu Phái II-VBXT (Xuyên Tây) & kiều bào',
-    date: '15/08/2026',
-    purpose: 'Gia cố tường bao và tôn tạo khuôn viên mộ ngài Triệu Tổ',
-    branchName: 'Phái II - Xuyên Tây (VBXT)',
-    receiptNumber: 'PT-GK-2026-001',
-  },
-  {
-    id: 'fund-2',
-    title: 'Đóng góp Quỹ Khuyến học Tộc Văn toàn thể 4 Phái năm 2026',
-    type: 'income',
-    amount: 25000000,
-    contributorOrReceiver: 'Đại diện Chi Tộc Văn Tấn (Quế Xuân) & Văn Phú (Xuyên Đông)',
-    date: '10/08/2026',
-    purpose: 'Trao thưởng khuyến tài đầu năm học mới',
-    branchName: 'Toàn Tộc Văn',
-    receiptNumber: 'PT-KH-2026-002',
-  },
-  {
-    id: 'fund-3',
-    title: 'Chi phí mua sắm lễ vật & hương đăng Đại Lễ Tế Xuân Từ đường',
-    type: 'expense',
-    amount: 12000000,
-    contributorOrReceiver: 'Ban Khánh Tiết Từ Đường Tộc Văn Bá',
-    date: '20/08/2026',
-    purpose: 'Chuẩn bị lễ phẩm tam sanh, trầu cau dâng cúng Tổ tiên',
-    branchName: 'Phái II - Xuyên Tây (VBXT)',
-    receiptNumber: 'PC-TX-2026-001',
-  },
-  {
-    id: 'fund-4',
-    title: 'Trao học bổng khuyến học cho 15 cháu đạt thành tích cao',
-    type: 'expense',
-    amount: 15000000,
-    contributorOrReceiver: 'Các cháu học sinh giỏi các chi phái',
-    date: '02/09/2026',
-    purpose: 'Phát thưởng học bổng khuyến học năm học 2025-2026',
-    branchName: 'Toàn Tộc Văn',
-    receiptNumber: 'PC-KH-2026-002',
-  },
-];
+    }
+  ],
+  "events": [
+    {
+      "id": "evt-1",
+      "title": "Đại Lễ Giỗ Tổ & Tế Xuân Tộc Văn (Mùng 10 Tháng 3 ÂL)",
+      "type": "death_anniversary",
+      "memberId": "mem-101",
+      "memberName": "Triệu Tổ Văn Bá Bạt",
+      "lunarDay": 10,
+      "lunarMonth": 3,
+      "solarDateThisYear": "2026-04-26",
+      "daysLeft": 49,
+      "description": "Đại lễ Tế Xuân cổ truyền quy tụ con cháu bốn Phái (Văn Bá, Văn Tấn, Văn Phú) về Từ đường Tộc Văn Bá tại Thị trấn Nam Phước và dâng hương tại Nghĩa trang Gia tộc Gò Khoai.",
+      "location": "Từ Đường Tộc Văn Bá, TT. Nam Phước, Duy Xuyên, Quảng Nam",
+      "responsibleBranchId": "branch-vbxt"
+    },
+    {
+      "id": "evt-2",
+      "title": "Lễ Giỗ Bà Tiên Tổ Trần Thị Hút (Hiệu Thôn Khí)",
+      "type": "death_anniversary",
+      "memberId": "mem-506-w",
+      "memberName": "Trần Thị Hút (Phu nhân cụ Văn Bá Đình)",
+      "lunarDay": 15,
+      "lunarMonth": 3,
+      "solarDateThisYear": "2026-05-01",
+      "daysLeft": 54,
+      "description": "Lễ giỗ hàng năm của Cụ Bà Trần Thị Hút, mẹ sinh của tổ Chi 1 (Văn Bá Trung) và Chi 2 (Văn Bá Đài). Con cháu nội ngoại Phái II-VBXT thành kính chuẩn bị phẩm vật cúng dâng.",
+      "location": "Từ Đường Tộc Văn Bá, TT. Nam Phước",
+      "responsibleBranchId": "branch-vbxt"
+    },
+    {
+      "id": "evt-3",
+      "title": "Lễ Tảo Mộ Tiết Thanh Minh tại Nghĩa Trang Gia Tộc Gò Khoai",
+      "type": "tomb_cleaning",
+      "lunarDay": 5,
+      "lunarMonth": 3,
+      "solarDateThisYear": "2026-04-21",
+      "daysLeft": 44,
+      "description": "Con cháu khắp nơi tụ hội về Nghĩa trang Gia tộc Gò Khoai (xóm Mỹ Luân, TT. Nam Phước) để thắp hương, dọn cỏ, chỉnh trang mộ phần ngài Triệu Tổ Văn Bá Bạt và chư vị Tiên linh.",
+      "location": "Nghĩa trang Gia tộc Gò Khoai, TT. Nam Phước, Duy Xuyên",
+      "responsibleBranchId": "branch-vbxt"
+    },
+    {
+      "id": "evt-4",
+      "title": "Lễ Giỗ Cụ Bà Nguyễn Thị Đích (Phu nhân Cụ Văn Bá Đài)",
+      "type": "death_anniversary",
+      "memberId": "mem-604-w",
+      "memberName": "Nguyễn Thị Đích",
+      "lunarDay": 16,
+      "lunarMonth": 2,
+      "solarDateThisYear": "2026-04-03",
+      "daysLeft": 26,
+      "description": "Lễ giỗ Cụ Bà do con cháu Phái II-VBXT-Chi 2 phụng cúng tại Từ đường chi tộc.",
+      "location": "Từ Đường Chi 2, TT. Nam Phước",
+      "responsibleBranchId": "branch-vbxt"
+    },
+    {
+      "id": "evt-5",
+      "title": "Lễ Giỗ Cụ Tiên Tổ Văn Tấn Vinh (Làng Xuân Phú)",
+      "type": "death_anniversary",
+      "memberId": "mem-501",
+      "memberName": "Văn Tấn Vinh",
+      "lunarDay": 4,
+      "lunarMonth": 1,
+      "solarDateThisYear": "2027-02-10",
+      "daysLeft": 156,
+      "description": "Lễ tưởng niệm ngài Khởi tổ Chi Tộc Văn Tấn Quế Xuân (VTQX) tại Nhà thờ Tộc Văn Tấn xã Quế Xuân, Quế Sơn.",
+      "location": "Nhà thờ Tộc Văn Tấn, xã Quế Xuân, huyện Quế Sơn, Quảng Nam",
+      "responsibleBranchId": "branch-vtqx"
+    },
+    {
+      "id": "evt-6",
+      "title": "Lễ Giỗ Cụ Văn Phú Toàn (Tại Lão Sum Viên)",
+      "type": "death_anniversary",
+      "memberId": "mem-513",
+      "memberName": "Văn Phú Toàn",
+      "lunarDay": 18,
+      "lunarMonth": 1,
+      "solarDateThisYear": "2027-02-24",
+      "daysLeft": 170,
+      "description": "Lễ giỗ Cụ Văn Phú Toàn do con cháu Phái III-VPXĐ phụng cúng tại Nhà thờ Tộc Văn Phú làng Mỹ Xuyên Đông.",
+      "location": "Nhà thờ Tộc Văn Phú, làng Mỹ Xuyên Đông, Duy Xuyên",
+      "responsibleBranchId": "branch-vpxd"
+    }
+  ],
+  "documents": [
+    {
+      "id": "doc-1",
+      "title": "Bản thảo Gia Phả Tộc Văn (Cập nhật 20/7/2023)",
+      "category": "pha_ky",
+      "categoryLabel": "Phả hệ toàn tộc",
+      "fileUrl": "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=800&auto=format&fit=crop&q=80",
+      "fileType": "pdf",
+      "description": "Bộ gia phả đồ sộ ghi chép từ Đời thứ 1 (ngài Triệu Tổ Văn Bá Bạt) đến Đời thứ 14, bao gồm các Phái: Văn Bá Xuyên Tây, Văn Tấn Quế Xuân, Văn Bá Đại Lộc, Văn Phú Xuyên Đông và Xuyên Tây.",
+      "recordedDate": "2023-07-20",
+      "dynastyEra": "Hiện đại - Cập nhật 2023",
+      "authorOrPreserver": "Hội đồng Gia tộc Tộc Văn biên soạn",
+      "tags": [
+        "Gia phả toàn tộc",
+        "Văn Bá",
+        "Văn Tấn",
+        "Văn Phú"
+      ],
+      "images": [
+        {
+          "id": "img-1-1",
+          "url": "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=800&auto=format&fit=crop&q=80",
+          "caption": "Bìa cuốn Đại phả hệ Tộc Văn - Công trình sưu khảo và biên tập công phu qua nhiều thế hệ con cháu bốn Phái."
+        },
+        {
+          "id": "img-1-2",
+          "url": "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=800&auto=format&fit=crop&q=80",
+          "caption": "Trang mở đầu ghi chép công đức ngài Triệu Tổ Văn Bá Bạt cùng sắc chỉ khai canh khai khẩn vùng đất Mỹ Xuyên Tây."
+        },
+        {
+          "id": "img-1-3",
+          "url": "https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&auto=format&fit=crop&q=80",
+          "caption": "Sơ đồ cây phả hệ phân bổ 4 Phái lớn: Văn Bá Xuyên Tây, Văn Tấn Quế Xuân, Văn Bá Đại Lộc và Văn Phú."
+        }
+      ]
+    },
+    {
+      "id": "doc-2",
+      "title": "Gia Phả Tộc Văn Lập Ngày 28/3/1960 (Bộ 4 Bản Gốc)",
+      "category": "pha_ky",
+      "categoryLabel": "Gia phả cổ truyền 1960",
+      "fileUrl": "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=800&auto=format&fit=crop&q=80",
+      "fileType": "pdf",
+      "description": "Gia phả Tộc Văn lập ngày 28/3/1960 chia thành 04 bản: 01 bản Phái Nhì Chi Nhất (Quế Sơn giữ), 01 bản Phái Nhì Chi Nhì (Xuyên Tây giữ), 01 bản Phái Ba (Xuyên Đông giữ), 01 bản Phái Tư (Xuyên Tây giữ). Tất cả các Phái đều phụng nghinh về thờ phụng.",
+      "recordedDate": "1960-03-28",
+      "dynastyEra": "Năm Canh Tý 1960",
+      "authorOrPreserver": "Cháu đời 11 & 12 bốn Phái đồng phụng sao",
+      "tags": [
+        "Gia phả 1960",
+        "Tư liệu quý",
+        "4 Bản gốc"
+      ],
+      "images": [
+        {
+          "id": "img-2-1",
+          "url": "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=800&auto=format&fit=crop&q=80",
+          "caption": "Bản sao gia phả Canh Tý 1960 bằng mực tàu trên giấy dó cổ, do các vị trưởng lão đời 11 và 12 đồng thủ bút."
+        },
+        {
+          "id": "img-2-2",
+          "url": "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=800&auto=format&fit=crop&q=80",
+          "caption": "Dấu ấn kiềm và chữ ký của đại diện 4 Phái tại lễ cung nghinh gia phả về Từ Đường Tộc Văn Bá."
+        }
+      ]
+    },
+    {
+      "id": "doc-3",
+      "title": "Bản Dập Văn Bia Mộ Ngài Triệu Tổ Văn Bá Bạt tại Gò Khoai (1976)",
+      "category": "sac_phong",
+      "categoryLabel": "Văn bia mộ tổ",
+      "fileUrl": "https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&auto=format&fit=crop&q=80",
+      "fileType": "image",
+      "description": "Bản dập và ảnh chụp toàn văn bia đá khắc năm 1976 khi di dời mộ ngài Triệu Tổ và các tiền hiền về Nghĩa trang Gia tộc tại Gò Khoai, Xuyên Tây.",
+      "recordedDate": "1976-11-15",
+      "dynastyEra": "Năm Bính Thìn 1976",
+      "authorOrPreserver": "Hội đồng Trưởng tộc Văn Bá",
+      "tags": [
+        "Bia mộ",
+        "Triệu Tổ",
+        "Gò Khoai"
+      ],
+      "images": [
+        {
+          "id": "img-3-1",
+          "url": "https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&auto=format&fit=crop&q=80",
+          "caption": "Bản dập rập mực thác bản văn bia bằng đá Thanh, khắc chữ Hán chân phương ghi rõ hành trạng ngài Triệu Tổ."
+        },
+        {
+          "id": "img-3-2",
+          "url": "https://images.unsplash.com/photo-1507842229451-79b1be886a27?w=800&auto=format&fit=crop&q=80",
+          "caption": "Quang cảnh khu lăng mộ ngài Triệu Tổ Văn Bá Bạt tại vị trí trung tâm Nghĩa trang Gia tộc Gò Khoai."
+        },
+        {
+          "id": "img-3-3",
+          "url": "https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?w=800&auto=format&fit=crop&q=80",
+          "caption": "Văn tế cổ và bản dịch quốc ngữ khắc trên bia phụ kế bên nhằm lưu truyền cho hậu bối."
+        }
+      ]
+    },
+    {
+      "id": "doc-4",
+      "title": "Mỹ Xuyên Tây: Lịch Sử, Địa Lý và Văn Hóa (Xuất bản T3-2020)",
+      "category": "huong_uoc",
+      "categoryLabel": "Địa chí & Lịch sử dòng tộc",
+      "fileUrl": "https://images.unsplash.com/photo-1507842229451-79b1be886a27?w=800&auto=format&fit=crop&q=80",
+      "fileType": "doc",
+      "description": "Tài liệu nghiên cứu lịch sử lập làng Mỹ Xuyên Tây, hành trình đưa hài cốt Triệu Tổ từ Thanh Hóa vào Quảng Nam, và lịch sử Nghĩa trang Gò Khoai xưa và nay.",
+      "recordedDate": "2020-03-01",
+      "dynastyEra": "Xuất bản Tháng 3/2020",
+      "authorOrPreserver": "Ban Liên Lạc & Nghiên cứu Lịch sử Văn Tộc",
+      "tags": [
+        "Địa chí",
+        "Mỹ Xuyên Tây",
+        "Lịch sử"
+      ],
+      "images": [
+        {
+          "id": "img-4-1",
+          "url": "https://images.unsplash.com/photo-1507842229451-79b1be886a27?w=800&auto=format&fit=crop&q=80",
+          "caption": "Bản đồ cổ địa giới làng Mỹ Xuyên Tây và các cồn bãi nơi tổ tiên khai phá ven sông Thu Bồn."
+        }
+      ]
+    }
+  ],
+  "stats": {
+    "totalMembers": 332,
+    "totalBranches": 6,
+    "generationsCount": 9
+  }
+}

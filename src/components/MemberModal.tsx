@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Member, Branch, UserRole } from '../types';
+import { Member, Branch, UserRole, ClanInfo } from '../types';
 import {
   X,
   MapPin,
@@ -15,6 +15,9 @@ import {
   GitBranch,
   AlertTriangle,
   Plus,
+  Info,
+  Phone,
+  Mail,
 } from 'lucide-react';
 import { DefaultAvatar } from './DefaultAvatar';
 
@@ -23,6 +26,7 @@ interface MemberModalProps {
   allMembers: Member[];
   branches: Branch[];
   userRole: UserRole;
+  clanInfo?: ClanInfo;
   onClose: () => void;
   onSelectRelative: (relative: Member) => void;
   onUpdateMember: (updated: Member) => void;
@@ -34,6 +38,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   allMembers,
   branches,
   userRole,
+  clanInfo,
   onClose,
   onSelectRelative,
   onUpdateMember,
@@ -106,10 +111,10 @@ export const MemberModal: React.FC<MemberModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border-2 border-amber-500/40 overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border-2 border-amber-500/40 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-[#400207] via-[#5c0612] to-[#400207] px-6 py-4 border-b border-amber-500/40 text-amber-50 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="bg-gradient-to-r from-[#400207] via-[#5c0612] to-[#400207] px-4 sm:px-6 py-3 sm:py-4 border-b border-amber-500/40 text-amber-50 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="flex-shrink-0">
               <DefaultAvatar
                 avatarUrl={member.avatarUrl}
@@ -118,16 +123,16 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                 size="md"
               />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold font-serif text-amber-200 uppercase tracking-wide">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <h3 className="text-base sm:text-lg font-bold font-serif text-amber-200 uppercase tracking-wide truncate">
                   {member.fullName}
                 </h3>
-                <span className="text-[11px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold">
+                <span className="text-[10px] sm:text-[11px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold shrink-0">
                   {member.isRootAncestor ? 'Thủy Tổ Khai Sáng' : `Đời thứ ${member.generation}`}
                 </span>
               </div>
-              <p className="text-xs text-amber-300/80 mt-0.5">
+              <p className="text-[11px] sm:text-xs text-amber-300/80 mt-0.5 truncate">
                 {member.generation <= 2
                   ? member.orderTitle || 'Thủy Tổ Khai Sáng Toàn Tộc'
                   : [
@@ -142,7 +147,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {canEdit && !isEditing && (
               <button
                 type="button"
@@ -210,7 +215,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
         )}
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-800 text-xs">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 sm:space-y-6 flex-1 text-slate-800 text-xs">
           {isEditing ? (
             /* Editing Form */
             <form onSubmit={handleSave} className="space-y-4">
@@ -337,7 +342,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                     className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none font-semibold"
                   >
                     <option value="true">Còn sống</option>
-                    <option value="false">Đã tạ thế (Hưởng thọ)</option>
+                    <option value="false">Đã tạ thế</option>
                   </select>
                 </div>
 
@@ -494,12 +499,14 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                     {member.courtesyName || member.posthumousName || 'Chưa cập nhật'}
                   </span>
                 </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <div className={`p-3 bg-slate-50 rounded-xl border border-slate-200 border-l-4 ${member.gender === 'male' ? 'border-l-blue-600' : 'border-l-rose-500'}`}>
                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Thế hệ & Thứ bậc</span>
                   <span className="font-bold text-slate-800 text-xs mt-0.5 block">
                     {member.isRootAncestor
                       ? 'Thủy Tổ Khai Sáng'
-                      : `Đời thứ ${member.generation} (${member.orderTitle || 'Con thứ'})`}
+                      : member.orderTitle
+                      ? `Đời ${member.generation} • ${member.orderTitle}`
+                      : `Đời ${member.generation}`}
                   </span>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
@@ -511,14 +518,14 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                         : 'bg-amber-100 text-amber-800'
                     }`}
                   >
-                    {member.isAlive ? 'Đang sinh sống' : 'Đã tạ thế (Hưởng thọ)'}
+                    {member.isAlive ? 'Đang sinh sống' : 'Đã tạ thế'}
                   </span>
                 </div>
               </div>
 
               {/* Dates & Burial */}
               <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-200/80 space-y-2">
-                <h4 className="font-bold text-amber-900 font-serif flex items-center gap-1.5 text-xs">
+                <h4 className="font-serif font-bold text-amber-950 uppercase tracking-wide text-xs flex items-center gap-1.5">
                   <Calendar className="w-4 h-4 text-amber-700" />
                   Niên Biểu & Mộ Phần
                 </h4>
@@ -566,7 +573,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
               {/* Biography & Achievements */}
               {member.bio && (
                 <div className="space-y-1.5">
-                  <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">
+                  <h4 className="font-serif font-bold text-amber-950 uppercase tracking-wide text-xs">
                     Tiểu Sử & Sự Nghiệp
                   </h4>
                   <p className="text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
@@ -578,7 +585,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
               {/* Achievements */}
               {member.achievements && member.achievements.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="font-bold text-amber-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <h4 className="font-serif font-bold text-amber-950 uppercase tracking-wide text-xs flex items-center gap-1.5">
                     <Award className="w-4 h-4 text-amber-600" />
                     Công Đức, Bằng Khen & Thành Tựu
                   </h4>
@@ -598,7 +605,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
 
               {/* Family Relationships (Cha, Mẹ đẻ, Các Phu nhân & Con cái theo từng mẹ) */}
               <div className="space-y-3 pt-2 border-t">
-                <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <h4 className="font-serif font-bold text-amber-950 uppercase tracking-wide text-xs flex items-center gap-1.5">
                   <Users className="w-4 h-4 text-slate-600" />
                   Mối Quan Hệ Gia Đình Trực Hệ
                 </h4>
@@ -716,15 +723,39 @@ export const MemberModal: React.FC<MemberModalProps> = ({
           )}
         </div>
 
-        {/* Modal Footer */}
-        <div className="bg-slate-50 px-6 py-3 border-t border-slate-200 flex items-center justify-between text-xs">
-          <span className="text-slate-500 italic">
-            Mã định danh thành viên: <span className="font-mono">{member.id}</span>
-          </span>
+        {/* Compact Modal Footer with Member ID & Contact Notice */}
+        <div className="bg-slate-50 px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs shrink-0">
+          <div className="space-y-1 min-w-0 flex-1">
+            <div className="flex items-center gap-2 text-slate-500 text-[11px] flex-wrap">
+              <span className="font-semibold text-slate-600">Mã định danh thành viên:</span>
+              <span className="font-mono font-bold text-slate-700 bg-slate-200 px-1.5 py-0.5 rounded text-[10.5px]">
+                {member.id}
+              </span>
+            </div>
+            <p className="text-[11px] text-amber-900/90 leading-normal">
+              {clanInfo?.contactNotice || 'Gia phả hiện đang cập nhật, nếu có sai sót hoặc cần bổ sung vui lòng liên hệ Ban Quản Trị:'}{' '}
+              {clanInfo?.contactPhone && (
+                <a
+                  href={`tel:${clanInfo.contactPhone}`}
+                  className="font-bold text-emerald-700 hover:underline inline-flex items-center gap-0.5 mr-2"
+                >
+                  <Phone className="w-3 h-3 text-emerald-600 shrink-0 inline" /> {clanInfo.contactPhone}
+                </a>
+              )}
+              {clanInfo?.contactEmail && (
+                <a
+                  href={`mailto:${clanInfo.contactEmail}`}
+                  className="font-bold text-blue-700 hover:underline inline-flex items-center gap-0.5"
+                >
+                  <Mail className="w-3 h-3 text-blue-600 shrink-0 inline" /> {clanInfo.contactEmail}
+                </a>
+              )}
+            </p>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-lg transition-colors"
+            className="self-end sm:self-center px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-lg transition-colors text-xs active:scale-95 cursor-pointer shrink-0"
           >
             Đóng
           </button>

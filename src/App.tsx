@@ -20,14 +20,26 @@ import {
 } from './data/sampleData';
 import {
   INITIAL_CLAN_USERS,
-  DEFAULT_SUPER_ADMIN_EMAIL,
   SUPABASE_FIX_BURIAL_COORDINATES_SQL,
   isSupabaseConfigured,
+  supabase,
 } from './lib/supabase';
 import {
   saveMemberToSupabase,
   deleteMemberFromSupabase,
   fetchMembersFromSupabase,
+  fetchClanDataFromSupabase,
+  fetchCurrentClanUser,
+  fetchClanUsersFromSupabase,
+  saveClanUserToSupabase,
+  deleteClanUserFromSupabase,
+  upsertClanInfoToSupabase,
+  upsertEventToSupabase,
+  deleteEventFromSupabase,
+  upsertDocumentToSupabase,
+  deleteDocumentFromSupabase,
+  upsertFundToSupabase,
+  upsertPostToSupabase,
 } from './lib/supabaseService';
 import { GoogleAuthModal } from './components/GoogleAuthModal';
 import { FamilyTree } from './components/FamilyTree';
@@ -65,6 +77,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   X,
+  Menu,
   Lock,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -81,34 +94,12 @@ export default function App() {
 
   // Authentication & Users state (Bảo mật: Mặc định chưa đăng nhập là Khách xem)
   const [clanUsers, setClanUsers] = useState<ClanUser[]>(INITIAL_CLAN_USERS);
-  const [currentUser, setCurrentUser] = useState<ClanUser | null>(() => {
-    try {
-      const saved = localStorage.getItem('clan_current_user');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      // ignore
-    }
-    return null; // Khách vãng lai mặc định, không tự động cho vào Super Admin
-  });
+  const [currentUser, setCurrentUser] = useState<ClanUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
-  // Active Tab
-  type TabType = 'tree' | 'search' | 'relationship' | 'anniversaries' | 'archives' | 'community' | 'database' | 'admin';
-  const [activeTab, setActiveTab] = useState<TabType>('tree');
-
-  // RBAC Role State (synced with current user)
-  const [userRole, setUserRole] = useState<UserRole>(() => {
-    try {
-      const saved = localStorage.getItem('clan_current_user');
-      if (saved) {
-        const u = JSON.parse(saved);
-        if (u && u.role) return u.role;
-      }
-    } catch (e) {
-      // ignore
-    }
-    return 'visitor'; // Khách chỉ có quyền xem
-  });
+  // Vai trò luôn lấy từ hồ sơ đã xác thực trong Supabase, không tin dữ liệu localStorage.
+  const [userRole, setUserRole] = useState<UserRole>('visitor');
 
   // Kiểm tra quyền quản trị: Chỉ Super Admin hoặc Trưởng Chi khi ĐÃ ĐĂNG NHẬP
   const isAdmin = Boolean(
@@ -129,15 +120,76 @@ export default function App() {
   const [copiedNoticeSql, setCopiedNoticeSql] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
 
-  // Tự động tải danh sách thành viên từ Supabase nếu đã cấu hình
+  // Khởi tạo dữ liệu + phiên đăng nhập thật từ Supabase.
   useEffect(() => {
-    if (isSupabaseConfigured) {
-      fetchMembersFromSupabase().then((res) => {
-        if (res.members && res.members.length > 0) {
-          setMembers(res.members);
+    let mounted = true;
+
+    const load = async () => {
+      if (!isSupabaseConfigured || !supabase) {
+        if (mounted) setAuthLoading(false);
+        return;
+      }
+
+      const [{ data: sessionData }, membersResult, cloudData] = await Promise.all([
+        supabase.auth.getSession(),
+        fetchMembersFromSupabase(),
+        fetchClanDataFromSupabase(),
+      ]);
+
+      if (!mounted) return;
+
+      if (membersResult.members && membersResult.members.length > 0) setMembers(membersResult.members);
+      if (cloudData.clanInfo) setClanInfo((prev) => ({ ...prev, ...cloudData.clanInfo }));
+      if (cloudData.branches?.length) setBranches(cloudData.branches);
+      if (cloudData.events?.length) setEvents(cloudData.events);
+      if (cloudData.documents?.length) setDocuments(cloudData.documents);
+      if (cloudData.funds?.length) setFunds(cloudData.funds);
+      if (cloudData.posts?.length) setPosts(cloudData.posts);
+
+      if (sessionData.session?.user) {
+        const profile = await fetchCurrentClanUser(sessionData.session.user);
+        if (mounted && profile) {
+          setCurrentUser(profile);
+          setUserRole(profile.role);
+          if (profile.role === 'super_admin') {
+            const dbUsers = await fetchClanUsersFromSupabase();
+            if (mounted && dbUsers.length) setClanUsers(dbUsers);
+          }
         }
-      });
-    }
+      }
+
+      if (mounted) setAuthLoading(false);
+    };
+
+    load();
+
+    const { data: listener } = supabase?.auth.onAuthStateChange((_event, session) => {
+      // Không gọi API Supabase trực tiếp bên trong callback auth để tránh deadlock.
+      window.setTimeout(async () => {
+        if (!session?.user) {
+          if (mounted) {
+            setCurrentUser(null);
+            setUserRole('visitor');
+          }
+          return;
+        }
+
+        const profile = await fetchCurrentClanUser(session.user);
+        if (mounted) {
+          setCurrentUser(profile);
+          setUserRole(profile?.role || 'visitor');
+          if (profile?.role === 'super_admin') {
+            const dbUsers = await fetchClanUsersFromSupabase();
+            if (mounted && dbUsers.length) setClanUsers(dbUsers);
+          }
+        }
+      }, 0);
+    }) ?? { subscription: { unsubscribe: () => undefined } };
+
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   // Quick notification message
@@ -206,9 +258,14 @@ export default function App() {
           ...spouseForNewMember,
           spouseIds: [...(spouseForNewMember.spouseIds || []), newMember.id],
         };
-        await saveMemberToSupabase(updatedSpouse);
+        const spouseResult = await saveMemberToSupabase(updatedSpouse);
+        if (!spouseResult.success) {
+          setSaveToast(spouseResult.error || 'Đã thêm người nhưng chưa đồng bộ quan hệ phối ngẫu');
+          setTimeout(() => setSaveToast(null), 3500);
+          return;
+        }
       }
-      setSaveToast('Đã lưu thành viên vào hệ thống thành công');
+      setSaveToast(res.success ? 'Đã lưu thành viên vào hệ thống thành công' : (res.error || 'Không thể lưu thành viên'));
       setTimeout(() => setSaveToast(null), 3500);
     }
   };
@@ -222,7 +279,7 @@ export default function App() {
       if (res.missingBurialCoordinatesColumn) {
         setSchemaWarningNotice(true);
       }
-      setSaveToast('Đã cập nhật hồ sơ thành viên thành công');
+      setSaveToast(res.success ? 'Đã cập nhật hồ sơ thành viên thành công' : (res.error || 'Không thể cập nhật hồ sơ'));
       setTimeout(() => setSaveToast(null), 3500);
     }
   };
@@ -241,46 +298,82 @@ export default function App() {
     setSelectedMember(null);
 
     if (isSupabaseConfigured) {
-      await deleteMemberFromSupabase(id);
-      setSaveToast('Đã xóa thành viên khỏi hệ thống');
+      const result = await deleteMemberFromSupabase(id);
+      setSaveToast(result.success ? 'Đã xóa thành viên khỏi hệ thống' : (result.error || 'Không thể xóa thành viên'));
       setTimeout(() => setSaveToast(null), 3500);
     }
   };
 
-  const handleAddPost = (post: PostItem) => {
+  const handleAddPost = async (post: PostItem) => {
     setPosts((prev) => [post, ...prev]);
+    if (isSupabaseConfigured) {
+      const result = await upsertPostToSupabase(post);
+      if (!result.success) setSaveToast(result.error || 'Không thể lưu bài viết');
+    }
   };
 
-  const handleAddFund = (fund: FundRecord) => {
+  const handleAddFund = async (fund: FundRecord) => {
     setFunds((prev) => [fund, ...prev]);
+    if (isSupabaseConfigured) {
+      const result = await upsertFundToSupabase(fund);
+      if (!result.success) setSaveToast(result.error || 'Không thể lưu giao dịch quỹ');
+    }
   };
 
-  const handleUpdateClanInfo = (newInfo: typeof CLAN_INFO) => {
+  const handleUpdateClanInfo = async (newInfo: typeof CLAN_INFO) => {
     setClanInfo(newInfo);
+    if (isSupabaseConfigured) {
+      const result = await upsertClanInfoToSupabase(newInfo);
+      if (!result.success) setSaveToast(result.error || 'Không thể lưu thông tin dòng tộc');
+    }
   };
 
-  const handleAddDocument = (newDoc: DocumentItem) => {
+  const handleAddDocument = async (newDoc: DocumentItem) => {
     setDocuments((prev) => [newDoc, ...prev]);
+    if (isSupabaseConfigured) {
+      const result = await upsertDocumentToSupabase(newDoc);
+      if (!result.success) setSaveToast(result.error || 'Không thể lưu tư liệu');
+    }
   };
 
-  const handleUpdateDocument = (updatedDoc: DocumentItem) => {
+  const handleUpdateDocument = async (updatedDoc: DocumentItem) => {
     setDocuments((prev) => prev.map((d) => (d.id === updatedDoc.id ? updatedDoc : d)));
+    if (isSupabaseConfigured) {
+      const result = await upsertDocumentToSupabase(updatedDoc);
+      if (!result.success) setSaveToast(result.error || 'Không thể cập nhật tư liệu');
+    }
   };
 
-  const handleDeleteDocument = (id: string) => {
+  const handleDeleteDocument = async (id: string) => {
     setDocuments((prev) => prev.filter((d) => d.id !== id));
+    if (isSupabaseConfigured) {
+      const result = await deleteDocumentFromSupabase(id);
+      if (!result.success) setSaveToast(result.error || 'Không thể xóa tư liệu');
+    }
   };
 
-  const handleAddEvent = (newEvent: EventItem) => {
+  const handleAddEvent = async (newEvent: EventItem) => {
     setEvents((prev) => [...prev, newEvent]);
+    if (isSupabaseConfigured) {
+      const result = await upsertEventToSupabase(newEvent);
+      if (!result.success) setSaveToast(result.error || 'Không thể lưu sự kiện');
+    }
   };
 
-  const handleUpdateEvent = (updatedEvent: EventItem) => {
+  const handleUpdateEvent = async (updatedEvent: EventItem) => {
     setEvents((prev) => prev.map((e) => (e.id === updatedEvent.id ? updatedEvent : e)));
+    if (isSupabaseConfigured) {
+      const result = await upsertEventToSupabase(updatedEvent);
+      if (!result.success) setSaveToast(result.error || 'Không thể cập nhật sự kiện');
+    }
   };
 
-  const handleDeleteEvent = (id: string) => {
+  const handleDeleteEvent = async (id: string) => {
     setEvents((prev) => prev.filter((e) => e.id !== id));
+    if (isSupabaseConfigured) {
+      const result = await deleteEventFromSupabase(id);
+      if (!result.success) setSaveToast(result.error || 'Không thể xóa sự kiện');
+    }
   };
 
   const handleResetSampleData = () => {
@@ -296,67 +389,97 @@ export default function App() {
 
   const handleImportClanData = (data: any) => {
     if (data.clanInfo) setClanInfo(data.clanInfo);
-    if (data.members) setMembers(data.members);
     if (data.branches) setBranches(data.branches);
     if (data.documents) setDocuments(data.documents);
     if (data.events) setEvents(data.events);
-  };
-
-  // Authentication Handlers
-  const handleLoginWithGoogle = (user: ClanUser) => {
-    setCurrentUser(user);
-    setUserRole(user.role);
-    try {
-      localStorage.setItem('clan_current_user', JSON.stringify(user));
-    } catch (e) {
-      // ignore
-    }
-    setClanUsers((prev) => {
-      const exists = prev.find((u) => u.email.toLowerCase() === user.email.toLowerCase());
-      if (!exists) {
-        return [user, ...prev];
+    if (data.members && Array.isArray(data.members)) {
+      // If dataset contains root ancestor or generation 1/2, replace entire member list
+      const hasRootAncestors = data.members.some((m: Member) => m.generation <= 2 || m.isRootAncestor);
+      if (hasRootAncestors) {
+        setMembers(data.members);
+      } else {
+        // Partial import (e.g. generations 7-9): Smart merge into existing tree
+        setMembers((prev) => {
+          const map = new Map(prev.map((m) => [m.id, m]));
+          for (const m of data.members) {
+            map.set(m.id, m);
+          }
+          return Array.from(map.values());
+        });
       }
-      return prev.map((u) => (u.email.toLowerCase() === user.email.toLowerCase() ? user : u));
-    });
-    setIsAuthModalOpen(false);
-    confetti({ particleCount: 35, spread: 60 });
+    }
+    confetti({ particleCount: 60, spread: 80 });
   };
 
-  const handleLogout = () => {
+  // Authentication Handlers: chỉ nhận danh tính từ Supabase Auth.
+  const handleLoginWithGoogle = () => {
+    // OAuth được thực hiện trong GoogleAuthModal. Session listener sẽ cập nhật profile.
+    setIsAuthModalOpen(false);
+  };
+
+  const handleLogout = async () => {
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
     setCurrentUser(null);
     setUserRole('visitor');
-    try {
-      localStorage.removeItem('clan_current_user');
-    } catch (e) {
-      // ignore
-    }
-    if (activeTab === 'admin') {
-      setActiveTab('tree');
-    }
+    if (activeTab === 'admin') setActiveTab('tree');
     setIsAuthModalOpen(false);
   };
 
-  const handleAddUser = (newUser: ClanUser) => {
-    setClanUsers((prev) => [newUser, ...prev]);
+  const handleAddUser = async (newUser: ClanUser) => {
+    const result = await saveClanUserToSupabase(newUser);
+    if (result.success && result.user) {
+      setClanUsers((prev) => [result.user!, ...prev.filter((u) => u.email !== result.user!.email)]);
+      setSaveToast('Đã lưu tài khoản vào Supabase');
+    } else if (!isSupabaseConfigured) {
+      setClanUsers((prev) => [newUser, ...prev]);
+    } else {
+      setSaveToast(result.error || 'Không thể lưu tài khoản');
+    }
+    setTimeout(() => setSaveToast(null), 3500);
   };
 
-  const handleUpdateUser = (updatedUser: ClanUser) => {
-    setClanUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)));
-    if (currentUser && currentUser.id === updatedUser.id) {
-      setCurrentUser(updatedUser);
-      setUserRole(updatedUser.role);
+  const handleUpdateUser = async (updatedUser: ClanUser) => {
+    const result = await saveClanUserToSupabase(updatedUser);
+    if (result.success && result.user) {
+      setClanUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? result.user! : u)));
+      if (currentUser && currentUser.id === updatedUser.id) {
+        setCurrentUser(result.user);
+        setUserRole(result.user.role);
+      }
+    } else if (!isSupabaseConfigured) {
+      setClanUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)));
+    } else {
+      setSaveToast(result.error || 'Không thể cập nhật tài khoản');
+      setTimeout(() => setSaveToast(null), 3500);
     }
   };
 
-  const handleDeleteUser = (userId: string) => {
-    setClanUsers((prev) => prev.filter((u) => u.id !== userId));
-    if (currentUser && currentUser.id === userId) {
-      handleLogout();
+  const handleDeleteUser = async (userId: string) => {
+    const result = await deleteClanUserFromSupabase(userId);
+    if (result.success || !isSupabaseConfigured) {
+      setClanUsers((prev) => prev.filter((u) => u.id !== userId));
+      if (currentUser && currentUser.id === userId) await handleLogout();
+    } else {
+      setSaveToast(result.error || 'Không thể xóa tài khoản');
+      setTimeout(() => setSaveToast(null), 3500);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#180204] text-amber-100 flex items-center justify-center p-6">
+        <div className="text-center space-y-3">
+          <div className="mx-auto w-10 h-10 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+          <p className="text-sm font-semibold">Đang kết nối dữ liệu gia phả…</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#180204] text-amber-50 flex flex-col font-sans selection:bg-amber-500 selection:text-amber-950">
+    <div className="min-h-screen bg-[#180204] text-amber-50 flex flex-col font-sans selection:bg-amber-500 selection:text-amber-950 pb-16 sm:pb-0">
       {/* Topmost Royal Hoành Phi Banner */}
       <header className="relative bg-gradient-to-r from-[#3b0207] via-[#5c0612] to-[#3b0207] border-b-2 border-amber-500/50 shadow-2xl overflow-hidden">
         {/* Decorative corner motifs */}
@@ -481,40 +604,6 @@ export default function App() {
               </button>
             )}
 
-            {/* Role Quick Switch (Chỉ hiển thị khi đã đăng nhập Super Admin thực thụ để kiểm thử) */}
-            {currentUser && currentUser.role === 'super_admin' && (
-              <div className="hidden lg:flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-amber-500/30 text-[10px]">
-                <span className="text-amber-300/70 px-1.5 font-medium">Thử Quyền:</span>
-                <button
-                  type="button"
-                  onClick={() => setUserRole('super_admin')}
-                  className={`px-2 py-0.5 rounded ${userRole === 'super_admin' ? 'bg-amber-500 text-amber-950 font-bold' : 'text-amber-200/70 hover:bg-white/5'}`}
-                >
-                  Trưởng Tộc
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setUserRole('branch_admin')}
-                  className={`px-2 py-0.5 rounded ${userRole === 'branch_admin' ? 'bg-amber-500 text-amber-950 font-bold' : 'text-amber-200/70 hover:bg-white/5'}`}
-                >
-                  Trưởng Chi
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setUserRole('member')}
-                  className={`px-2 py-0.5 rounded ${userRole === 'member' ? 'bg-amber-500 text-amber-950 font-bold' : 'text-amber-200/70 hover:bg-white/5'}`}
-                >
-                  Thành Viên
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setUserRole('visitor')}
-                  className={`px-2 py-0.5 rounded ${userRole === 'visitor' ? 'bg-amber-500 text-amber-950 font-bold' : 'text-amber-200/70 hover:bg-white/5'}`}
-                >
-                  Khách
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
@@ -536,10 +625,21 @@ export default function App() {
         )}
       </header>
 
-      {/* Main Tab Navigation Bar */}
-      <nav className="bg-[#280205] border-b border-amber-500/30 sticky top-0 z-30 shadow-md backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center gap-1 overflow-x-auto py-2 scrollbar-none">
+      {/* Main Tab Navigation Bar (Desktop / Tablet - on mobile use bottom navigation bar) */}
+      <nav className="bg-[#280205] border-b border-amber-500/30 sticky top-0 z-30 shadow-md backdrop-blur-md hidden sm:block">
+        <div className="max-w-7xl mx-auto px-2 sm:px-6">
+          <div className="flex items-center gap-1.5 overflow-x-auto py-2 scrollbar-none">
+            {/* Mobile Menu Opener Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="sm:hidden px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0 hover:bg-amber-500/30 active:scale-95"
+              title="Mở toàn bộ danh mục chức năng"
+            >
+              <Menu className="w-4 h-4 text-amber-400" />
+              <span>Menu</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setActiveTab('tree')}
@@ -654,11 +754,13 @@ export default function App() {
       </nav>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+      <main className={`flex-1 w-full mx-auto ${activeTab === 'tree' ? 'p-1 sm:px-6 sm:py-6 max-w-[1920px]' : 'max-w-7xl px-3 sm:px-6 py-4 sm:py-6'} pb-20 sm:pb-6`}>
         {activeTab === 'tree' && (
           <FamilyTree
             members={members}
             branches={branches}
+            clanInfo={clanInfo}
+            onUpdateClanInfo={handleUpdateClanInfo}
             userRole={userRole}
             onSelectMember={handleSelectMember}
             onAddChild={handleOpenAddChild}
@@ -768,7 +870,7 @@ export default function App() {
                   <span>Quyền truy cập hợp lệ:</span>
                 </div>
                 <p className="text-[11px] text-slate-600">
-                  • Tài khoản Super Admin: <b>sanhangdoc.shop@gmail.com</b>
+                  • Tài khoản Super Admin: tài khoản được khai báo trong bảng <b>clan_users</b> của Supabase.
                 </p>
                 <p className="text-[11px] text-slate-600">
                   • Hoặc các tài khoản Google đã được cấp quyền Quản trị trong danh sách gia tộc.
@@ -797,8 +899,8 @@ export default function App() {
         )}
       </main>
 
-      {/* Floating Quick Action Bar for Index / Mobile / Everywhere */}
-      <div className="fixed bottom-5 right-5 z-40 flex items-center gap-2 bg-[#250104]/90 p-2 rounded-2xl border-2 border-amber-500/70 shadow-2xl backdrop-blur-md">
+      {/* Floating Quick Action Bar for Desktop */}
+      <div className="hidden sm:flex fixed bottom-6 right-6 z-30 items-center gap-2 bg-[#250104]/90 p-2 rounded-2xl border-2 border-amber-500/70 shadow-2xl backdrop-blur-md">
         {isAdmin ? (
           <button
             type="button"
@@ -855,6 +957,7 @@ export default function App() {
           allMembers={members}
           branches={branches}
           userRole={userRole}
+          clanInfo={clanInfo}
           onClose={() => setSelectedMember(null)}
           onSelectRelative={handleSelectMember}
           onUpdateMember={handleUpdateMember}
@@ -948,7 +1051,7 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className="bg-[#120103] border-t border-amber-500/20 py-6 text-center text-xs text-amber-300/60">
+      <footer className="bg-[#120103] border-t border-amber-500/20 py-6 text-center text-xs text-amber-300/60 mb-12 sm:mb-0">
         <div className="max-w-7xl mx-auto px-4 space-y-2">
           <p className="font-serif font-bold text-amber-200 tracking-wider">
             {clanInfo.ancestralHall} • {clanInfo.address}
@@ -958,6 +1061,195 @@ export default function App() {
           </p>
         </div>
       </footer>
+
+      {/* MOBILE FULL MENU DRAWER MODAL */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end sm:hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+
+          {/* Drawer Sheet */}
+          <div className="relative bg-gradient-to-b from-[#2b0206] to-[#1a0104] border-t-2 border-amber-400 rounded-t-3xl p-5 shadow-2xl z-10 max-h-[85vh] overflow-y-auto space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-amber-500/30 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500 text-amber-950 flex items-center justify-center font-bold">
+                  <Crown className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-serif font-black text-amber-200 text-sm uppercase">Danh Mục Phả Hệ</h3>
+                  <p className="text-[11px] text-amber-300/70">{clanInfo.name}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-8 h-8 rounded-full bg-white/10 text-amber-300 flex items-center justify-center hover:bg-white/20"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Menu items list */}
+            <div className="grid grid-cols-1 gap-2 pt-1">
+              {[
+                { id: 'tree', label: 'Cây Gia Phả Tương Tác', desc: 'Sơ đồ 2D trực quan, cành nhánh các đời', icon: TreeDeciduous },
+                { id: 'search', label: 'Tra Cứu Thông Minh', desc: 'Tìm kiếm con cháu, chi phái, mộ phần', icon: Search },
+                { id: 'relationship', label: 'Tính Mối Quan Hệ (Xưng Hô)', desc: 'Xác định cách gọi đúng thứ bậc họ hàng', icon: GitCompare },
+                { id: 'anniversaries', label: 'Lịch Âm & Ngày Giỗ', desc: 'Lịch kỵ nhật, thông báo lễ bái hằng năm', icon: Calendar },
+                { id: 'archives', label: 'Kho Tư Liệu & Sắc Phong', desc: 'Văn bia, câu đối, gia huấn tiền nhân', icon: Scroll },
+                { id: 'community', label: 'Bảng Tin & Sổ Quỹ', desc: 'Hoạt động dòng tộc, thu chi minh bạch', icon: MessageSquare },
+                { id: 'database', label: 'Database Supabase & 0đ Guide', desc: 'Cấu hình đồng bộ cơ sở dữ liệu đám mây', icon: Database },
+              ].map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(item.id as TabType);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`w-full p-3 rounded-2xl flex items-center gap-3.5 text-left transition-all ${
+                      isActive
+                        ? 'bg-amber-500 text-amber-950 font-bold shadow-lg'
+                        : 'bg-black/30 hover:bg-white/5 text-amber-100 border border-amber-500/20'
+                    }`}
+                  >
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        isActive ? 'bg-amber-950 text-amber-300' : 'bg-amber-500/20 text-amber-300'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-bold leading-tight">{item.label}</div>
+                      <div className={`text-[10px] mt-0.5 truncate ${isActive ? 'text-amber-950/80' : 'text-amber-300/60'}`}>
+                        {item.desc}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+
+              {/* AdminCP button */}
+              {isAdmin ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('admin');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full p-3 rounded-2xl flex items-center gap-3.5 text-left transition-all border-2 ${
+                    activeTab === 'admin'
+                      ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-950 border-white shadow-xl'
+                      : 'bg-gradient-to-r from-amber-700/60 to-red-900/60 text-amber-100 border-amber-400/50'
+                  }`}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-amber-950 text-amber-300 flex items-center justify-center shrink-0">
+                    <SlidersHorizontal className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-black uppercase text-amber-300 flex items-center gap-2">
+                      <span>Bảng Quản Trị AdminCP</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-red-600 text-white font-bold">
+                        {userRole === 'super_admin' ? 'Toàn Quyền' : 'Trưởng Chi'}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-amber-200/80 mt-0.5">
+                      Thêm/sửa thành viên, phân quyền, cấu hình hiển thị thẻ
+                    </div>
+                  </div>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setIsAuthModalOpen(true);
+                  }}
+                  className="w-full p-3 rounded-2xl flex items-center gap-3.5 text-left bg-white/5 border border-amber-500/30 text-amber-200"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                    <Lock className="w-4 h-4 text-amber-300" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-amber-200">Đăng Nhập Quản Trị Viên</div>
+                    <div className="text-[10px] text-amber-300/60 mt-0.5">
+                      Đăng nhập tài khoản Google để vào AdminCP
+                    </div>
+                  </div>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MOBILE BOTTOM QUICK NAVIGATION BAR */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#240205]/95 border-t border-amber-500/40 backdrop-blur-lg flex justify-around items-center py-2 px-1 sm:hidden shadow-2xl">
+        <button
+          type="button"
+          onClick={() => setActiveTab('tree')}
+          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
+            activeTab === 'tree' ? 'text-amber-400 font-bold scale-105' : 'text-amber-200/60 hover:text-amber-200'
+          }`}
+        >
+          <TreeDeciduous className="w-4 h-4" />
+          <span className="text-[10px]">Cây Phả Hệ</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('search')}
+          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
+            activeTab === 'search' ? 'text-amber-400 font-bold scale-105' : 'text-amber-200/60 hover:text-amber-200'
+          }`}
+        >
+          <Search className="w-4 h-4" />
+          <span className="text-[10px]">Tra Cứu</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('relationship')}
+          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
+            activeTab === 'relationship' ? 'text-amber-400 font-bold scale-105' : 'text-amber-200/60 hover:text-amber-200'
+          }`}
+        >
+          <GitCompare className="w-4 h-4" />
+          <span className="text-[10px]">Xưng Hô</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('anniversaries')}
+          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
+            activeTab === 'anniversaries' ? 'text-amber-400 font-bold scale-105' : 'text-amber-200/60 hover:text-amber-200'
+          }`}
+        >
+          <Calendar className="w-4 h-4" />
+          <span className="text-[10px]">Lịch Giỗ</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setIsMobileMenuOpen(true)}
+          className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
+            isMobileMenuOpen || activeTab === 'admin' || activeTab === 'archives' || activeTab === 'community' || activeTab === 'database'
+              ? 'text-amber-400 font-bold'
+              : 'text-amber-200/60 hover:text-amber-200'
+          }`}
+        >
+          <Menu className="w-4 h-4" />
+          <span className="text-[10px]">Thêm...</span>
+        </button>
+      </nav>
     </div>
   );
 }

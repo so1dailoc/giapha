@@ -6,6 +6,7 @@ import {
   EventItem,
   UserRole,
   ClanUser,
+  ClanInfo,
 } from '../types';
 import {
   DEFAULT_SUPER_ADMIN_EMAIL,
@@ -40,6 +41,7 @@ import {
   MapPin,
   RefreshCw,
   Mail,
+  Phone,
   UserPlus,
   UserCheck,
   Copy,
@@ -54,16 +56,8 @@ import {
 import confetti from 'canvas-confetti';
 
 interface AdminCPProps {
-  clanInfo: {
-    name: string;
-    branchSubtitle: string;
-    ancestralHall: string;
-    address: string;
-    foundingYear: number;
-    motto: string;
-    mottoMeaning: string;
-  };
-  onUpdateClanInfo: (info: any) => void;
+  clanInfo: ClanInfo;
+  onUpdateClanInfo: (info: ClanInfo) => void;
   members: Member[];
   branches: Branch[];
   documents: DocumentItem[];
@@ -266,6 +260,77 @@ export const AdminCP: React.FC<AdminCPProps> = ({
     link.click();
     URL.revokeObjectURL(url);
     confetti({ particleCount: 40, spread: 70 });
+  };
+
+  // Download Đời 7 & 8 JSON (Extracted from PDF)
+  const handleDownloadDoi78Json = async () => {
+    try {
+      const res = await fetch('/clan_data_doi7_8.json');
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'gia_pha_toc_van_doi_7_va_8.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      confetti({ particleCount: 30, spread: 60 });
+    } catch (e) {
+      alert('Không thể tải tệp dữ liệu Đời 7 & 8.');
+    }
+  };
+
+  // Download Full 9-Generations JSON
+  const handleDownloadFullJson = async () => {
+    try {
+      const res = await fetch('/clan_data_full.json');
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'gia_pha_toc_van_full_9_doi.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      confetti({ particleCount: 30, spread: 60 });
+    } catch (e) {
+      alert('Không thể tải tệp dữ liệu toàn bộ gia phả.');
+    }
+  };
+
+  // Download Supabase SQL
+  const handleDownloadSupabaseSql = async () => {
+    try {
+      const res = await fetch('/supabase_import.sql');
+      const text = await res.text();
+      const blob = new Blob([text], { type: 'text/sql' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'supabase_import_toc_van.sql';
+      a.click();
+      URL.revokeObjectURL(url);
+      confetti({ particleCount: 30, spread: 60 });
+    } catch (e) {
+      alert('Không thể tải tệp SQL Supabase.');
+    }
+  };
+
+  // 1-Click Load PDF Data (282 members)
+  const handleOneClickLoadDoi78 = async () => {
+    if (!confirm('Bạn có muốn nạp dữ liệu trích xuất từ Sách Gia Phả (Đời 7, 8 & 9 gồm 282 vị) vào cây phả hệ ngay lập tức không?')) {
+      return;
+    }
+    try {
+      const res = await fetch('/clan_data_full.json');
+      const full = await res.json();
+      if (onImportClanData) {
+        onImportClanData(full);
+        alert(`Đã nạp thành công ${full.members.length} thành viên (Đời 1 đến Đời 9) vào hệ thống!`);
+      }
+    } catch (e) {
+      alert('Đã xảy ra lỗi khi nạp dữ liệu.');
+    }
   };
 
   // Copy Supabase SQL Schema
@@ -724,6 +789,70 @@ export const AdminCP: React.FC<AdminCPProps> = ({
       {/* TAB 1: QUẢN LÝ CÂY GIA PHẢ & THÀNH VIÊN */}
       {activeTab === 'tree' && (
         <div className="space-y-4">
+          {/* PDF Genealogy Import & Download Banner */}
+          <div className="bg-gradient-to-r from-amber-900 via-[#4a0812] to-amber-950 rounded-2xl border-2 border-amber-500/60 p-5 text-amber-50 shadow-lg space-y-3">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[10px] font-bold uppercase tracking-wider">
+                    ✓ Đã Số Hóa Từ Bản Thảo Gia Phả Tộc Văn (20/7/2023)
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 text-[10px] font-bold">
+                    282 Thành Viên Mới (Đời 7, 8 & 9)
+                  </span>
+                </div>
+                <h3 className="text-base md:text-lg font-bold font-serif text-amber-200">
+                  Dữ Liệu Gia Phả Tộc Văn Cập Nhật: Đời 7, Đời 8 & Hậu Duệ Đời 9
+                </h3>
+                <p className="text-xs text-amber-200/80 max-w-3xl leading-relaxed">
+                  Bao gồm đầy đủ các nhánh: <b>Phái II-VTQX</b> (Văn Tấn - Quế Xuân), <b>Phái II-VBĐL</b> (Văn Bá - Đại Lộc), <b>Phái II-VBXT</b> (Văn Bá - Xuyên Tây), <b>Phái III-VPXĐ</b> (Văn Phú - Xuyên Đông) và <b>Phái IV-VPXT</b> (Văn Phú - Xuyên Tây).
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleOneClickLoadDoi78}
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-amber-950 font-bold text-xs flex items-center gap-1.5 shadow-md transition-all active:scale-95"
+                  title="Nạp ngay toàn bộ dữ liệu Đời 7, 8 vào cây phả hệ"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-950" />
+                  Nạp Vào Cây Phả Hệ (1-Click)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadDoi78Json}
+                  className="px-3 py-2 rounded-xl bg-black/40 hover:bg-black/60 text-amber-200 border border-amber-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                  title="Tải tệp JSON Đời 7 và Đời 8"
+                >
+                  <Download className="w-3.5 h-3.5 text-amber-300" />
+                  Tải JSON Đời 7 & 8
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadFullJson}
+                  className="px-3 py-2 rounded-xl bg-black/40 hover:bg-black/60 text-amber-200 border border-amber-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                  title="Tải toàn bộ phả hệ 9 đời dạng JSON"
+                >
+                  <FileText className="w-3.5 h-3.5 text-amber-300" />
+                  Tải JSON Toàn Phả Hệ
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadSupabaseSql}
+                  className="px-3 py-2 rounded-xl bg-black/40 hover:bg-black/60 text-amber-200 border border-amber-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                  title="Tải mã lệnh SQL để chạy trên Supabase"
+                >
+                  <Database className="w-3.5 h-3.5 text-amber-300" />
+                  Tải SQL Supabase
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Filter Bar */}
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs text-slate-800">
             <div className="flex flex-wrap items-center gap-2 flex-1">
@@ -1349,6 +1478,497 @@ export const AdminCP: React.FC<AdminCPProps> = ({
                 className="w-full p-2.5 border rounded-xl focus:outline-none focus:border-amber-600"
               />
             </div>
+
+            {/* Cấu Hình 5 Phương Án Hiển Thị Cây Phả Hệ Do Ban Quản Trị Chỉ Định */}
+            <div className="sm:col-span-2 pt-4 border-t border-slate-200 mt-2 space-y-4">
+              <div>
+                <h3 className="text-sm font-bold font-serif text-amber-950 uppercase flex items-center gap-2">
+                  <TreeDeciduous className="w-4 h-4 text-amber-600" />
+                  Cấu Hình 5 Phương Án Hiển Thị Cây Phả Hệ (Chỉ Định Của Ban Quản Trị)
+                </h3>
+                <p className="text-slate-500 text-xs">
+                  Thiết lập giao diện và giải thuật mặc định khi con cháu hoặc khách truy cập vào trang Cây Gia Phả.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-amber-50/50 p-4 rounded-xl border border-amber-200/80">
+                {/* Phương Án 5: Chế độ hiển thị mặc định */}
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1">
+                    1. Chế Độ Xem Mặc Định Khi Vào Trang (PA 5)
+                  </label>
+                  <select
+                    value={clanForm.defaultTreeSettings?.viewMode || 'graph_canvas'}
+                    onChange={(e) =>
+                      setClanForm({
+                        ...clanForm,
+                        defaultTreeSettings: {
+                          ...clanForm.defaultTreeSettings,
+                          viewMode: e.target.value as any,
+                        },
+                      })
+                    }
+                    className="w-full p-2 border rounded-lg bg-white font-medium"
+                  >
+                    <option value="graph_canvas">🌲 Cây Đồ Họa 2D (Không gian tương tác trực quan)</option>
+                    <option value="book_outline">📖 Sổ Phả Hệ Văn Bản Dọc (Dạng sách truyền thống, cuộn mượt)</option>
+                  </select>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Khuyên dùng Sổ Phả Hệ nếu đa số con cháu dùng điện thoại hoặc in ấn thành sách.
+                  </p>
+                </div>
+
+                {/* Phương Án 3: Thuật toán sắp xếp */}
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1">
+                    2. Giải Thuật Sắp Xếp Nhánh Con (PA 3)
+                  </label>
+                  <select
+                    value={clanForm.defaultTreeSettings?.layoutAlgorithm || 'family_cluster'}
+                    onChange={(e) =>
+                      setClanForm({
+                        ...clanForm,
+                        defaultTreeSettings: {
+                          ...clanForm.defaultTreeSettings,
+                          layoutAlgorithm: e.target.value as any,
+                        },
+                      })
+                    }
+                    className="w-full p-2 border rounded-lg bg-white font-medium"
+                  >
+                    <option value="family_cluster">👨‍👩‍👧‍👦 Xếp Cụm Gia Đình (Căn giữa dưới cha, chống chéo line)</option>
+                    <option value="flat_generation">↔ Dàn Đều Hàng Ngang (Căn bằng phẳng theo thế hệ)</option>
+                  </select>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Cụm gia đình giúp triệt tiêu hoàn toàn tình trạng line kéo chéo xiên xẹo qua nhau.
+                  </p>
+                </div>
+
+                {/* Phương Án 1: Tự động thu gọn cành sâu */}
+                <div className="flex items-start gap-2.5">
+                  <input
+                    type="checkbox"
+                    id="cfg-autoCollapse"
+                    checked={clanForm.defaultTreeSettings?.autoCollapseDeepGens ?? true}
+                    onChange={(e) =>
+                      setClanForm({
+                        ...clanForm,
+                        defaultTreeSettings: {
+                          ...clanForm.defaultTreeSettings,
+                          autoCollapseDeepGens: e.target.checked,
+                          enableCollapsible: true,
+                        },
+                      })
+                    }
+                    className="mt-1 rounded text-amber-600 focus:ring-amber-500"
+                  />
+                  <div>
+                    <label htmlFor="cfg-autoCollapse" className="font-bold text-slate-800 cursor-pointer">
+                      3. Tự Động Thu Gọn Từ Đời Thứ 7 Trở Đi (PA 1)
+                    </label>
+                    <p className="text-[11px] text-slate-500">
+                      Khi mở trang, các cụ Đời 7 chỉ hiện nút <b>[+ X con]</b>, người xem bấm vào để mở rộng. Cây không bị phình to gây giật lag.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Phương Án 4: Xếp so le 2 tầng */}
+                <div className="flex items-start gap-2.5">
+                  <input
+                    type="checkbox"
+                    id="cfg-zigzag"
+                    checked={clanForm.defaultTreeSettings?.enableZigZagRows ?? true}
+                    onChange={(e) =>
+                      setClanForm({
+                        ...clanForm,
+                        defaultTreeSettings: {
+                          ...clanForm.defaultTreeSettings,
+                          enableZigZagRows: e.target.checked,
+                        },
+                      })
+                    }
+                    className="mt-1 rounded text-amber-600 focus:ring-amber-500"
+                  />
+                  <div>
+                    <label htmlFor="cfg-zigzag" className="font-bold text-slate-800 cursor-pointer">
+                      4. Xếp So Le 2 Tầng Cho Nhà Đông Con (PA 4)
+                    </label>
+                    <p className="text-[11px] text-slate-500">
+                      Gia đình có từ 5 người con trở lên sẽ tự động chia 2 hàng so le, giảm tới 50% độ rộng ngang.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Phương Án Mới: Thẻ thành viên dọc từ đời thứ 6 trở xuống, họ tên sổ dọc */}
+                <div className="sm:col-span-2 p-3.5 bg-amber-100/50 rounded-xl border border-amber-300/80 space-y-3">
+                  <div className="flex items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      id="cfg-verticalCards"
+                      checked={clanForm.defaultTreeSettings?.enableVerticalCards ?? true}
+                      onChange={(e) =>
+                        setClanForm({
+                          ...clanForm,
+                          defaultTreeSettings: {
+                            ...clanForm.defaultTreeSettings,
+                            enableVerticalCards: e.target.checked,
+                          },
+                        })
+                      }
+                      className="mt-1 rounded text-amber-600 focus:ring-amber-500"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <label htmlFor="cfg-verticalCards" className="font-bold text-amber-950 cursor-pointer">
+                          📐 Thẻ Dọc Sổ Tên Từ Đời 6 Trở Xuống (Phương Án Tiết Kiệm Diện Tích Tối Đa)
+                        </label>
+                        <span className="text-[10px] px-2 py-0.5 bg-emerald-600 text-white font-bold rounded-full">
+                          -70% Chiều Rộng
+                        </span>
+                      </div>
+                      <p className="text-xs text-amber-900/80 mt-1">
+                        Từ đời thứ 6 trở xuống, con cháu rất đông. Thẻ thành viên sẽ tự động chuyển sang chiều dọc, họ và tên sổ dọc từng từ (ví dụ: <b>VĂN</b> &lt;xuống dòng&gt; <b>TẤN</b> &lt;xuống dòng&gt; <b>NHA</b>). Chuẩn phong cách bài vị truyền thống, vừa trang trọng vừa giúp cây không bị quá dài ngang.
+                      </p>
+
+                      <div className="mt-2.5 flex items-center gap-3 flex-wrap text-xs">
+                        <span className="font-semibold text-amber-900">Bắt đầu áp dụng từ:</span>
+                        <select
+                          value={clanForm.defaultTreeSettings?.verticalCardStartGen ?? 6}
+                          onChange={(e) =>
+                            setClanForm({
+                              ...clanForm,
+                              defaultTreeSettings: {
+                                ...clanForm.defaultTreeSettings,
+                                verticalCardStartGen: Number(e.target.value),
+                              },
+                            })
+                          }
+                          disabled={!(clanForm.defaultTreeSettings?.enableVerticalCards ?? true)}
+                          className="py-1 px-2.5 rounded-lg border border-amber-300 bg-white font-semibold text-slate-800 focus:ring-2 focus:ring-amber-500 disabled:opacity-50"
+                        >
+                          <option value={5}>Từ Đời Thứ 5 trở xuống</option>
+                          <option value={6}>Từ Đời Thứ 6 trở xuống (Khuyên Dùng)</option>
+                          <option value={7}>Từ Đời Thứ 7 trở xuống</option>
+                          <option value={8}>Từ Đời Thứ 8 trở xuống</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Admin điều chỉnh khoảng cách giữa 2 thẻ thành viên */}
+                  <div className="pt-2.5 border-t border-amber-300/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <label className="font-bold text-xs text-amber-950 block">
+                        Khoảng Cách Giữa 2 Thẻ Thành Viên (Pixels)
+                      </label>
+                      <span className="text-[11px] text-amber-800/80 block">
+                        Admin có thể kéo thanh trượt để cây thưa thoáng hoặc gom sít lại theo ý muốn.
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="range"
+                        min={15}
+                        max={120}
+                        step={5}
+                        value={clanForm.defaultTreeSettings?.cardHorizontalGap ?? 35}
+                        onChange={(e) =>
+                          setClanForm({
+                            ...clanForm,
+                            defaultTreeSettings: {
+                              ...clanForm.defaultTreeSettings,
+                              cardHorizontalGap: Number(e.target.value),
+                            },
+                          })
+                        }
+                        className="w-28 sm:w-36 accent-amber-600 cursor-pointer"
+                      />
+                      <input
+                        type="number"
+                        min={10}
+                        max={150}
+                        value={clanForm.defaultTreeSettings?.cardHorizontalGap ?? 35}
+                        onChange={(e) =>
+                          setClanForm({
+                            ...clanForm,
+                            defaultTreeSettings: {
+                              ...clanForm.defaultTreeSettings,
+                              cardHorizontalGap: Math.max(10, Math.min(150, Number(e.target.value))),
+                            },
+                          })
+                        }
+                        className="w-16 py-1 px-2 text-center text-xs font-bold border border-amber-300 rounded-lg bg-white"
+                      />
+                      <span className="text-xs font-bold text-amber-900">px</span>
+
+                      <div className="flex items-center gap-1 ml-1">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setClanForm({
+                              ...clanForm,
+                              defaultTreeSettings: {
+                                ...clanForm.defaultTreeSettings,
+                                cardHorizontalGap: 25,
+                              },
+                            })
+                          }
+                          className="px-2 py-0.5 text-[10px] rounded bg-white hover:bg-amber-200 border border-amber-300 font-medium text-amber-950"
+                        >
+                          Dày 25
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setClanForm({
+                              ...clanForm,
+                              defaultTreeSettings: {
+                                ...clanForm.defaultTreeSettings,
+                                cardHorizontalGap: 35,
+                              },
+                            })
+                          }
+                          className="px-2 py-0.5 text-[10px] rounded bg-white hover:bg-amber-200 border border-amber-300 font-medium text-amber-950"
+                        >
+                          Chuẩn 35
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setClanForm({
+                              ...clanForm,
+                              defaultTreeSettings: {
+                                ...clanForm.defaultTreeSettings,
+                                cardHorizontalGap: 60,
+                              },
+                            })
+                          }
+                          className="px-2 py-0.5 text-[10px] rounded bg-white hover:bg-amber-200 border border-amber-300 font-medium text-amber-950"
+                        >
+                          Thoáng 60
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cấu Hình Mặc Định Hiển Thị Thẻ Thành Viên (Hiển Thị Thẻ) */}
+                <div className="sm:col-span-2 p-4 bg-amber-50/80 rounded-xl border border-amber-300/80 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold text-amber-950 text-xs flex items-center gap-1.5">
+                        <Eye className="w-4 h-4 text-amber-700" />
+                        👁️ Cấu Hình Mặc Định &quot;Hiển Thị Thẻ&quot; (Áp Dụng Toàn Cây Gia Phả)
+                      </h4>
+                      <p className="text-[11px] text-amber-900/80 mt-0.5">
+                        Tùy chỉnh thông tin mặc định hiển thị trên thẻ thành viên cho bà con dòng tộc và khách khi truy cập trang web.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
+                    <label className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white border border-amber-200/80 cursor-pointer hover:bg-amber-100/50 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={clanForm.defaultTreeSettings?.showSpouses ?? false}
+                        onChange={(e) =>
+                          setClanForm({
+                            ...clanForm,
+                            defaultTreeSettings: {
+                              ...clanForm.defaultTreeSettings,
+                              showSpouses: e.target.checked,
+                            },
+                          })
+                        }
+                        className="rounded text-amber-600 focus:ring-amber-500"
+                      />
+                      <div>
+                        <span className="text-xs font-semibold text-slate-800 block">Hiển thị Phối Ngẫu</span>
+                        <span className="text-[10px] text-slate-500 block">Vợ / Chồng bên cạnh</span>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white border border-amber-200/80 cursor-pointer hover:bg-amber-100/50 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={clanForm.defaultTreeSettings?.showDates ?? false}
+                        onChange={(e) =>
+                          setClanForm({
+                            ...clanForm,
+                            defaultTreeSettings: {
+                              ...clanForm.defaultTreeSettings,
+                              showDates: e.target.checked,
+                            },
+                          })
+                        }
+                        className="rounded text-amber-600 focus:ring-amber-500"
+                      />
+                      <div>
+                        <span className="text-xs font-semibold text-slate-800 block">Năm Sinh, Mất & Giỗ</span>
+                        <span className="text-[10px] text-slate-500 block">Niên biểu âm / dương</span>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white border border-amber-200/80 cursor-pointer hover:bg-amber-100/50 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={clanForm.defaultTreeSettings?.showAvatars ?? false}
+                        onChange={(e) =>
+                          setClanForm({
+                            ...clanForm,
+                            defaultTreeSettings: {
+                              ...clanForm.defaultTreeSettings,
+                              showAvatars: e.target.checked,
+                            },
+                          })
+                        }
+                        className="rounded text-amber-600 focus:ring-amber-500"
+                      />
+                      <div>
+                        <span className="text-xs font-semibold text-slate-800 block">Ảnh Chân Dung</span>
+                        <span className="text-[10px] text-slate-500 block">Ảnh đại diện thẻ</span>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white border border-amber-200/80 cursor-pointer hover:bg-amber-100/50 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={clanForm.defaultTreeSettings?.showTitles ?? false}
+                        onChange={(e) =>
+                          setClanForm({
+                            ...clanForm,
+                            defaultTreeSettings: {
+                              ...clanForm.defaultTreeSettings,
+                              showTitles: e.target.checked,
+                            },
+                          })
+                        }
+                        className="rounded text-amber-600 focus:ring-amber-500"
+                      />
+                      <div>
+                        <span className="text-xs font-semibold text-slate-800 block">Thế Hệ & Thứ Bậc</span>
+                        <span className="text-[10px] text-slate-500 block">Trưởng nam, thứ nam...</span>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white border border-amber-200/80 cursor-pointer hover:bg-amber-100/50 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={clanForm.defaultTreeSettings?.showHierarchy ?? false}
+                        onChange={(e) =>
+                          setClanForm({
+                            ...clanForm,
+                            defaultTreeSettings: {
+                              ...clanForm.defaultTreeSettings,
+                              showHierarchy: e.target.checked,
+                            },
+                          })
+                        }
+                        className="rounded text-amber-600 focus:ring-amber-500"
+                      />
+                      <div>
+                        <span className="text-xs font-semibold text-slate-800 block">Phái • Chi • Nhánh</span>
+                        <span className="text-[10px] text-slate-500 block">Tổ chức phân cấp</span>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white border border-amber-200/80 cursor-pointer hover:bg-amber-100/50 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={clanForm.defaultTreeSettings?.showBirthPlace ?? false}
+                        onChange={(e) =>
+                          setClanForm({
+                            ...clanForm,
+                            defaultTreeSettings: {
+                              ...clanForm.defaultTreeSettings,
+                              showBirthPlace: e.target.checked,
+                            },
+                          })
+                        }
+                        className="rounded text-amber-600 focus:ring-amber-500"
+                      />
+                      <div>
+                        <span className="text-xs font-semibold text-slate-800 block">Quê Quán / Nơi Sinh</span>
+                        <span className="text-[10px] text-slate-500 block">Địa chỉ sinh quán</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Quyền Người Xem Tự Do Chuyển Đổi */}
+                <div className="sm:col-span-2 flex items-start gap-2.5 pt-2 border-t border-amber-200/60">
+                  <input
+                    type="checkbox"
+                    id="cfg-allowUserCustom"
+                    checked={clanForm.allowUserViewCustomization ?? true}
+                    onChange={(e) =>
+                      setClanForm({
+                        ...clanForm,
+                        allowUserViewCustomization: e.target.checked,
+                      })
+                    }
+                    className="mt-1 rounded text-amber-600 focus:ring-amber-500"
+                  />
+                  <div>
+                    <label htmlFor="cfg-allowUserCustom" className="font-bold text-slate-800 cursor-pointer">
+                      5. Cho Phép Con Cháu / Khách Tự Do Đổi Phương Án Trên Cây
+                    </label>
+                    <p className="text-[11px] text-slate-500">
+                      Bật: Người xem có thể bấm các nút chuyển đổi trên thanh công cụ Cây Phả Hệ. Tắt: Cố định theo cấu hình Ban Quản Trị chỉ định ở trên.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* THÔNG TIN LIÊN HỆ TIẾP NHẬN BỔ SUNG & CẬP NHẬT GIA PHẢ */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 text-amber-900 border-b pb-3">
+                <Phone className="w-5 h-5 text-amber-600" />
+                <h3 className="font-bold text-sm font-serif">Thông Tin Liên Hệ Bổ Sung & Sửa Đổi Gia Phả</h3>
+              </div>
+              <p className="text-xs text-slate-500">
+                Thông tin này sẽ hiển thị ở cuối bảng xem chi tiết thành viên để con cháu tiện liên hệ với Ban Quản Trị khi phát hiện thông tin cần đính chính hoặc bổ sung con cháu mới sinh.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div className="sm:col-span-2">
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Nội dung thông báo hướng dẫn liên hệ
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={clanForm.contactNotice || ''}
+                    onChange={(e) => setClanForm({ ...clanForm, contactNotice: e.target.value })}
+                    placeholder="Gia phả hiện đang được Ban Quản Trị rà soát và cập nhật liên tục. Nếu có sai sót về niên biểu, danh xưng hoặc cần bổ sung con cháu, phối ngẫu, xin vui lòng liên hệ..."
+                    className="w-full p-2.5 border rounded-xl focus:border-amber-600 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Số điện thoại / Zalo Ban Quản Trị</label>
+                  <input
+                    type="text"
+                    value={clanForm.contactPhone || ''}
+                    onChange={(e) => setClanForm({ ...clanForm, contactPhone: e.target.value })}
+                    placeholder="0905.123.456"
+                    className="w-full p-2.5 border rounded-xl focus:border-amber-600 focus:outline-none font-semibold text-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Email tiếp nhận thông tin</label>
+                  <input
+                    type="email"
+                    value={clanForm.contactEmail || ''}
+                    onChange={(e) => setClanForm({ ...clanForm, contactEmail: e.target.value })}
+                    placeholder="bqt.giaphatocvan@gmail.com"
+                    className="w-full p-2.5 border rounded-xl focus:border-amber-600 focus:outline-none text-slate-800"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="pt-4 border-t flex items-center justify-end">
@@ -1451,32 +2071,42 @@ export const AdminCP: React.FC<AdminCPProps> = ({
                 </p>
               </div>
 
-              {/* 3 Main Action Download Buttons */}
+              {/* Main Action Download Buttons */}
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={downloadSupabaseSchemaSql}
-                  className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-amber-950 font-bold rounded-xl shadow-lg flex items-center gap-2 text-xs transition-all hover:scale-[1.02]"
-                  title="Tải tệp tin SQL đã cấu hình sẵn bảng, RLS và tài khoản 13.phucthinh@gmail.com"
+                  onClick={handleDownloadDoi78Json}
+                  className="px-3.5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-amber-950 font-bold rounded-xl shadow-lg flex items-center gap-2 text-xs transition-all hover:scale-[1.02]"
+                  title="Tải tệp tin JSON Đời 7 & 8 trích xuất từ PDF Gia Phả"
                 >
-                  <Download className="w-4 h-4" />
-                  1. Tải Tệp SQL Supabase (.sql)
+                  <Sparkles className="w-4 h-4 text-amber-950" />
+                  Tải JSON Đời 7 & 8 (.json)
                 </button>
 
                 <button
                   type="button"
-                  onClick={handleExportBackup}
-                  className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-amber-100 border border-amber-400/40 font-bold rounded-xl shadow-md flex items-center gap-2 text-xs transition-all"
-                  title="Tải bản sao lưu toàn bộ dữ liệu hiện tại dạng JSON"
+                  onClick={handleDownloadFullJson}
+                  className="px-3.5 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/40 font-bold rounded-xl shadow-md flex items-center gap-2 text-xs transition-all"
+                  title="Tải toàn bộ phả hệ 9 đời dạng JSON (332 thành viên)"
                 >
                   <FileText className="w-4 h-4 text-amber-300" />
-                  2. Tải Dữ Liệu Sao Lưu (.json)
+                  Tải JSON 9 Đời (.json)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadSupabaseSql}
+                  className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-amber-100 border border-amber-400/40 font-bold rounded-xl shadow-md flex items-center gap-2 text-xs transition-all"
+                  title="Tải toàn bộ dữ liệu 9 đời chuyển thành lệnh SQL Supabase"
+                >
+                  <Database className="w-4 h-4 text-emerald-400" />
+                  Tải SQL Đầy Đủ (.sql)
                 </button>
 
                 <button
                   type="button"
                   onClick={handleCopySql}
-                  className="px-4 py-2.5 bg-black/40 hover:bg-black/60 text-amber-200 border border-amber-500/40 font-bold rounded-xl shadow-md flex items-center gap-2 text-xs transition-all"
+                  className="px-3.5 py-2.5 bg-black/40 hover:bg-black/60 text-amber-200 border border-amber-500/40 font-bold rounded-xl shadow-md flex items-center gap-2 text-xs transition-all"
                   title="Sao chép toàn bộ lệnh SQL để dán trực tiếp vào Supabase SQL Editor"
                 >
                   {copiedSql ? (
@@ -1487,7 +2117,7 @@ export const AdminCP: React.FC<AdminCPProps> = ({
                   ) : (
                     <>
                       <Copy className="w-4 h-4 text-amber-400" />
-                      3. Sao Chép Toàn Bộ SQL
+                      Sao Chép Schema SQL
                     </>
                   )}
                 </button>

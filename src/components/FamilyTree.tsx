@@ -11,7 +11,6 @@ import {
   useEdgesState,
   MarkerType,
 } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
 
 import { Member, Branch, UserRole, FamilyTreeSettings, ClanInfo, TreeViewMode, LayoutAlgorithm } from '../types';
 import { FamilyTreeNode, FamilyTreeNodeData } from './FamilyTreeNode';

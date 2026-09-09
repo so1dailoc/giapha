@@ -289,8 +289,10 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
           )}
         </div>
 
-        {/* Hover Action Floating Bar */}
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 pb-1">
+        {/* Hover Action Floating Bar
+            Desktop: show on hover.
+            Touch/mobile: always show because there is no reliable hover gesture. */}
+        <div className="family-tree-mobile-actions opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity flex items-center justify-center gap-1 pb-1">
           <button
             type="button"
             title="Xem chi tiết"

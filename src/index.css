@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
 
 
 /* Production/mobile hardening */
@@ -66,12 +67,50 @@ textarea:focus-visible {
   }
 }
 
-/* Mobile genealogy canvas: touch-first controls and readable viewport */
+/* React Flow: load its stylesheet before our overrides (Tailwind 4 safe). */
 .react-flow__renderer { touch-action: none; }
+
+/* Keep built-in panels sized to their content. This prevents the Controls panel
+   from expanding into a giant bordered rectangle on narrow touch viewports. */
+.react-flow__controls {
+  width: max-content !important;
+  height: max-content !important;
+  max-width: calc(100% - 20px) !important;
+  max-height: calc(100% - 20px) !important;
+  flex: 0 0 auto !important;
+}
+
+.react-flow__controls-button {
+  flex: 0 0 auto !important;
+}
+
 @media (max-width: 640px) {
-  .react-flow__controls { bottom: 12px !important; left: 10px !important; display: flex !important; flex-direction: column !important; }
-  .react-flow__controls-button { width: 42px !important; height: 42px !important; }
-  .react-flow__minimap { display: none !important; }
+  /* Let React Flow's position classes (bottom-right, bottom-left, ...) win.
+     Do not hard-code left/bottom here. */
+  .react-flow__controls {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+  }
+
+  .react-flow__controls-button {
+    width: 42px !important;
+    height: 42px !important;
+  }
+
+  /* Mobile tree deliberately has no MiniMap: the map is redundant on a touch
+     screen and can otherwise become an oversized panel when CSS is overridden. */
+  .react-flow__minimap {
+    display: none !important;
+  }
+
   .react-flow__attribution { display: none !important; }
   .react-flow__node { touch-action: none; }
+
+  /* Vertical member cards: hover does not exist on touch devices, so expose
+     the same quick actions that desktop users get on hover. */
+  .family-tree-mobile-actions {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
 }

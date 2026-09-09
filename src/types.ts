@@ -163,6 +163,18 @@ export interface FamilyTreeSettings {
   verticalCardStartGen?: number; // Đời bắt đầu áp dụng thẻ dọc (mặc định: 6)
   cardHorizontalGap?: number; // Khoảng cách ngang giữa 2 anh em trong cùng nhà (px)
   interFamilyGap?: number; // Khoảng cách giữa các cụm gia đình khác nhau để chống đè line (px)
+
+  // Cấu hình riêng cho trải nghiệm mobile / màn hình cảm ứng
+  mobileTreeHeight?: number; // Chiều cao vùng cây trên mobile (px)
+  mobileInitialZoom?: number; // Zoom khởi tạo trên mobile
+  mobileMinZoom?: number; // Zoom nhỏ nhất trên mobile
+  mobileMaxZoom?: number; // Zoom lớn nhất trên mobile
+  mobileShowMiniMap?: boolean; // Hiện/ẩn MiniMap trên mobile
+  mobileControlsPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  focusMobileZoom?: number; // Zoom khi mở một nhánh cụ thể trên mobile
+  focusDesktopZoom?: number; // Zoom khi mở một nhánh cụ thể trên desktop
+  focusMobileOffsetY?: number; // Dịch tâm node trên mobile (px)
+  focusDesktopOffsetY?: number; // Dịch tâm node trên desktop (px)
 }
 
 export interface RelationshipResult {

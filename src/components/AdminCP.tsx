@@ -1904,6 +1904,106 @@ export const AdminCP: React.FC<AdminCPProps> = ({
                   </div>
                 </div>
 
+                {/* CẤU HÌNH MOBILE / REACTFLOW NÂNG CAO */}
+                <div className="sm:col-span-2 p-4 bg-slate-50 rounded-xl border border-slate-300 space-y-4">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                      <Settings className="w-4 h-4 text-amber-700" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-sm">⚙️ Cấu Hình ReactFlow & Mobile</h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Các thiết lập này được lưu vào Supabase và áp dụng mặc định cho tất cả điện thoại. Có thể thay đổi mà không cần sửa mã nguồn.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="p-3 rounded-lg bg-white border border-slate-200">
+                      <label className="text-xs font-bold text-slate-800 block mb-1">Chiều cao cây trên Mobile</label>
+                      <div className="flex items-center gap-2">
+                        <input type="range" min={560} max={1400} step={20}
+                          value={clanForm.defaultTreeSettings?.mobileTreeHeight ?? 760}
+                          onChange={(e) => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, mobileTreeHeight: Number(e.target.value) } })}
+                          className="flex-1 accent-amber-600" />
+                        <input type="number" min={560} max={1600} step={20}
+                          value={clanForm.defaultTreeSettings?.mobileTreeHeight ?? 760}
+                          onChange={(e) => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, mobileTreeHeight: Math.max(560, Math.min(1600, Number(e.target.value))) } })}
+                          className="w-20 p-1.5 text-center border rounded-lg text-xs font-bold" />
+                        <span className="text-[10px]">px</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-1">Khuyên dùng 720–900px.</p>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-white border border-slate-200">
+                      <label className="text-xs font-bold text-slate-800 block mb-1">Zoom mở cây trên Mobile</label>
+                      <div className="flex items-center gap-2">
+                        <input type="range" min={0.35} max={1.2} step={0.05}
+                          value={clanForm.defaultTreeSettings?.mobileInitialZoom ?? 0.72}
+                          onChange={(e) => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, mobileInitialZoom: Number(e.target.value) } })}
+                          className="flex-1 accent-amber-600" />
+                        <span className="w-10 text-center text-xs font-bold">{(clanForm.defaultTreeSettings?.mobileInitialZoom ?? 0.72).toFixed(2)}×</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-1">Tăng nếu cây vẫn quá bé.</p>
+                    </div>
+
+                    <label className="p-3 rounded-lg bg-white border border-slate-200 flex items-start gap-2 cursor-pointer">
+                      <input type="checkbox" checked={clanForm.defaultTreeSettings?.mobileShowMiniMap ?? false}
+                        onChange={(e) => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, mobileShowMiniMap: e.target.checked } })}
+                        className="mt-0.5 rounded text-amber-600 focus:ring-amber-500" />
+                      <span><b className="text-xs block">Hiện MiniMap trên Mobile</b><small className="text-[10px] text-slate-500">Mặc định tắt để dành diện tích cho cây.</small></span>
+                    </label>
+
+                    <div className="p-3 rounded-lg bg-white border border-slate-200">
+                      <label className="text-xs font-bold text-slate-800 block mb-1">Zoom khi mở một nhánh</label>
+                      <div className="flex gap-3">
+                        <label className="flex-1 text-[10px] text-slate-500">Mobile
+                          <input type="number" min={0.5} max={1.5} step={0.05}
+                            value={clanForm.defaultTreeSettings?.focusMobileZoom ?? 0.9}
+                            onChange={(e) => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, focusMobileZoom: Math.max(0.5, Math.min(1.5, Number(e.target.value))) } })}
+                            className="mt-1 w-full p-1.5 border rounded-lg text-xs font-bold text-slate-800" />
+                        </label>
+                        <label className="flex-1 text-[10px] text-slate-500">Desktop
+                          <input type="number" min={0.5} max={1.5} step={0.05}
+                            value={clanForm.defaultTreeSettings?.focusDesktopZoom ?? 1}
+                            onChange={(e) => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, focusDesktopZoom: Math.max(0.5, Math.min(1.5, Number(e.target.value))) } })}
+                            className="mt-1 w-full p-1.5 border rounded-lg text-xs font-bold text-slate-800" />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-white border border-slate-200">
+                      <label className="text-xs font-bold text-slate-800 block mb-1">Dịch tâm khi mở nhánh (Y)</label>
+                      <div className="flex gap-3">
+                        <label className="flex-1 text-[10px] text-slate-500">Mobile
+                          <input type="number" min={-300} max={300} step={10}
+                            value={clanForm.defaultTreeSettings?.focusMobileOffsetY ?? 0}
+                            onChange={(e) => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, focusMobileOffsetY: Number(e.target.value) } })}
+                            className="mt-1 w-full p-1.5 border rounded-lg text-xs font-bold text-slate-800" />
+                        </label>
+                        <label className="flex-1 text-[10px] text-slate-500">Desktop
+                          <input type="number" min={-300} max={300} step={10}
+                            value={clanForm.defaultTreeSettings?.focusDesktopOffsetY ?? 0}
+                            onChange={(e) => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, focusDesktopOffsetY: Number(e.target.value) } })}
+                            className="mt-1 w-full p-1.5 border rounded-lg text-xs font-bold text-slate-800" />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-white border border-slate-200">
+                      <label className="text-xs font-bold text-slate-800 block mb-1">Vị trí nút Zoom trên Mobile</label>
+                      <select value={clanForm.defaultTreeSettings?.mobileControlsPosition ?? 'bottom-right'}
+                        onChange={(e) => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, mobileControlsPosition: e.target.value as any } })}
+                        className="w-full p-1.5 border rounded-lg text-xs font-semibold text-slate-800 bg-white">
+                        <option value="top-left">Trên trái</option>
+                        <option value="top-right">Trên phải</option>
+                        <option value="bottom-left">Dưới trái</option>
+                        <option value="bottom-right">Dưới phải</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Quyền Người Xem Tự Do Chuyển Đổi */}
                 <div className="sm:col-span-2 flex items-start gap-2.5 pt-2 border-t border-amber-200/60">
                   <input

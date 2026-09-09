@@ -125,6 +125,11 @@ CREATE TABLE IF NOT EXISTS public.clan_info (
     founding_year INT,
     motto TEXT,
     motto_meaning TEXT,
+    default_tree_settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+    allow_user_view_customization BOOLEAN NOT NULL DEFAULT true,
+    contact_notice TEXT,
+    contact_phone TEXT,
+    contact_email TEXT,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

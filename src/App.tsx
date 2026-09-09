@@ -326,11 +326,15 @@ export default function App() {
   };
 
   const handleUpdateClanInfo = async (newInfo: ClanInfo) => {
-    setClanInfo(newInfo);
     if (isSupabaseConfigured) {
       const result = await upsertClanInfoToSupabase(newInfo);
-      if (!result.success) setSaveToast(result.error || 'Không thể lưu thông tin dòng tộc');
+      if (!result.success) {
+        setSaveToast(result.error || 'Không thể lưu thông tin dòng tộc');
+        return result;
+      }
     }
+    setClanInfo(newInfo);
+    return { success: true };
   };
 
   const handleAddDocument = async (newDoc: DocumentItem) => {

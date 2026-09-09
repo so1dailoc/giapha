@@ -107,6 +107,12 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     interFamilyGap: adminDefaults?.interFamilyGap ?? 110,
   }));
 
+  // Đồng bộ cấu hình Admin từ Supabase sau khi dữ liệu cloud tải xong.
+  useEffect(() => {
+    if (!adminDefaults) return;
+    setSettings((prev) => ({ ...prev, ...adminDefaults }));
+  }, [adminDefaults]);
+
   const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
   const [treeSearchQuery, setTreeSearchQuery] = useState<string>('');
   const [focusedMemberId, setFocusedMemberId] = useState<string | null>(highlightedMemberId || null);
@@ -782,6 +788,16 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Trên mobile không fit toàn bộ 332+ node vào một màn hình vì sẽ làm cây cực nhỏ.
+  // Sau khi ReactFlow fit lần đầu, giữ góc nhìn trung tâm ở mức phóng đại dễ thao tác.
+  useEffect(() => {
+    if (!rfInstance || typeof window === 'undefined' || window.innerWidth >= 640) return;
+    const timer = window.setTimeout(() => {
+      rfInstance.zoomTo?.(0.62, { duration: 450 });
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [rfInstance, initialNodes.length]);
 
   // Sync state when layout inputs change
   useEffect(() => {

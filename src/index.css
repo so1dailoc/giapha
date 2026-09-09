@@ -65,3 +65,13 @@ textarea:focus-visible {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Mobile genealogy canvas: touch-first controls and readable viewport */
+.react-flow__renderer { touch-action: none; }
+@media (max-width: 640px) {
+  .react-flow__controls { bottom: 12px !important; left: 10px !important; display: flex !important; flex-direction: column !important; }
+  .react-flow__controls-button { width: 42px !important; height: 42px !important; }
+  .react-flow__minimap { display: none !important; }
+  .react-flow__attribution { display: none !important; }
+  .react-flow__node { touch-action: none; }
+}

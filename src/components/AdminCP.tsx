@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Member,
   Branch,
@@ -57,7 +57,7 @@ import confetti from 'canvas-confetti';
 
 interface AdminCPProps {
   clanInfo: ClanInfo;
-  onUpdateClanInfo: (info: ClanInfo) => void;
+  onUpdateClanInfo: (info: ClanInfo) => void | Promise<{ success: boolean; error?: string }>;
   members: Member[];
   branches: Branch[];
   documents: DocumentItem[];
@@ -202,6 +202,10 @@ export const AdminCP: React.FC<AdminCPProps> = ({
 
   // Clan Settings Local State
   const [clanForm, setClanForm] = useState({ ...clanInfo });
+
+  useEffect(() => {
+    setClanForm({ ...clanInfo });
+  }, [clanInfo]);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
 
   // Stats calculation
@@ -450,9 +454,13 @@ export const AdminCP: React.FC<AdminCPProps> = ({
   };
 
   // Handle Save Clan Master Settings
-  const handleSaveClanSettings = (e: React.FormEvent) => {
+  const handleSaveClanSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdateClanInfo(clanForm);
+    const result = await onUpdateClanInfo(clanForm);
+    if (result && !result.success) {
+      setSaveSuccessMsg('Lưu thất bại: ' + (result.error || 'Không thể lưu vào Supabase'));
+      return;
+    }
     setSaveSuccessMsg('Đã lưu thành công thông tin & cài đặt Dòng Tộc!');
     confetti({ particleCount: 30, spread: 60 });
     setTimeout(() => setSaveSuccessMsg(''), 4000);

@@ -280,7 +280,13 @@ export async function upsertClanInfoToSupabase(info: ClanInfo) {
   const { error } = await supabase.from('clan_info').upsert({
     id: 'main_clan', name: info.name, branch_subtitle: info.branchSubtitle,
     ancestral_hall: info.ancestralHall, address: info.address, founding_year: info.foundingYear,
-    motto: info.motto, motto_meaning: info.mottoMeaning, updated_at: new Date().toISOString(),
+    motto: info.motto, motto_meaning: info.mottoMeaning,
+    default_tree_settings: info.defaultTreeSettings || {},
+    allow_user_view_customization: info.allowUserViewCustomization ?? true,
+    contact_notice: info.contactNotice || null,
+    contact_phone: info.contactPhone || null,
+    contact_email: info.contactEmail || null,
+    updated_at: new Date().toISOString(),
   });
   return error ? { success: false, error: error.message } : { success: true };
 }
@@ -368,6 +374,11 @@ export async function fetchClanDataFromSupabase(): Promise<ClanDataSnapshot> {
       foundingYear: clanInfo.data.founding_year || 0,
       motto: clanInfo.data.motto || '',
       mottoMeaning: clanInfo.data.motto_meaning || '',
+      defaultTreeSettings: clanInfo.data.default_tree_settings || {},
+      allowUserViewCustomization: clanInfo.data.allow_user_view_customization ?? true,
+      contactNotice: clanInfo.data.contact_notice || '',
+      contactPhone: clanInfo.data.contact_phone || '',
+      contactEmail: clanInfo.data.contact_email || '',
     } : undefined,
     branches: branches.data?.map((b) => ({
       id: b.id, name: b.name, code: b.code, leaderId: b.leader_id || undefined,

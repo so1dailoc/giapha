@@ -47,8 +47,19 @@ CREATE TABLE IF NOT EXISTS public.clan_info (
     founding_year INT,
     motto TEXT,
     motto_meaning TEXT,
+    default_tree_settings JSONB DEFAULT '{}'::jsonb,
+    allow_user_view_customization BOOLEAN DEFAULT true,
+    contact_notice TEXT,
+    contact_phone TEXT,
+    contact_email TEXT,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+ALTER TABLE public.clan_info ADD COLUMN IF NOT EXISTS default_tree_settings JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE public.clan_info ADD COLUMN IF NOT EXISTS allow_user_view_customization BOOLEAN DEFAULT true;
+ALTER TABLE public.clan_info ADD COLUMN IF NOT EXISTS contact_notice TEXT;
+ALTER TABLE public.clan_info ADD COLUMN IF NOT EXISTS contact_phone TEXT;
+ALTER TABLE public.clan_info ADD COLUMN IF NOT EXISTS contact_email TEXT;
 
 -- 4. BẢNG PHÂN CHI / PHÁI (BRANCHES)
 CREATE TABLE IF NOT EXISTS public.branches (

@@ -8,6 +8,7 @@ import {
   FundRecord,
   UserRole,
   ClanUser,
+  ClanInfo,
 } from './types';
 import {
   CLAN_INFO,
@@ -83,8 +84,10 @@ import {
 import confetti from 'canvas-confetti';
 
 export default function App() {
+  type TabType = 'tree' | 'search' | 'relationship' | 'anniversaries' | 'archives' | 'community' | 'database' | 'admin';
+
   // Master state
-  const [clanInfo, setClanInfo] = useState(CLAN_INFO);
+  const [clanInfo, setClanInfo] = useState<ClanInfo>(CLAN_INFO);
   const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
   const [branches, setBranches] = useState<Branch[]>(INITIAL_BRANCHES);
   const [events, setEvents] = useState<EventItem[]>(INITIAL_EVENTS);
@@ -97,6 +100,8 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<ClanUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>('tree');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Vai trò luôn lấy từ hồ sơ đã xác thực trong Supabase, không tin dữ liệu localStorage.
   const [userRole, setUserRole] = useState<UserRole>('visitor');
@@ -320,7 +325,7 @@ export default function App() {
     }
   };
 
-  const handleUpdateClanInfo = async (newInfo: typeof CLAN_INFO) => {
+  const handleUpdateClanInfo = async (newInfo: ClanInfo) => {
     setClanInfo(newInfo);
     if (isSupabaseConfigured) {
       const result = await upsertClanInfoToSupabase(newInfo);

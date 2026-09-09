@@ -1,36 +1,25 @@
 import React, { useState } from 'react';
-import { PostItem, FundRecord, UserRole } from '../types';
+import { PostItem, UserRole } from '../types';
 import {
   MessageSquare,
-  DollarSign,
-  TrendingUp,
-  TrendingDown,
   Heart,
   Share2,
   Award,
   Send,
-  Plus,
-  ShieldCheck,
-  CheckCircle2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface CommunityAndFundProps {
   posts: PostItem[];
-  funds: FundRecord[];
   userRole: UserRole;
   onAddPost?: (post: PostItem) => void;
-  onAddFund?: (fund: FundRecord) => void;
 }
 
 export const CommunityAndFund: React.FC<CommunityAndFundProps> = ({
   posts,
-  funds,
   userRole,
   onAddPost,
-  onAddFund,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'news' | 'funds'>('news');
   const [likes, setLikes] = useState<Record<string, number>>({});
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
 
@@ -38,15 +27,6 @@ export const CommunityAndFund: React.FC<CommunityAndFundProps> = ({
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostTitle, setNewPostTitle] = useState('');
   const [newPostCategory, setNewPostCategory] = useState<PostItem['category']>('khuyen_hoc');
-
-  // Fund calculations
-  const totalIncome = funds
-    .filter((f) => f.type === 'income')
-    .reduce((sum, f) => sum + f.amount, 0);
-  const totalExpense = funds
-    .filter((f) => f.type === 'expense')
-    .reduce((sum, f) => sum + f.amount, 0);
-  const balance = totalIncome - totalExpense;
 
   const handleLike = (postId: string, initialLikes: number) => {
     if (likedPosts.has(postId)) return;
@@ -84,43 +64,8 @@ export const CommunityAndFund: React.FC<CommunityAndFundProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Sub tabs navigation */}
-      <div className="flex items-center justify-between border-b pb-3">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('news')}
-            className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${
-              activeSubTab === 'news'
-                ? 'bg-amber-600 text-white shadow-md'
-                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-            }`}
-          >
-            <MessageSquare className="w-4 h-4" />
-            Bảng Tin & Mạng Xã Hội Dòng Tộc
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('funds')}
-            className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${
-              activeSubTab === 'funds'
-                ? 'bg-amber-600 text-white shadow-md'
-                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-            }`}
-          >
-            <DollarSign className="w-4 h-4" />
-            Sổ Quỹ Gia Tộc (Thu Chi Minh Bạch)
-          </button>
-        </div>
-
-        <span className="text-xs text-slate-500 hidden sm:inline italic">
-          Cố kết tình thân • Đồng lòng xây dựng dòng họ
-        </span>
-      </div>
-
-      {activeSubTab === 'news' ? (
-        /* Community News Section */
-        <div className="space-y-6">
+      {/* Community News Section */}
+      <div className="space-y-6">
           {/* Post Creation Box */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
@@ -237,89 +182,6 @@ export const CommunityAndFund: React.FC<CommunityAndFundProps> = ({
             })}
           </div>
         </div>
-      ) : (
-        /* Fund Management Section */
-        <div className="space-y-6">
-          {/* Fund Summary Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-                Số Dư Quỹ Hiện Tại
-              </span>
-              <div className="text-2xl font-black text-amber-700 font-serif">
-                {balance.toLocaleString('vi-VN')} VNĐ
-              </div>
-              <p className="text-[11px] text-slate-400">Được giám sát bởi Ban Tài chính Gia tộc</p>
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-              <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider block flex items-center gap-1">
-                <TrendingUp className="w-3.5 h-3.5" />
-                Tổng Thu & Công Đức
-              </span>
-              <div className="text-2xl font-black text-emerald-700 font-serif">
-                +{totalIncome.toLocaleString('vi-VN')} VNĐ
-              </div>
-              <p className="text-[11px] text-slate-400">Từ con cháu nội ngoại & các chi nhánh</p>
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-              <span className="text-xs font-bold text-red-600 uppercase tracking-wider block flex items-center gap-1">
-                <TrendingDown className="w-3.5 h-3.5" />
-                Tổng Chi Tế Tự & Khuyến Học
-              </span>
-              <div className="text-2xl font-black text-red-700 font-serif">
-                -{totalExpense.toLocaleString('vi-VN')} VNĐ
-              </div>
-              <p className="text-[11px] text-slate-400">Chi cúng tế sóc vọng, học bổng con cháu</p>
-            </div>
-          </div>
-
-          {/* Fund Records Table */}
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-            <div className="p-4 border-b flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                Bảng Kê Chi Tiết Thu Chi Minh Bạch
-              </h3>
-              <span className="text-xs text-slate-500">Cập nhật niên khóa 2026</span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-700">
-                <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b">
-                  <tr>
-                    <th className="p-3">Mã phiếu</th>
-                    <th className="p-3">Khoản mục</th>
-                    <th className="p-3">Người đóng góp / Thụ hưởng</th>
-                    <th className="p-3">Chi phái</th>
-                    <th className="p-3">Ngày</th>
-                    <th className="p-3 text-right">Số tiền</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {funds.map((f) => (
-                    <tr key={f.id} className="hover:bg-slate-50/80">
-                      <td className="p-3 font-mono font-medium text-slate-500">{f.receiptNumber || f.id}</td>
-                      <td className="p-3 font-semibold text-slate-800">{f.title}</td>
-                      <td className="p-3 text-slate-600">{f.contributorOrReceiver}</td>
-                      <td className="p-3 text-slate-500">{f.branchName || 'Đại tộc'}</td>
-                      <td className="p-3 text-slate-500">{f.date}</td>
-                      <td
-                        className={`p-3 text-right font-bold ${
-                          f.type === 'income' ? 'text-emerald-600' : 'text-red-600'
-                        }`}
-                      >
-                        {f.type === 'income' ? '+' : '-'}
-                        {f.amount.toLocaleString('vi-VN')} đ
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

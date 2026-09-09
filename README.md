@@ -147,3 +147,13 @@ scripts/
 - `npm run preview` — xem bản production local.
 - `npm run check` — kiểm tra TypeScript.
 
+
+## Tính năng đề xuất vị trí mộ qua Google Maps
+
+Thành viên có thể mở hồ sơ người đã khuất, chọn **Gửi vị trí Google Maps**, dán link Google Maps hoặc lấy GPS hiện tại trên điện thoại. Đề xuất được lưu ở trạng thái `pending` và chưa làm thay đổi dữ liệu chính thức.
+
+Ban quản trị vào **AdminCP → Xác Nhận Vị Trí Mộ** để mở Google Maps kiểm tra, ghi chú và **Xác nhận** hoặc **Từ chối**. Chỉ khi xác nhận, `members.burial_coordinates` mới được cập nhật.
+
+Chạy file `supabase/migration_burial_location_submissions.sql` một lần trên Supabase SQL Editor nếu database hiện tại chưa có bảng đề xuất vị trí mộ. Schema đầy đủ trong AdminCP cũng đã bao gồm bảng này.
+
+> Trên iPhone/Android, chức năng GPS yêu cầu website chạy HTTPS và người dùng cho phép trình duyệt truy cập vị trí.

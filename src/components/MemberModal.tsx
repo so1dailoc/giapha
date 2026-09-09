@@ -18,8 +18,10 @@ import {
   Info,
   Phone,
   Mail,
+  Share2,
 } from 'lucide-react';
 import { DefaultAvatar } from './DefaultAvatar';
+import { submitBurialLocationSuggestion } from '../lib/supabaseService';
 
 interface MemberModalProps {
   member: Member;
@@ -48,6 +50,14 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [formData, setFormData] = useState<Member>({ ...member });
   const [newAchievementInput, setNewAchievementInput] = useState('');
+  const [showBurialSuggestion, setShowBurialSuggestion] = useState(false);
+  const [burialMapsUrl, setBurialMapsUrl] = useState('');
+  const [burialNote, setBurialNote] = useState('');
+  const [burialSubmitter, setBurialSubmitter] = useState('');
+  const [burialContact, setBurialContact] = useState('');
+  const [burialSubmitting, setBurialSubmitting] = useState(false);
+  const [burialMessage, setBurialMessage] = useState<string | null>(null);
+  const [burialShareUrl, setBurialShareUrl] = useState<string | null>(null);
 
   React.useEffect(() => {
     setFormData({ ...member });
@@ -95,6 +105,57 @@ export const MemberModal: React.FC<MemberModalProps> = ({
     });
     return map;
   }, [spouses, allMembers, member.id]);
+
+  const parseMapsCoordinates = (url: string): { lat: number; lng: number } | null => {
+    const value = url.trim();
+    const patterns = [
+      /@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/,
+      /[?&](?:q|ll|query)=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/,
+      /(?:maps\.google\.[^/]+\/[^/]*\/)(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/i,
+    ];
+    for (const pattern of patterns) {
+      const match = value.match(pattern);
+      if (match) {
+        const lat = Number(match[1]); const lng = Number(match[2]);
+        if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
+      }
+    }
+    return null;
+  };
+
+  const useCurrentBurialLocation = () => {
+    if (!navigator.geolocation) { setBurialMessage('Thiết bị không hỗ trợ định vị.'); return; }
+    setBurialSubmitting(true); setBurialMessage('Đang lấy vị trí GPS…');
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const lat = pos.coords.latitude.toFixed(7); const lng = pos.coords.longitude.toFixed(7);
+      const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+      setBurialMapsUrl(mapsUrl);
+      setBurialShareUrl(mapsUrl);
+      setBurialMessage('Đã lấy vị trí hiện tại. Hãy kiểm tra lại trước khi gửi.'); setBurialSubmitting(false);
+    }, (err) => {
+      setBurialMessage(err.code === 1 ? 'Bạn cần cho phép trình duyệt truy cập vị trí.' : 'Không lấy được vị trí GPS.'); setBurialSubmitting(false);
+    }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
+  };
+
+  const shareBurialLocation = async () => {
+    if (!burialShareUrl) return;
+    try {
+      if (navigator.share) { await navigator.share({ title: `Vị trí mộ - ${member.fullName}`, text: `Vị trí mộ của ${member.fullName}`, url: burialShareUrl }); }
+      else { await navigator.clipboard.writeText(burialShareUrl); setBurialMessage('Đã sao chép link Google Maps để chia sẻ.'); }
+    } catch { /* Người dùng đóng hộp chia sẻ */ }
+  };
+
+  const handleBurialSuggestion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const coords = parseMapsCoordinates(burialMapsUrl);
+    if (!coords) { setBurialMessage('Không đọc được tọa độ từ link Google Maps. Hãy dán link có dạng @15.123,108.456 hoặc q=15.123,108.456.'); return; }
+    setBurialSubmitting(true); setBurialMessage(null);
+    const result = await submitBurialLocationSuggestion({ memberId: member.id, mapsUrl: burialMapsUrl, latitude: coords.lat, longitude: coords.lng, note: burialNote, submittedByName: burialSubmitter, submittedByContact: burialContact });
+    setBurialSubmitting(false);
+    if (!result.success) { setBurialMessage(result.error || 'Gửi đề xuất thất bại.'); return; }
+    setBurialMessage('Đã gửi đề xuất. Ban quản trị sẽ kiểm tra và xác nhận trước khi đưa vào gia phả.');
+    setBurialMapsUrl(''); setBurialNote('');
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -547,12 +608,12 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                     </div>
                   )}
 
-                  {member.burialLocation && (
+                  {(member.burialLocation || member.burialCoordinates) && (
                     <div className="sm:col-span-2 flex items-start gap-1.5 pt-1">
                       <MapPin className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                       <div>
                         <span className="text-slate-500">Nơi an táng:</span>{' '}
-                        <span className="font-semibold text-slate-800">{member.burialLocation}</span>
+                        <span className="font-semibold text-slate-800">{member.burialLocation || 'Đã xác nhận tọa độ mộ phần'}</span>
                         {member.burialCoordinates && (
                           <a
                             href={`https://maps.google.com/?q=${member.burialCoordinates.lat},${member.burialCoordinates.lng}`}
@@ -569,6 +630,31 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                   )}
                 </div>
               </div>
+
+              {!member.isAlive && (
+                <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
+                  <button type="button" onClick={() => setShowBurialSuggestion((v) => !v)} className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-800 hover:text-blue-950">
+                    <MapPin className="w-4 h-4" /> {member.burialCoordinates ? 'Đề xuất cập nhật vị trí mộ' : 'Bạn biết vị trí mộ? Gửi vị trí Google Maps'}
+                  </button>
+                  {showBurialSuggestion && (
+                    <form onSubmit={handleBurialSuggestion} className="mt-3 space-y-2.5">
+                      <div className="flex gap-2">
+                        <input value={burialMapsUrl} onChange={(e) => setBurialMapsUrl(e.target.value)} placeholder="Dán link Google Maps của ngôi mộ…" className="min-w-0 flex-1 rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-400" />
+                        <button type="button" onClick={useCurrentBurialLocation} disabled={burialSubmitting} className="shrink-0 rounded-lg bg-blue-700 px-3 py-2 text-[11px] font-bold text-white">GPS hiện tại</button>
+                        {burialShareUrl && <button type="button" onClick={shareBurialLocation} className="shrink-0 rounded-lg border border-blue-300 bg-white px-3 py-2 text-[11px] font-bold text-blue-800 inline-flex items-center gap-1"><Share2 className="w-3.5 h-3.5" /> Chia sẻ</button>}
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input value={burialSubmitter} onChange={(e) => setBurialSubmitter(e.target.value)} placeholder="Tên người gửi (không bắt buộc)" className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs" />
+                        <input value={burialContact} onChange={(e) => setBurialContact(e.target.value)} placeholder="SĐT/email (không bắt buộc)" className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs" />
+                      </div>
+                      <textarea value={burialNote} onChange={(e) => setBurialNote(e.target.value)} placeholder="Ghi chú: mộ nằm hàng nào, nghĩa trang nào, dấu hiệu nhận biết…" rows={2} className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs resize-none" />
+                      <button type="submit" disabled={burialSubmitting} className="w-full rounded-lg bg-amber-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-60">{burialSubmitting ? 'Đang gửi…' : 'Gửi đề xuất để Ban Quản Trị xác nhận'}</button>
+                      {burialMessage && <p className="text-[11px] leading-relaxed text-blue-800">{burialMessage}</p>}
+                      <p className="text-[10px] text-slate-500">Vị trí chỉ được cập nhật vào hệ thống sau khi Ban Quản Trị kiểm tra và duyệt.</p>
+                    </form>
+                  )}
+                </div>
+              )}
 
               {/* Biography & Achievements */}
               {member.bio && (

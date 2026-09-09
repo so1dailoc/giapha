@@ -29,7 +29,10 @@ import {
   saveMemberToSupabase,
   deleteMemberFromSupabase,
   fetchMembersFromSupabase,
-  fetchClanDataFromSupabase,
+  fetchCoreClanDataFromSupabase,
+  fetchEventsFromSupabase,
+  fetchDocumentsFromSupabase,
+  fetchPostsFromSupabase,
   fetchCurrentClanUser,
   fetchClanUsersFromSupabase,
   saveClanUserToSupabase,
@@ -49,7 +52,6 @@ import { RelationshipModal } from './components/RelationshipModal';
 import { LunarAnniversaries } from './components/LunarAnniversaries';
 import { ArchivesManager } from './components/ArchivesManager';
 import { CommunityAndFund } from './components/CommunityAndFund';
-import { DatabaseSchemaView } from './components/DatabaseSchemaView';
 import { MemberModal } from './components/MemberModal';
 import { AddMemberModal } from './components/AddMemberModal';
 import { AdminCP } from './components/AdminCP';
@@ -60,7 +62,6 @@ import {
   Calendar,
   Scroll,
   MessageSquare,
-  Database,
   ShieldCheck,
   UserCheck,
   Sparkles,
@@ -84,7 +85,7 @@ import {
 import confetti from 'canvas-confetti';
 
 export default function App() {
-  type TabType = 'tree' | 'search' | 'relationship' | 'anniversaries' | 'archives' | 'community' | 'database' | 'admin';
+  type TabType = 'tree' | 'search' | 'relationship' | 'anniversaries' | 'archives' | 'community' | 'admin';
 
   // Master state
   const [clanInfo, setClanInfo] = useState<ClanInfo>(CLAN_INFO);
@@ -135,21 +136,21 @@ export default function App() {
         return;
       }
 
-      const [{ data: sessionData }, membersResult, cloudData] = await Promise.all([
+      // Chỉ tải dữ liệu lõi khi khởi động. Lịch giỗ vẫn tải một lần vì nó phục vụ
+      // thông báo sự kiện ở header; Tư liệu và Bảng tin được lazy-load theo menu.
+      const [{ data: sessionData }, membersResult, coreData, initialEvents] = await Promise.all([
         supabase.auth.getSession(),
         fetchMembersFromSupabase(),
-        fetchClanDataFromSupabase(),
+        fetchCoreClanDataFromSupabase(),
+        fetchEventsFromSupabase(),
       ]);
 
       if (!mounted) return;
 
       if (membersResult.members && membersResult.members.length > 0) setMembers(membersResult.members);
-      if (cloudData.clanInfo) setClanInfo((prev) => ({ ...prev, ...cloudData.clanInfo }));
-      if (cloudData.branches?.length) setBranches(cloudData.branches);
-      if (cloudData.events?.length) setEvents(cloudData.events);
-      if (cloudData.documents?.length) setDocuments(cloudData.documents);
-      if (cloudData.funds?.length) setFunds(cloudData.funds);
-      if (cloudData.posts?.length) setPosts(cloudData.posts);
+      if (coreData.clanInfo) setClanInfo((prev) => ({ ...prev, ...coreData.clanInfo }));
+      if (coreData.branches?.length) setBranches(coreData.branches);
+      if (initialEvents.length) setEvents(initialEvents);
 
       if (sessionData.session?.user) {
         const profile = await fetchCurrentClanUser(sessionData.session.user);
@@ -196,6 +197,20 @@ export default function App() {
       listener.subscription.unsubscribe();
     };
   }, []);
+
+  // Lazy-load các màn hình nặng: chỉ gọi Supabase khi người dùng thực sự mở menu.
+  const [loadedTabs, setLoadedTabs] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return;
+    if (activeTab === 'archives' && !loadedTabs.archives) {
+      setLoadedTabs((prev) => ({ ...prev, archives: true }));
+      fetchDocumentsFromSupabase().then((data) => setDocuments(data));
+    }
+    if (activeTab === 'community' && !loadedTabs.community) {
+      setLoadedTabs((prev) => ({ ...prev, community: true }));
+      fetchPostsFromSupabase().then((data) => setPosts(data));
+    }
+  }, [activeTab, loadedTabs.archives, loadedTabs.community]);
 
   // Quick notification message
   const upcomingEvent = events.find((e) => e.type === 'death_anniversary');
@@ -287,6 +302,10 @@ export default function App() {
       setSaveToast(res.success ? 'Đã cập nhật hồ sơ thành viên thành công' : (res.error || 'Không thể cập nhật hồ sơ'));
       setTimeout(() => setSaveToast(null), 3500);
     }
+  };
+
+  const handleBurialLocationApproved = (memberId: string, coordinates: { lat: number; lng: number }) => {
+    setMembers((prev) => prev.map((member) => member.id === memberId ? { ...member, burialCoordinates: coordinates, updatedAt: new Date().toISOString() } : member));
   };
 
   const handleDeleteMember = async (id: string) => {
@@ -724,20 +743,7 @@ export default function App() {
               }`}
             >
               <MessageSquare className="w-4 h-4" />
-              Bảng Tin & Sổ Quỹ
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('database')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 flex-shrink-0 transition-all ${
-                activeTab === 'database'
-                  ? 'bg-amber-500 text-amber-950 shadow-lg'
-                  : 'text-amber-200 hover:bg-white/5'
-              }`}
-            >
-              <Database className="w-4 h-4" />
-              Database Supabase & 0đ Guide
+              Bảng Tin Dòng Tộc
             </button>
 
             {/* AdminCP Tab - CHỈ HIỂN THỊ KHI ĐÃ ĐĂNG NHẬP VỚI QUYỀN QUẢN TRỊ */}
@@ -818,14 +824,11 @@ export default function App() {
         {activeTab === 'community' && (
           <CommunityAndFund
             posts={posts}
-            funds={funds}
             userRole={userRole}
             onAddPost={handleAddPost}
-            onAddFund={handleAddFund}
           />
         )}
 
-        {activeTab === 'database' && <DatabaseSchemaView />}
 
         {activeTab === 'admin' && (
           isAdmin ? (
@@ -855,6 +858,7 @@ export default function App() {
               onDeleteEvent={handleDeleteEvent}
               onResetSampleData={handleResetSampleData}
               onImportClanData={handleImportClanData}
+              onBurialLocationApproved={handleBurialLocationApproved}
             />
           ) : (
             <div className="max-w-xl mx-auto my-12 bg-white rounded-3xl border-2 border-amber-500/40 shadow-2xl p-8 text-center space-y-5">
@@ -1110,8 +1114,7 @@ export default function App() {
                 { id: 'relationship', label: 'Tính Mối Quan Hệ (Xưng Hô)', desc: 'Xác định cách gọi đúng thứ bậc họ hàng', icon: GitCompare },
                 { id: 'anniversaries', label: 'Lịch Âm & Ngày Giỗ', desc: 'Lịch kỵ nhật, thông báo lễ bái hằng năm', icon: Calendar },
                 { id: 'archives', label: 'Kho Tư Liệu & Sắc Phong', desc: 'Văn bia, câu đối, gia huấn tiền nhân', icon: Scroll },
-                { id: 'community', label: 'Bảng Tin & Sổ Quỹ', desc: 'Hoạt động dòng tộc, thu chi minh bạch', icon: MessageSquare },
-                { id: 'database', label: 'Database Supabase & 0đ Guide', desc: 'Cấu hình đồng bộ cơ sở dữ liệu đám mây', icon: Database },
+                { id: 'community', label: 'Bảng Tin Dòng Tộc', desc: 'Hoạt động, thông báo và vinh danh con cháu', icon: MessageSquare },
               ].map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
@@ -1201,7 +1204,7 @@ export default function App() {
       )}
 
       {/* MOBILE BOTTOM QUICK NAVIGATION BAR */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#240205]/95 border-t border-amber-500/40 backdrop-blur-lg flex justify-around items-center py-2 px-1 sm:hidden shadow-2xl">
+      <nav className="mobile-bottom-nav-safe fixed bottom-0 left-0 right-0 z-40 bg-[#240205]/95 border-t border-amber-500/40 backdrop-blur-lg flex justify-around items-center py-2 px-1 sm:hidden shadow-2xl">
         <button
           type="button"
           onClick={() => setActiveTab('tree')}
@@ -1250,7 +1253,7 @@ export default function App() {
           type="button"
           onClick={() => setIsMobileMenuOpen(true)}
           className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
-            isMobileMenuOpen || activeTab === 'admin' || activeTab === 'archives' || activeTab === 'community' || activeTab === 'database'
+            isMobileMenuOpen || activeTab === 'admin' || activeTab === 'archives' || activeTab === 'community'
               ? 'text-amber-400 font-bold'
               : 'text-amber-200/60 hover:text-amber-200'
           }`}

@@ -54,6 +54,8 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { fetchBurialLocationSubmissions, reviewBurialLocationSubmission } from '../lib/supabaseService';
+import type { BurialLocationSubmission } from '../types';
 
 interface AdminCPProps {
   clanInfo: ClanInfo;
@@ -81,6 +83,7 @@ interface AdminCPProps {
   onDeleteEvent: (id: string) => void;
   onResetSampleData?: () => void;
   onImportClanData?: (data: any) => void;
+  onBurialLocationApproved?: (memberId: string, coordinates: { lat: number; lng: number }) => void;
 }
 
 export const AdminCP: React.FC<AdminCPProps> = ({
@@ -109,9 +112,21 @@ export const AdminCP: React.FC<AdminCPProps> = ({
   onDeleteEvent,
   onResetSampleData,
   onImportClanData,
+  onBurialLocationApproved,
 }) => {
-  type AdminTab = 'tree' | 'users' | 'archives' | 'settings' | 'events' | 'cloud';
+  type AdminTab = 'tree' | 'users' | 'archives' | 'settings' | 'events' | 'burial' | 'cloud';
   const [activeTab, setActiveTab] = useState<AdminTab>('tree');
+  const [burialSubmissions, setBurialSubmissions] = useState<BurialLocationSubmission[]>([]);
+  const [burialLoading, setBurialLoading] = useState(false);
+  const [burialReviewNote, setBurialReviewNote] = useState<Record<string, string>>({});
+  const loadBurialSubmissions = async () => { setBurialLoading(true); const rows = await fetchBurialLocationSubmissions(); setBurialSubmissions(rows); setBurialLoading(false); };
+  useEffect(() => { if (activeTab === 'burial') loadBurialSubmissions(); }, [activeTab]);
+  const handleBurialReview = async (submission: BurialLocationSubmission, approved: boolean) => {
+    const result = await reviewBurialLocationSubmission({ submission, approved, adminNote: burialReviewNote[submission.id], reviewerName: currentUser?.name });
+    if (!result.success) { alert(result.error || 'Không thể xử lý đề xuất.'); return; }
+    if (approved) onBurialLocationApproved?.(submission.memberId, { lat: submission.latitude, lng: submission.longitude });
+    setBurialSubmissions((prev) => prev.map((item) => item.id === submission.id ? { ...item, status: approved ? 'approved' : 'rejected', adminNote: burialReviewNote[item.id], reviewedBy: currentUser?.name, reviewedAt: new Date().toISOString() } : item));
+  };
 
   // User Management State
   const [userSearch, setUserSearch] = useState('');
@@ -778,6 +793,19 @@ export const AdminCP: React.FC<AdminCPProps> = ({
         >
           <Calendar className="w-4 h-4" />
           Ngày Giỗ & Tế Tự ({events.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('burial')}
+          className={`px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all ${
+            activeTab === 'burial'
+              ? 'bg-amber-500 text-amber-950 shadow-md'
+              : 'text-amber-200 hover:bg-white/5'
+          }`}
+        >
+          <MapPin className="w-4 h-4" />
+          Xác Nhận Vị Trí Mộ ({burialSubmissions.filter((x) => x.status === 'pending').length})
         </button>
 
         <button
@@ -2153,6 +2181,49 @@ export const AdminCP: React.FC<AdminCPProps> = ({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* TAB: DUYỆT VỊ TRÍ MỘ PHẦN */}
+      {activeTab === 'burial' && (
+        <div className="space-y-4 text-xs text-slate-800">
+          <div className="bg-gradient-to-r from-amber-950 via-[#4a0812] to-[#250104] rounded-2xl border-2 border-amber-500/50 p-5 text-amber-50 shadow-lg">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold font-serif text-amber-200">Xác Nhận Vị Trí Mộ Phần</h2>
+                <p className="text-xs text-amber-300/80 mt-1 max-w-2xl">Thành viên có thể gửi tọa độ thực tế từ Google Maps. Admin kiểm tra trên bản đồ rồi mới ghi tọa độ chính thức vào hồ sơ tổ tiên.</p>
+              </div>
+              <button type="button" onClick={loadBurialSubmissions} className="px-3 py-2 rounded-xl bg-white/10 border border-amber-400/30 font-bold flex items-center gap-1.5"><RefreshCw className={`w-4 h-4 ${burialLoading ? 'animate-spin' : ''}`} /> Làm mới</button>
+            </div>
+          </div>
+          {burialSubmissions.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500">Chưa có đề xuất vị trí mộ nào.</div>
+          ) : burialSubmissions.map((submission) => (
+            <div key={submission.id} className={`bg-white rounded-2xl border p-4 shadow-sm ${submission.status === 'pending' ? 'border-amber-300' : 'border-slate-200'}`}>
+              <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                <div className="min-w-0 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-bold font-serif text-sm text-slate-900">{submission.memberName || submission.memberId}</h3>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${submission.status === 'pending' ? 'bg-amber-100 text-amber-800' : submission.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>{submission.status === 'pending' ? 'Chờ duyệt' : submission.status === 'approved' ? 'Đã duyệt' : 'Đã từ chối'}</span>
+                  </div>
+                  <p className="text-slate-600 flex items-center gap-1.5"><MapPin className="w-4 h-4 text-amber-600" /> {submission.latitude.toFixed(7)}, {submission.longitude.toFixed(7)}</p>
+                  {submission.note && <p className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 leading-relaxed">Ghi chú: {submission.note}</p>}
+                  <p className="text-[11px] text-slate-500">Người gửi: {submission.submittedByName || 'Không cung cấp'} {submission.submittedByContact ? `• ${submission.submittedByContact}` : ''}</p>
+                  {submission.adminNote && <p className="text-[11px] text-slate-500">Ghi chú quản trị: {submission.adminNote}</p>}
+                </div>
+                <div className="w-full lg:w-72 space-y-2 shrink-0">
+                  <a href={submission.mapsUrl} target="_blank" rel="noopener noreferrer" className="w-full px-3 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 font-bold flex items-center justify-center gap-1.5"><ExternalLink className="w-4 h-4" /> Mở Google Maps kiểm tra</a>
+                  {submission.status === 'pending' && (<>
+                    <textarea value={burialReviewNote[submission.id] || ''} onChange={(e) => setBurialReviewNote((prev) => ({ ...prev, [submission.id]: e.target.value }))} rows={2} placeholder="Ghi chú duyệt/từ chối (không bắt buộc)" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs resize-none" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => handleBurialReview(submission, false)} className="px-3 py-2 rounded-xl bg-red-50 text-red-700 border border-red-200 font-bold">Từ chối</button>
+                      <button type="button" onClick={() => handleBurialReview(submission, true)} className="px-3 py-2 rounded-xl bg-emerald-700 text-white font-bold flex items-center justify-center gap-1"><CheckCircle className="w-4 h-4" /> Xác nhận</button>
+                    </div>
+                  </>)}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

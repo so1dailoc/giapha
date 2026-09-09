@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import type { User } from '@supabase/supabase-js';
-import { Member, Branch, EventItem, DocumentItem, ClanUser, ClanInfo, FundRecord, PostItem } from '../types';
+import { Member, Branch, EventItem, DocumentItem, ClanUser, ClanInfo, FundRecord, PostItem, BurialLocationSubmission } from '../types';
 
 /**
  * Chuyển đổi từ Member (TypeScript frontend) sang Record database (snake_case PostgreSQL)
@@ -353,18 +353,111 @@ export interface ClanDataSnapshot {
   posts?: PostItem[];
 }
 
-export async function fetchClanDataFromSupabase(): Promise<ClanDataSnapshot> {
+const MEMBER_SELECT = `
+  id, full_name, courtesy_name, posthumous_name, gender, generation,
+  branch_id, phai_name, chi_name, nhanh_name, order_in_family, order_title,
+  birth_place, birth_date, birth_date_lunar, is_alive, death_date, death_date_lunar,
+  burial_location, burial_coordinates, avatar_url, phone, email, current_address,
+  occupation, bio, achievements, father_id, mother_id, spouse_ids, is_root_ancestor,
+  created_at, updated_at
+`;
+
+/**
+ * Tải thành viên theo trang. Supabase thường giới hạn số dòng trả về mặc định;
+ * phân trang giúp cây gia phả không bị cắt khi có trên 1.000 thành viên.
+ */
+export async function fetchMembersFromSupabase(): Promise<{ members: Member[] | null; error?: string }> {
+  if (!supabase || !isSupabaseConfigured) return { members: null };
+
+  try {
+    const pageSize = 1000;
+    const allRows: Record<string, any>[] = [];
+
+    const fetchPage = async (page: number) => {
+      const from = page * pageSize;
+      return supabase
+        .from('members')
+        .select(MEMBER_SELECT)
+        .order('generation', { ascending: true })
+        .order('full_name', { ascending: true })
+        .range(from, from + pageSize - 1);
+    };
+
+    // Fetch the first page immediately, then prefetch the next batch in parallel.
+    // This keeps the safe 1,000-row/page limit while avoiding 5+ sequential round trips
+    // for a 5,000-member clan.
+    let page = 0;
+    while (true) {
+      const first = await fetchPage(page);
+      if (first.error) return { members: null, error: first.error.message };
+      const firstData = first.data || [];
+      if (!firstData.length) break;
+      allRows.push(...firstData);
+      if (firstData.length < pageSize) break;
+
+      const batchPages = [page + 1, page + 2, page + 3, page + 4];
+      const batch = await Promise.all(batchPages.map(fetchPage));
+      let reachedEnd = false;
+      for (const result of batch) {
+        if (result.error) return { members: null, error: result.error.message };
+        const rows = result.data || [];
+        if (rows.length) allRows.push(...rows);
+        if (rows.length < pageSize) {
+          reachedEnd = true;
+          break;
+        }
+      }
+      if (reachedEnd) break;
+      page += 5;
+    }
+
+    return { members: allRows.map(dbRowToMember) };
+  } catch (err: any) {
+    return { members: null, error: err?.message };
+  }
+}
+
+async function fetchEventsOnly(): Promise<EventItem[]> {
+  if (!supabase || !isSupabaseConfigured) return [];
+  const { data } = await supabase.from('events').select('*').order('lunar_month').order('lunar_day');
+  return data?.map((e) => ({
+    id: e.id, title: e.title, type: e.type, memberId: e.member_id || undefined,
+    memberName: undefined, lunarDay: e.lunar_day, lunarMonth: e.lunar_month,
+    lunarYear: e.lunar_year || undefined, description: e.description || '',
+    location: e.location || '', responsibleBranchId: e.responsible_branch_id || undefined,
+  })) || [];
+}
+
+async function fetchDocumentsOnly(): Promise<DocumentItem[]> {
+  if (!supabase || !isSupabaseConfigured) return [];
+  const { data } = await supabase.from('documents').select('*').order('created_at', { ascending: false });
+  return data?.map((d) => ({
+    id: d.id, title: d.title, category: d.category, categoryLabel: d.category_label,
+    fileUrl: d.file_url, fileType: d.file_type, description: d.description || '',
+    recordedDate: d.recorded_date || undefined, dynastyEra: d.dynasty_era || undefined,
+    authorOrPreserver: d.author_or_preserver || undefined,
+    tags: Array.isArray(d.tags) ? d.tags : [], images: Array.isArray(d.images) ? d.images : [],
+  })) || [];
+}
+
+async function fetchPostsOnly(): Promise<PostItem[]> {
+  if (!supabase || !isSupabaseConfigured) return [];
+  const { data } = await supabase.from('posts').select('*').order('created_at', { ascending: false });
+  return data?.map((post) => ({
+    id: post.id, title: post.title, authorName: post.author_name, authorRole: post.author_role,
+    avatarUrl: post.avatar_url || undefined, createdAt: post.created_at, category: post.category,
+    content: post.content, images: Array.isArray(post.images) ? post.images : [],
+    likesCount: post.likes_count || 0, commentsCount: post.comments_count || 0,
+  })) || [];
+}
+
+/** Chỉ tải dữ liệu cần cho màn hình khởi động: thông tin dòng họ + phái/chi. */
+export async function fetchCoreClanDataFromSupabase(): Promise<ClanDataSnapshot> {
   if (!supabase || !isSupabaseConfigured) return {};
-
-  const [clanInfo, branches, events, documents, funds, posts] = await Promise.all([
+  const [clanInfo, branches] = await Promise.all([
     supabase.from('clan_info').select('*').eq('id', 'main_clan').maybeSingle(),
-    supabase.from('branches').select('*').order('name'),
-    supabase.from('events').select('*').order('lunar_month').order('lunar_day'),
-    supabase.from('documents').select('*').order('created_at', { ascending: false }),
-    supabase.from('funds').select('*').order('date', { ascending: false }),
-    supabase.from('posts').select('*').order('created_at', { ascending: false }),
+    supabase.from('branches').select('id,name,code,leader_id,description,ancestor_id,color_accent').order('name'),
   ]);
-
   return {
     clanInfo: clanInfo.data ? {
       name: clanInfo.data.name,
@@ -385,56 +478,29 @@ export async function fetchClanDataFromSupabase(): Promise<ClanDataSnapshot> {
       description: b.description || undefined, ancestorId: b.ancestor_id || undefined,
       colorAccent: b.color_accent || undefined,
     })),
-    events: events.data?.map((e) => ({
-      id: e.id, title: e.title, type: e.type, memberId: e.member_id || undefined,
-      memberName: undefined, lunarDay: e.lunar_day, lunarMonth: e.lunar_month,
-      lunarYear: e.lunar_year || undefined, description: e.description || '',
-      location: e.location || '', responsibleBranchId: e.responsible_branch_id || undefined,
-    })),
-    documents: documents.data?.map((d) => ({
-      id: d.id, title: d.title, category: d.category, categoryLabel: d.category_label,
-      fileUrl: d.file_url, fileType: d.file_type, description: d.description || '',
-      recordedDate: d.recorded_date || undefined, dynastyEra: d.dynasty_era || undefined,
-      authorOrPreserver: d.author_or_preserver || undefined,
-      tags: Array.isArray(d.tags) ? d.tags : [], images: Array.isArray(d.images) ? d.images : [],
-    })),
-    funds: funds.data?.map((f) => ({
-      id: f.id, title: f.title, type: f.type, amount: Number(f.amount) || 0,
-      contributorOrReceiver: f.contributor_or_receiver, date: f.date, purpose: f.purpose,
-      branchName: f.branch_name || undefined, receiptNumber: f.receipt_number || undefined,
-    })),
-    posts: posts.data?.map((post) => ({
-      id: post.id, title: post.title, authorName: post.author_name, authorRole: post.author_role,
-      avatarUrl: post.avatar_url || undefined, createdAt: post.created_at, category: post.category,
-      content: post.content, images: Array.isArray(post.images) ? post.images : [],
-      likesCount: post.likes_count || 0, commentsCount: post.comments_count || 0,
-    })),
   };
 }
 
-export async function fetchMembersFromSupabase(): Promise<{ members: Member[] | null; error?: string }> {
-  if (!supabase || !isSupabaseConfigured) {
-    return { members: null };
-  }
+/** Lazy-load dữ liệu phụ trợ khi người dùng thực sự mở từng menu. */
+export async function fetchEventsFromSupabase() { return fetchEventsOnly(); }
+export async function fetchDocumentsFromSupabase() { return fetchDocumentsOnly(); }
+export async function fetchPostsFromSupabase() { return fetchPostsOnly(); }
+export async function fetchFundsFromSupabase(): Promise<FundRecord[]> {
+  if (!supabase || !isSupabaseConfigured) return [];
+  const { data } = await supabase.from('funds').select('*').order('date', { ascending: false });
+  return data?.map((f) => ({
+    id: f.id, title: f.title, type: f.type, amount: Number(f.amount) || 0,
+    contributorOrReceiver: f.contributor_or_receiver, date: f.date, purpose: f.purpose,
+    branchName: f.branch_name || undefined, receiptNumber: f.receipt_number || undefined,
+  })) || [];
+}
 
-  try {
-    const { data, error } = await supabase
-      .from('members')
-      .select('*')
-      .order('generation', { ascending: true });
-
-    if (error) {
-      return { members: null, error: error.message };
-    }
-
-    if (data && data.length > 0) {
-      return { members: data.map(dbRowToMember) };
-    }
-
-    return { members: [] };
-  } catch (err: any) {
-    return { members: null, error: err?.message };
-  }
+export async function fetchClanDataFromSupabase(): Promise<ClanDataSnapshot> {
+  const core = await fetchCoreClanDataFromSupabase();
+  const [events, documents, funds, posts] = await Promise.all([
+    fetchEventsOnly(), fetchDocumentsOnly(), fetchFundsFromSupabase(), fetchPostsOnly(),
+  ]);
+  return { ...core, events, documents, funds, posts };
 }
 
 /**
@@ -538,4 +604,64 @@ export async function seedAllClanDataToSupabase(params: {
   } catch (err: any) {
     return { success: false, count: 0, error: err?.message || 'Lỗi khi đồng bộ lên Supabase' };
   }
+}
+
+
+export async function submitBurialLocationSuggestion(input: {
+  memberId: string;
+  mapsUrl: string;
+  latitude: number;
+  longitude: number;
+  note?: string;
+  submittedByName?: string;
+  submittedByContact?: string;
+}): Promise<{ success: boolean; error?: string; submission?: BurialLocationSubmission }> {
+  if (!supabase || !isSupabaseConfigured) return { success: false, error: 'Supabase chưa được cấu hình.' };
+  const row = {
+    member_id: input.memberId, maps_url: input.mapsUrl.trim(), latitude: input.latitude, longitude: input.longitude,
+    note: input.note?.trim() || null, submitted_by_name: input.submittedByName?.trim() || null,
+    submitted_by_contact: input.submittedByContact?.trim() || null, status: 'pending'
+  };
+  const { data, error } = await supabase.from('burial_location_submissions').insert(row).select('*, members:member_id(full_name)').single();
+  if (error || !data) return { success: false, error: error?.message || 'Không thể gửi đề xuất vị trí mộ.' };
+  return { success: true, submission: {
+    id: data.id, memberId: data.member_id, memberName: data.members?.full_name, mapsUrl: data.maps_url,
+    latitude: Number(data.latitude), longitude: Number(data.longitude), note: data.note || undefined,
+    submittedByName: data.submitted_by_name || undefined, submittedByContact: data.submitted_by_contact || undefined,
+    status: data.status, adminNote: data.admin_note || undefined, reviewedBy: data.reviewed_by || undefined,
+    reviewedAt: data.reviewed_at || undefined, createdAt: data.created_at
+  }};
+}
+
+export async function fetchBurialLocationSubmissions(): Promise<BurialLocationSubmission[]> {
+  if (!supabase || !isSupabaseConfigured) return [];
+  const { data, error } = await supabase.from('burial_location_submissions')
+    .select('*, members:member_id(full_name)').order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data.map((row: any) => ({
+    id: row.id, memberId: row.member_id, memberName: row.members?.full_name, mapsUrl: row.maps_url,
+    latitude: Number(row.latitude), longitude: Number(row.longitude), note: row.note || undefined,
+    submittedByName: row.submitted_by_name || undefined, submittedByContact: row.submitted_by_contact || undefined,
+    status: row.status, adminNote: row.admin_note || undefined, reviewedBy: row.reviewed_by || undefined,
+    reviewedAt: row.reviewed_at || undefined, createdAt: row.created_at
+  }));
+}
+
+export async function reviewBurialLocationSubmission(input: {
+  submission: BurialLocationSubmission; approved: boolean; adminNote?: string; reviewerName?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  if (!supabase || !isSupabaseConfigured) return { success: false, error: 'Supabase chưa được cấu hình.' };
+  const status = input.approved ? 'approved' : 'rejected';
+  const { error } = await supabase.from('burial_location_submissions').update({
+    status, admin_note: input.adminNote?.trim() || null, reviewed_by: input.reviewerName || null, reviewed_at: new Date().toISOString()
+  }).eq('id', input.submission.id);
+  if (error) return { success: false, error: error.message };
+  if (input.approved) {
+    const { error: memberError } = await supabase.from('members').update({
+      burial_coordinates: { lat: input.submission.latitude, lng: input.submission.longitude },
+      updated_at: new Date().toISOString()
+    }).eq('id', input.submission.memberId);
+    if (memberError) return { success: false, error: memberError.message };
+  }
+  return { success: true };
 }

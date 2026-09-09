@@ -179,6 +179,9 @@ ALTER TABLE public.members ADD COLUMN IF NOT EXISTS burial_coordinates JSONB;
 ALTER TABLE public.members ADD COLUMN IF NOT EXISTS burial_location TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_members_generation ON public.members(generation);
+CREATE INDEX IF NOT EXISTS idx_members_generation_full_name ON public.members(generation ASC, full_name ASC);
+CREATE INDEX IF NOT EXISTS idx_members_branch_generation ON public.members(branch_id, generation ASC);
+CREATE INDEX IF NOT EXISTS idx_members_phai_generation ON public.members(phai_name, generation ASC);
 CREATE INDEX IF NOT EXISTS idx_members_branch_id ON public.members(branch_id);
 CREATE INDEX IF NOT EXISTS idx_members_father_id ON public.members(father_id);
 CREATE INDEX IF NOT EXISTS idx_members_mother_id ON public.members(mother_id);

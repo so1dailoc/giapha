@@ -122,6 +122,23 @@ export interface PostItem {
   commentsCount: number;
 }
 
+export interface BurialLocationSubmission {
+  id: string;
+  memberId: string;
+  memberName?: string;
+  mapsUrl: string;
+  latitude: number;
+  longitude: number;
+  note?: string;
+  submittedByName?: string;
+  submittedByContact?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  adminNote?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  createdAt: string;
+}
+
 export interface FundRecord {
   id: string;
   title: string;

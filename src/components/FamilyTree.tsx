@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useDeferredValue } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -124,8 +124,8 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
 
   const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
   const [treeSearchQuery, setTreeSearchQuery] = useState<string>('');
+  const deferredTreeSearchQuery = useDeferredValue(treeSearchQuery);
   const [focusedMemberId, setFocusedMemberId] = useState<string | null>(highlightedMemberId || null);
-  const [hoveredMemberId, setHoveredMemberId] = useState<string | null>(null);
   const [rfInstance, setRfInstance] = useState<any>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCardDisplayModalOpen, setIsCardDisplayModalOpen] = useState(false);
@@ -134,9 +134,11 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const onResize = () => setIsMobileViewport(window.innerWidth < 640);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    const media = window.matchMedia('(max-width: 639px)');
+    const onChange = () => setIsMobileViewport(media.matches);
+    onChange();
+    media.addEventListener?.('change', onChange);
+    return () => media.removeEventListener?.('change', onChange);
   }, []);
 
   // PA 2 State: Focus Subtree Root ID
@@ -161,6 +163,28 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
         if (!map.has(pId)) map.set(pId, []);
         map.get(pId)!.push(m);
       }
+    });
+    return map;
+  }, [members]);
+
+  // Shared indexes: avoid repeated O(n) .find()/.filter() calls while building
+  // hundreds/thousands of ReactFlow nodes and edges.
+  const memberById = useMemo(() => {
+    const map = new Map<string, Member>();
+    members.forEach((m) => map.set(m.id, m));
+    return map;
+  }, [members]);
+
+  // Children grouped by the exact biological parent pair. This replaces a
+  // full members.filter(...) for every spouse card.
+  const childrenByParentPair = useMemo(() => {
+    const map = new Map<string, string[]>();
+    members.forEach((child) => {
+      if (!child.fatherId || !child.motherId) return;
+      const key = [child.fatherId, child.motherId].sort().join('::');
+      const list = map.get(key);
+      if (list) list.push(child.fullName.toUpperCase());
+      else map.set(key, [child.fullName.toUpperCase()]);
     });
     return map;
   }, [members]);
@@ -234,18 +258,18 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     const hidden = new Set<string>();
     if (collapsedNodeIds.size === 0) return hidden;
 
-    const collectDescendants = (parentId: string) => {
+    // Iterative traversal avoids call-stack overflow on very deep genealogies.
+    const stack = Array.from(collapsedNodeIds);
+    while (stack.length) {
+      const parentId = stack.pop()!;
       const kids = childrenMap.get(parentId) || [];
-      kids.forEach((k) => {
+      for (const k of kids) {
+        if (hidden.has(k.id)) continue;
         hidden.add(k.id);
         if (k.spouseIds) k.spouseIds.forEach((sid) => hidden.add(sid));
-        collectDescendants(k.id);
-      });
-    };
-
-    collapsedNodeIds.forEach((id) => {
-      collectDescendants(id);
-    });
+        stack.push(k.id);
+      }
+    }
 
     return hidden;
   }, [collapsedNodeIds, childrenMap]);
@@ -257,19 +281,17 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     }
     const ids = new Set<string>();
     const chain: Member[] = [];
-    const memberMap = new Map<string, Member>();
-    members.forEach((m) => memberMap.set(m.id, m));
 
-    const rootMember = memberMap.get(focusedSubtreeRootId);
+    const rootMember = memberById.get(focusedSubtreeRootId);
     let currParentId = rootMember ? (rootMember.fatherId || rootMember.motherId) : null;
     while (currParentId) {
       ids.add(currParentId);
-      const p = memberMap.get(currParentId);
+      const p = memberById.get(currParentId);
       if (p) chain.unshift(p);
       currParentId = p ? (p.fatherId || p.motherId) : null;
     }
     return { directAncestorIds: ids, ancestorBreadcrumbs: chain };
-  }, [focusedSubtreeRootId, members]);
+  }, [focusedSubtreeRootId, memberById]);
 
   // Collect all allowed IDs for focused subtree (PA 2)
   const subtreeAllowedIds = useMemo(() => {
@@ -278,15 +300,17 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     allowed.add(focusedSubtreeRootId);
 
     // 1. Hậu duệ cành nhánh
-    const collect = (pid: string) => {
+    const stack = [focusedSubtreeRootId];
+    while (stack.length) {
+      const pid = stack.pop()!;
       const kids = childrenMap.get(pid) || [];
-      kids.forEach((k) => {
+      for (const k of kids) {
+        if (allowed.has(k.id)) continue;
         allowed.add(k.id);
         if (k.spouseIds) k.spouseIds.forEach((sid) => allowed.add(sid));
-        collect(k.id);
-      });
-    };
-    collect(focusedSubtreeRootId);
+        stack.push(k.id);
+      }
+    }
 
     // 2. Thượng tổ trực hệ (Các đời tổ tiên ở trên của cụ khởi cành nhánh)
     directAncestorIds.forEach((aId) => allowed.add(aId));
@@ -297,8 +321,8 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
   // Focused Root Member object
   const focusedSubtreeMember = useMemo(() => {
     if (!focusedSubtreeRootId) return null;
-    return members.find((m) => m.id === focusedSubtreeRootId) || null;
-  }, [focusedSubtreeRootId, members]);
+    return memberById.get(focusedSubtreeRootId) || null;
+  }, [focusedSubtreeRootId, memberById]);
 
   // Helper normalize Vietnamese string for smart search
   const normalizeSearch = (str: string) =>
@@ -309,25 +333,25 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       .replace(/đ/g, 'd')
       .trim();
 
-  // Smart suggestions for real-time search dropdown
+  // Build the normalized search index once. This is important on 5,000+ member trees:
+  // typing no longer normalizes every field of every member on each keystroke.
+  const treeSearchIndex = useMemo(() => members.map((m) => ({
+    member: m,
+    text: normalizeSearch([m.fullName, m.courtesyName, m.posthumousName, m.phaiName, m.chiName, String(m.generation)].filter(Boolean).join(' ')),
+    name: normalizeSearch(m.fullName),
+  })), [members]);
+
+  // Smart suggestions for real-time search dropdown; defer filtering while typing.
   const searchSuggestions = useMemo(() => {
-    if (!treeSearchQuery.trim()) return [];
-    const q = normalizeSearch(treeSearchQuery);
-    return members
-      .filter((m) => {
-        const nameMatch = normalizeSearch(m.fullName).includes(q);
-        const courtesyMatch = m.courtesyName && normalizeSearch(m.courtesyName).includes(q);
-        const posthumousMatch = m.posthumousName && normalizeSearch(m.posthumousName).includes(q);
-        const phaiMatch = m.phaiName && normalizeSearch(m.phaiName).includes(q);
-        const chiMatch = m.chiName && normalizeSearch(m.chiName).includes(q);
-        const genMatch =
-          `doi ${m.generation}`.includes(q) ||
-          `the he ${m.generation}`.includes(q) ||
-          `d${m.generation}`.includes(q);
-        return nameMatch || courtesyMatch || posthumousMatch || phaiMatch || chiMatch || genMatch;
-      })
-      .slice(0, 8);
-  }, [treeSearchQuery, members]);
+    if (!deferredTreeSearchQuery.trim()) return [];
+    const q = normalizeSearch(deferredTreeSearchQuery);
+    const words = q.split(/\s+/).filter(Boolean);
+    return treeSearchIndex
+      .filter((item) => words.every((word) => item.text.includes(word)))
+      .sort((a, b) => (a.name.startsWith(q) ? 0 : 1) - (b.name.startsWith(q) ? 0 : 1))
+      .slice(0, 8)
+      .map((item) => item.member);
+  }, [deferredTreeSearchQuery, treeSearchIndex]);
 
   // Map for branch lookups
   const branchMap = useMemo(() => {
@@ -344,10 +368,12 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     branches.forEach((b) => {
       options.push({ value: b.id, label: b.name });
     });
+    const branchNameIndex = branches.map((b) => b.name.toLowerCase());
     const uniquePhai = new Set<string>();
     members.forEach((m) => {
-      if (m.phaiName && !branches.some((b) => b.name.toLowerCase().includes(m.phaiName!.toLowerCase()))) {
-        uniquePhai.add(m.phaiName);
+      const phai = m.phaiName?.trim();
+      if (phai && !branchNameIndex.some((name) => name.includes(phai.toLowerCase()))) {
+        uniquePhai.add(phai);
       }
     });
     uniquePhai.forEach((phai) => {
@@ -381,8 +407,6 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     let allowedMemberIds: Set<string> | null = null;
     if (selectedBranchId !== 'all') {
       allowedMemberIds = new Set<string>();
-      const memberMap = new Map<string, Member>();
-      members.forEach((m) => memberMap.set(m.id, m));
 
       members.forEach((m) => {
         let matches = false;
@@ -398,7 +422,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
           let currentParentId = m.fatherId || m.motherId;
           while (currentParentId) {
             allowedMemberIds!.add(currentParentId);
-            const parent = memberMap.get(currentParentId);
+            const parent = memberById.get(currentParentId);
             currentParentId = parent ? (parent.fatherId || parent.motherId) : null;
           }
         }
@@ -422,7 +446,17 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       }
       return true;
     });
-  }, [members, subtreeAllowedIds, selectedBranchId, settings.showDaughters, hiddenDescendantIds]);
+  }, [members, memberById, subtreeAllowedIds, selectedBranchId, settings.showDaughters, hiddenDescendantIds]);
+
+  const filteredMemberIdSet = useMemo(
+    () => new Set(filteredMembers.map((m) => m.id)),
+    [filteredMembers]
+  );
+
+  // Above ~2,500 nodes the SVG edge layer becomes the dominant rendering cost.
+  // Keep the full tree and layout, but simplify edge geometry/markers and disable
+  // non-essential edge animation for a much smoother 5,000+ member canvas.
+  const isLargeTree = filteredMembers.length >= 2500;
 
   // Build tree nodes and edges with hierarchical layout calculation (PA 3 & PA 4)
   const { initialNodes, initialEdges } = useMemo(() => {
@@ -454,7 +488,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     ];
 
     const getParentLineColor = (pId: string, isTrad: boolean) => {
-      const parentMember = members.find((x) => x.id === pId);
+      const parentMember = memberById.get(pId);
       if (parentMember?.branchId && branchMap.has(parentMember.branchId)) {
         const bColor = branchMap.get(parentMember.branchId)?.colorAccent;
         if (bColor) return bColor;
@@ -583,7 +617,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
             siblings.sort((a, b) => (a.orderInFamily || 1) - (b.orderInFamily || 1));
 
             const parentPos = nodePositions.get(pId);
-            const parentMember = members.find((item) => item.id === pId);
+            const parentMember = memberById.get(pId);
             const parentGen = parentMember?.generation || (gen - 1);
             const parentWidth = getGenNodeWidth(parentGen);
             const parentCenterX = parentPos ? parentPos.x + parentWidth / 2 : 0;
@@ -675,29 +709,19 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       const isSubtreeRoot = m.id === focusedSubtreeRootId;
       const isHighlighted = m.id === focusedMemberId || m.id === highlightedMemberId;
 
-      // Spouses
-      const spouses: Member[] = [];
-      if (m.spouseIds && m.spouseIds.length > 0) {
-        m.spouseIds.forEach((sId) => {
-          const sp = members.find((item) => item.id === sId);
-          if (sp) spouses.push(sp);
-        });
-      }
+      // Indexed lookups keep node construction close to O(n) instead of O(n²).
+      const spouses: Member[] = m.spouseIds
+        ? m.spouseIds.map((sId) => memberById.get(sId)).filter(Boolean) as Member[]
+        : [];
 
-      // Children by spouse
       const childrenBySpouse: Record<string, string[]> = {};
       spouses.forEach((sp) => {
-        const biologicalKids = members.filter(
-          (c) =>
-            (c.fatherId === m.id && c.motherId === sp.id) ||
-            (c.motherId === m.id && c.fatherId === sp.id)
-        );
-        if (biologicalKids.length > 0) {
-          childrenBySpouse[sp.id] = biologicalKids.map((c) => c.fullName.toUpperCase());
-        }
+        const pairKey = [m.id, sp.id].sort().join('::');
+        const names = childrenByParentPair.get(pairKey);
+        if (names?.length) childrenBySpouse[sp.id] = names;
       });
 
-      const mother = m.motherId ? members.find((item) => item.id === m.motherId) || null : null;
+      const mother = m.motherId ? memberById.get(m.motherId) || null : null;
 
       nodes.push({
         id: m.id,
@@ -738,21 +762,20 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
 
       // Edge from parent
       const parentId = m.fatherId || m.motherId;
-      if (parentId && filteredMembers.some((p) => p.id === parentId)) {
+      if (parentId && filteredMemberIdSet.has(parentId)) {
         const isTraditional = settings.theme === 'traditional';
         const isAncestralLine =
           directAncestorIds.has(parentId) &&
           (directAncestorIds.has(m.id) || m.id === focusedSubtreeRootId);
-        const isParentHovered = hoveredMemberId === parentId || hoveredMemberId === m.id;
-        const isHighlightedFamily = isHighlighted || isParentHovered;
+        const isHighlightedFamily = isHighlighted;
         const familyColor = getParentLineColor(parentId, isTraditional);
 
         edges.push({
           id: `e-${parentId}-${m.id}`,
           source: parentId,
           target: m.id,
-          type: 'smoothstep',
-          animated: isAncestralLine || isHighlightedFamily,
+          type: isLargeTree ? 'straight' : 'smoothstep',
+          animated: !isLargeTree && (isAncestralLine || isHighlightedFamily),
           style: {
             stroke: isAncestralLine
               ? '#fbbf24'
@@ -761,14 +784,14 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
               : familyColor,
             strokeWidth: isAncestralLine ? 3.5 : isHighlightedFamily ? 3 : 2.2,
             strokeDasharray: m.gender === 'female' ? '4 4' : undefined,
-            opacity: hoveredMemberId && !isHighlightedFamily && !isAncestralLine ? 0.35 : 1,
+            opacity: isHighlightedFamily || isAncestralLine ? 1 : 0.92,
             filter: isAncestralLine
               ? 'drop-shadow(0 0 6px rgba(251, 191, 36, 0.9))'
               : isHighlightedFamily
               ? 'drop-shadow(0 0 4px rgba(245, 158, 11, 0.7))'
               : undefined,
           },
-          markerEnd: {
+          markerEnd: isLargeTree ? undefined : {
             type: MarkerType.ArrowClosed,
             color: isAncestralLine
               ? '#fbbf24'
@@ -785,7 +808,9 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     return { initialNodes: nodes, initialEdges: edges };
   }, [
     filteredMembers,
-    members,
+    memberById,
+    filteredMemberIdSet,
+    childrenByParentPair,
     settings,
     userRole,
     onSelectMember,
@@ -795,12 +820,12 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     branchMap,
     focusedMemberId,
     highlightedMemberId,
-    hoveredMemberId,
     focusedSubtreeRootId,
     directAncestorIds,
     collapsedNodeIds,
     childrenCountMap,
     childrenMap,
+    isLargeTree,
   ]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -858,7 +883,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
         nextCollapsed.delete(p);
         needsUncollapse = true;
       }
-      const parentM = members.find((item) => item.id === p);
+      const parentM = memberById.get(p);
       p = parentM ? (parentM.fatherId || parentM.motherId) : undefined;
     }
     if (needsUncollapse) {
@@ -900,20 +925,21 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       jumpToMember(searchSuggestions[0]);
     } else {
       const q = normalizeSearch(treeSearchQuery.trim());
-      const found = members.find((m) => normalizeSearch(m.fullName).includes(q));
-      if (found) {
-        jumpToMember(found);
-      }
+      const found = treeSearchIndex.find((item) => item.text.includes(q))?.member;
+      if (found) jumpToMember(found);
     }
   };
 
   // Stats calculation
   const stats = useMemo(() => {
+    let living = 0;
+    let maxGen = 1;
+    for (const m of members) {
+      if (m.isAlive) living++;
+      if (m.generation > maxGen) maxGen = m.generation;
+    }
     const total = members.length;
-    const living = members.filter((m) => m.isAlive).length;
-    const deceased = total - living;
-    const maxGen = Math.max(...members.map((m) => m.generation), 1);
-    return { total, living, deceased, maxGen };
+    return { total, living, deceased: total - living, maxGen };
   }, [members]);
 
   const isTraditional = settings.theme === 'traditional';
@@ -1432,8 +1458,8 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
 
             {isCardDisplayModalOpen && (
               <>
-                <div className="fixed inset-0 z-40" onClick={() => setIsCardDisplayModalOpen(false)} />
-                <div className="absolute right-0 top-full mt-2 w-80 rounded-2xl bg-[#2b0408] border-2 border-amber-500/60 shadow-2xl z-50 p-3.5 text-xs text-amber-100 space-y-3 backdrop-blur-lg">
+                <div className="fixed inset-0 z-[90] bg-black/35 backdrop-blur-[1px]" onClick={() => setIsCardDisplayModalOpen(false)} />
+                <div className="fixed z-[100] left-2 right-2 bottom-2 max-h-[78dvh] overflow-y-auto rounded-2xl bg-[#2b0408] border-2 border-amber-500/60 shadow-2xl p-3.5 text-xs text-amber-100 space-y-3 backdrop-blur-lg overscroll-contain pb-[max(0.875rem,env(safe-area-inset-bottom))] sm:absolute sm:left-auto sm:right-0 sm:bottom-auto sm:top-full sm:mt-2 sm:w-80 sm:max-w-[calc(100vw-1.5rem)] sm:max-h-[min(75vh,42rem)]">
                   <div className="flex items-center justify-between border-b border-amber-500/30 pb-2">
                     <div className="flex items-center gap-1.5 font-bold font-serif text-amber-300">
                       <Settings2 className="w-4 h-4 text-amber-400" />
@@ -1685,6 +1711,15 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
             panOnScroll={false}
             zoomOnPinch
             zoomOnScroll
+            zoomOnDoubleClick={false}
+            onlyRenderVisibleElements
+            nodesDraggable={false}
+            nodesConnectable={false}
+            selectionOnDrag={false}
+            nodesFocusable={!isMobileViewport}
+            edgesFocusable={false}
+            elementsSelectable={!isMobileViewport}
+            className={isMobileViewport ? 'family-tree-touch-canvas' : undefined}
           >
             <Background
               color={isTraditional ? '#7b1113' : '#cbd5e1'}

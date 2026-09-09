@@ -106,11 +106,32 @@ textarea:focus-visible {
 
   .react-flow__attribution { display: none !important; }
   .react-flow__node { touch-action: none; }
+  .react-flow__controls {
+    margin-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    margin-right: max(0.25rem, env(safe-area-inset-right));
+  }
+  .react-flow__node .nodrag,
+  .react-flow__node .nopan {
+    touch-action: manipulation;
+  }
+  .family-tree-touch-canvas .react-flow__pane {
+    cursor: grab;
+  }
+  .family-tree-touch-canvas .react-flow__pane:active {
+    cursor: grabbing;
+  }
 
   /* Vertical member cards: hover does not exist on touch devices, so expose
      the same quick actions that desktop users get on hover. */
   .family-tree-mobile-actions {
     opacity: 1 !important;
     pointer-events: auto !important;
+  }
+}
+
+/* iPhone safe-area support for the fixed navigation used by the main app. */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .mobile-bottom-nav-safe {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
 }

@@ -300,7 +300,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
               e.stopPropagation();
               onSelectMember(member);
             }}
-            className="p-1 rounded bg-amber-500 text-amber-950 hover:bg-amber-400 shadow text-[9px]"
+            className="nodrag nopan p-1 rounded bg-amber-500 text-amber-950 hover:bg-amber-400 shadow text-[9px] sm:min-w-0 min-w-6 min-h-6 flex items-center justify-center"
           >
             <Eye className="w-2.5 h-2.5" />
           </button>
@@ -313,7 +313,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
                 e.stopPropagation();
                 onFocusSubtree(member.id);
               }}
-              className="p-1 rounded bg-amber-600/80 text-amber-100 hover:bg-amber-500 shadow text-[9px]"
+              className="nodrag nopan p-1 rounded bg-amber-600/80 text-amber-100 hover:bg-amber-500 shadow text-[9px] sm:min-w-0 min-w-6 min-h-6 flex items-center justify-center"
             >
               <GitFork className="w-2.5 h-2.5" />
             </button>
@@ -327,7 +327,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
                 e.stopPropagation();
                 onAddChild(member);
               }}
-              className="p-1 rounded bg-red-800 text-amber-100 hover:bg-red-700 shadow text-[9px]"
+              className="nodrag nopan p-1 rounded bg-red-800 text-amber-100 hover:bg-red-700 shadow text-[9px] sm:min-w-0 min-w-6 min-h-6 flex items-center justify-center"
             >
               <UserPlus className="w-2.5 h-2.5" />
             </button>
@@ -639,7 +639,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
                           e.stopPropagation();
                           onSelectMember(sp);
                         }}
-                        className="px-1.5 py-0.5 rounded bg-rose-500/30 hover:bg-rose-500/50 text-rose-200 text-[9.5px] flex items-center gap-0.5 flex-shrink-0 transition-colors"
+                        className="nodrag nopan px-1.5 py-0.5 rounded bg-rose-500/30 hover:bg-rose-500/50 text-rose-200 text-[9.5px] flex items-center gap-0.5 flex-shrink-0 transition-colors min-h-7"
                         title="Xem hồ sơ phối ngẫu"
                       >
                         <Eye className="w-2.5 h-2.5" />
@@ -691,7 +691,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
           <button
             type="button"
             onClick={() => onSelectMember(member)}
-            className={`flex-1 py-1 px-1.5 text-[10.5px] font-medium rounded flex items-center justify-center gap-1 transition-colors ${
+            className={`nodrag nopan flex-1 py-1 px-1.5 text-[10.5px] font-medium rounded flex items-center justify-center gap-1 transition-colors min-h-8 ${
               isTraditional
                 ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
@@ -710,7 +710,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
                 e.stopPropagation();
                 onFocusSubtree(member.id);
               }}
-              className={`py-1 px-2 text-[10.5px] font-medium rounded flex items-center gap-1 transition-colors ${
+              className={`nodrag nopan py-1 px-2 text-[10.5px] font-medium rounded flex items-center gap-1 transition-colors min-h-8 ${
                 isTraditional
                   ? 'bg-amber-500/20 hover:bg-amber-500/40 text-amber-200 border border-amber-500/50'
                   : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200'
@@ -728,7 +728,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
                   type="button"
                   title="Thêm con cho thành viên này"
                   onClick={() => onAddChild(member)}
-                  className={`py-1 px-2 text-[10.5px] font-medium rounded flex items-center gap-1 transition-colors ${
+                  className={`nodrag nopan py-1 px-2 text-[10.5px] font-medium rounded flex items-center gap-1 transition-colors min-h-8 ${
                     isTraditional
                       ? 'bg-red-800/80 hover:bg-red-700 text-amber-100 border border-amber-500/40'
                       : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200'

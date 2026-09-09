@@ -105,6 +105,16 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     verticalCardStartGen: adminDefaults?.verticalCardStartGen ?? 6,
     cardHorizontalGap: adminDefaults?.cardHorizontalGap ?? 30,
     interFamilyGap: adminDefaults?.interFamilyGap ?? 110,
+    mobileTreeHeight: adminDefaults?.mobileTreeHeight ?? 760,
+    mobileInitialZoom: adminDefaults?.mobileInitialZoom ?? 0.72,
+    mobileMinZoom: adminDefaults?.mobileMinZoom ?? 0.25,
+    mobileMaxZoom: adminDefaults?.mobileMaxZoom ?? 2.2,
+    mobileShowMiniMap: adminDefaults?.mobileShowMiniMap ?? false,
+    mobileControlsPosition: adminDefaults?.mobileControlsPosition ?? 'bottom-right',
+    focusMobileZoom: adminDefaults?.focusMobileZoom ?? 0.9,
+    focusDesktopZoom: adminDefaults?.focusDesktopZoom ?? 1.0,
+    focusMobileOffsetY: adminDefaults?.focusMobileOffsetY ?? 0,
+    focusDesktopOffsetY: adminDefaults?.focusDesktopOffsetY ?? 0,
   }));
 
   // Đồng bộ cấu hình Admin từ Supabase sau khi dữ liệu cloud tải xong.
@@ -121,6 +131,14 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCardDisplayModalOpen, setIsCardDisplayModalOpen] = useState(false);
   const [isMobileControlsOpen, setIsMobileControlsOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onResize = () => setIsMobileViewport(window.innerWidth < 640);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   // PA 2 State: Focus Subtree Root ID
   const [focusedSubtreeRootId, setFocusedSubtreeRootId] = useState<string | null>(null);
@@ -790,14 +808,14 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   // Trên mobile không fit toàn bộ 332+ node vào một màn hình vì sẽ làm cây cực nhỏ.
-  // Sau khi ReactFlow fit lần đầu, giữ góc nhìn trung tâm ở mức phóng đại dễ thao tác.
+  // Sau khi ReactFlow khởi tạo, dùng zoom do Admin cấu hình thay vì ép fit toàn bộ cây.
   useEffect(() => {
-    if (!rfInstance || typeof window === 'undefined' || window.innerWidth >= 640) return;
+    if (!rfInstance || !isMobileViewport || focusedSubtreeRootId) return;
     const timer = window.setTimeout(() => {
-      rfInstance.zoomTo?.(0.62, { duration: 450 });
+      rfInstance.zoomTo?.(settings.mobileInitialZoom ?? 0.72, { duration: 450 });
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [rfInstance, initialNodes.length]);
+  }, [rfInstance, initialNodes.length, isMobileViewport, focusedSubtreeRootId, settings.mobileInitialZoom]);
 
   // Sync state when layout inputs change
   useEffect(() => {
@@ -805,27 +823,26 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     setEdges(initialEdges);
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
-  // Auto zoom and smooth center on the branch root node when entering focused subtree
+  // Khi xem một nhánh cụ thể: căn chính xác tâm NODE, không cộng offset cố định theo kích thước thẻ.
+  // ReactFlow node có thể thay đổi kích thước theo cấu hình Hiển Thị Thẻ, vì vậy đọc width/height thực tế.
   useEffect(() => {
     if (!rfInstance || !focusedSubtreeRootId) return;
-    const timer = setTimeout(() => {
-      const targetNode = initialNodes.find((n) => n.id === focusedSubtreeRootId);
-      if (targetNode && targetNode.position) {
-        const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-        rfInstance.setCenter?.(
-          targetNode.position.x + 120,
-          targetNode.position.y + (isMobile ? 180 : 120),
-          {
-            zoom: isMobile ? 0.75 : 1.0,
-            duration: 800,
-          }
-        );
-      } else {
-        rfInstance.fitView?.({ padding: 0.2, duration: 750 });
-      }
-    }, 180);
+    const timer = window.setTimeout(() => {
+      const targetNode = rfInstance.getNode?.(focusedSubtreeRootId) || initialNodes.find((n) => n.id === focusedSubtreeRootId);
+      if (!targetNode) return;
+      const width = targetNode.measured?.width ?? targetNode.width ?? 180;
+      const height = targetNode.measured?.height ?? targetNode.height ?? 150;
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+      const offsetY = isMobile ? (settings.focusMobileOffsetY ?? 0) : (settings.focusDesktopOffsetY ?? 0);
+      const zoom = isMobile ? (settings.focusMobileZoom ?? 0.9) : (settings.focusDesktopZoom ?? 1);
+      rfInstance.setCenter?.(
+        targetNode.position.x + width / 2,
+        targetNode.position.y + height / 2 + offsetY,
+        { zoom, duration: 700 }
+      );
+    }, 320);
     return () => clearTimeout(timer);
-  }, [focusedSubtreeRootId, initialNodes, rfInstance]);
+  }, [focusedSubtreeRootId, initialNodes, rfInstance, settings.focusMobileZoom, settings.focusDesktopZoom, settings.focusMobileOffsetY, settings.focusDesktopOffsetY]);
 
   // Jump to specific member and smoothly center ReactFlow canvas
   const jumpToMember = (targetMember: Member) => {
@@ -850,14 +867,19 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     }
 
     setTimeout(() => {
-      const targetNode = nodes.find((n) => n.id === targetMember.id);
+      const targetNode = rfInstance?.getNode?.(targetMember.id) || nodes.find((n) => n.id === targetMember.id);
       if (targetNode && rfInstance) {
-        rfInstance.setCenter(targetNode.position.x + 140, targetNode.position.y + 90, {
-          zoom: 1.15,
-          duration: 800,
+        const width = targetNode.measured?.width ?? targetNode.width ?? 180;
+        const height = targetNode.measured?.height ?? targetNode.height ?? 150;
+        const mobile = typeof window !== 'undefined' && window.innerWidth < 640;
+        const zoom = mobile ? (settings.focusMobileZoom ?? 0.9) : (settings.focusDesktopZoom ?? 1);
+        const offsetY = mobile ? (settings.focusMobileOffsetY ?? 0) : (settings.focusDesktopOffsetY ?? 0);
+        rfInstance.setCenter(targetNode.position.x + width / 2, targetNode.position.y + height / 2 + offsetY, {
+          zoom,
+          duration: 700,
         });
       }
-    }, 150);
+    }, 350);
 
     try {
       confetti({
@@ -899,11 +921,12 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
 
   return (
     <div
-      className={`relative w-full h-[calc(100dvh-130px)] min-h-[520px] sm:h-[840px] rounded-2xl overflow-hidden border shadow-2xl flex flex-col ${
+      className={`relative w-full rounded-2xl overflow-hidden border shadow-2xl flex flex-col min-h-[520px] sm:h-[840px] ${
         isTraditional
           ? 'bg-[#1e0205] border-amber-500/40 text-amber-50'
           : 'bg-slate-50 border-slate-200 text-slate-900'
       }`}
+      style={isMobileViewport ? { height: `${Math.max(560, settings.mobileTreeHeight ?? 760)}px` } : undefined}
     >
       {/* PA 2: Focused Subtree Active Banner */}
       {focusedSubtreeMember && (
@@ -1657,8 +1680,12 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
             onInit={(instance) => setRfInstance(instance)}
             fitView
             fitViewOptions={{ padding: 0.2 }}
-            minZoom={0.15}
-            maxZoom={1.8}
+            minZoom={isMobileViewport ? (settings.mobileMinZoom ?? 0.25) : 0.15}
+            maxZoom={isMobileViewport ? (settings.mobileMaxZoom ?? 2.2) : 1.8}
+            panOnDrag
+            panOnScroll={false}
+            zoomOnPinch
+            zoomOnScroll
           >
             <Background
               color={isTraditional ? '#7b1113' : '#cbd5e1'}
@@ -1667,25 +1694,29 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
               variant={BackgroundVariant.Dots}
             />
             <Controls
+              position={isMobileViewport ? (settings.mobileControlsPosition ?? 'bottom-right') : 'bottom-left'}
+              showInteractive
               className={`!border rounded-lg shadow-lg overflow-hidden ${
                 isTraditional
                   ? '!bg-[#3c0308] !border-amber-500/50 !text-amber-200'
                   : '!bg-white !border-slate-300'
               }`}
             />
-            <MiniMap
-              zoomable
-              pannable
-              nodeColor={(node) => {
-                if (node.id === 'mem-101') return '#f59e0b';
-                return isTraditional ? '#991b1b' : '#3b82f6';
-              }}
-              className={`!border rounded-lg shadow-md ${
-                isTraditional
-                  ? '!bg-[#200204] !border-amber-500/40'
-                  : '!bg-white !border-slate-300'
-              }`}
-            />
+            {(!isMobileViewport || settings.mobileShowMiniMap) && (
+              <MiniMap
+                zoomable
+                pannable
+                nodeColor={(node) => {
+                  if (node.id === 'mem-101') return '#f59e0b';
+                  return isTraditional ? '#991b1b' : '#3b82f6';
+                }}
+                className={`!border rounded-lg shadow-md ${
+                  isTraditional
+                    ? '!bg-[#200204] !border-amber-500/40'
+                    : '!bg-white !border-slate-300'
+                }`}
+              />
+            )}
           </ReactFlow>
 
           {/* Bottom Floating Traditional Motto Scroll */}

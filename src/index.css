@@ -144,3 +144,14 @@ textarea:focus-visible {
 
 .clan-app-shell { font-family: var(--clan-font, 'Be Vietnam Pro', system-ui, sans-serif); }
 .clan-app-shell .rounded-xl, .clan-app-shell .rounded-2xl { border-radius: var(--clan-radius, .75rem); }
+
+
+/* AdminCP theme controls: header/nav/buttons are intentionally tokenized so the
+   administrator can preview and change the visual identity without editing code. */
+.clan-app-shell .clan-header {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--clan-header, #5c0612) 92%, #000 8%), var(--clan-header, #5c0612), color-mix(in srgb, var(--clan-header, #5c0612) 92%, #000 8%));
+}
+.clan-app-shell .clan-nav { background-color: var(--clan-nav, #280205); }
+.clan-app-shell .clan-mobile-nav { background-color: color-mix(in srgb, var(--clan-nav, #280205) 94%, transparent); }
+.clan-app-shell .theme-button { background-color: var(--clan-button, #d4a72c); color: var(--clan-button-text, #3b0207); }
+.clan-app-shell .theme-muted { color: var(--clan-muted, #f3c969); }

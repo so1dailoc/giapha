@@ -10,7 +10,8 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "check": "tsc --noEmit",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:relationships": "tsx tests/relationshipCalculator.deep.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

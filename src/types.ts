@@ -225,6 +225,11 @@ export interface FamilyTreeSettings {
   interfaceTextColor?: string;
   interfaceFontFamily?: 'be-vietnam' | 'merriweather' | 'sans';
   interfaceRadius?: 'compact' | 'soft' | 'rounded';
+  interfaceHeaderColor?: string;
+  interfaceNavColor?: string;
+  interfaceButtonColor?: string;
+  interfaceButtonTextColor?: string;
+  interfaceMutedTextColor?: string;
 }
 
 export interface RelationshipResult {

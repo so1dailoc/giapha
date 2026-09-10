@@ -139,6 +139,11 @@ export default function App() {
     root.style.setProperty('--clan-text', s.interfaceTextColor || theme.interfaceTextColor);
     root.style.setProperty('--clan-font', s.interfaceFontFamily === 'merriweather' ? 'Merriweather, serif' : s.interfaceFontFamily === 'sans' ? 'system-ui, sans-serif' : 'Be Vietnam Pro, system-ui, sans-serif');
     root.style.setProperty('--clan-radius', s.interfaceRadius === 'compact' ? '0.5rem' : s.interfaceRadius === 'rounded' ? '1.25rem' : '0.75rem');
+    root.style.setProperty('--clan-header', s.interfaceHeaderColor || theme.interfaceHeaderColor);
+    root.style.setProperty('--clan-nav', s.interfaceNavColor || theme.interfaceNavColor);
+    root.style.setProperty('--clan-button', s.interfaceButtonColor || theme.interfaceButtonColor);
+    root.style.setProperty('--clan-button-text', s.interfaceButtonTextColor || theme.interfaceButtonTextColor);
+    root.style.setProperty('--clan-muted', s.interfaceMutedTextColor || theme.interfaceMutedTextColor);
     root.dataset.clanTheme = s.interfaceThemePreset || theme.interfaceThemePreset;
   }, [clanInfo.defaultTreeSettings]);
 
@@ -585,7 +590,7 @@ export default function App() {
   return (
     <div className="clan-app-shell min-h-screen text-amber-50 flex flex-col font-sans selection:bg-amber-500 selection:text-amber-950 pb-16 sm:pb-0" style={{ backgroundColor: 'var(--clan-page-bg)' }}>
       {/* Topmost Royal Hoành Phi Banner */}
-      <header className="relative bg-gradient-to-r from-[#3b0207] via-[#5c0612] to-[#3b0207] border-b-2 border-amber-500/50 shadow-2xl overflow-hidden">
+      <header className="clan-header relative border-b-2 border-amber-500/50 shadow-2xl overflow-hidden">
         {/* Decorative corner motifs */}
         <div className="absolute top-0 left-0 w-32 h-32 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-500/20 to-transparent pointer-events-none" />
         <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-500/20 to-transparent pointer-events-none" />
@@ -730,7 +735,7 @@ export default function App() {
       </header>
 
       {/* Main Tab Navigation Bar (Desktop / Tablet - on mobile use bottom navigation bar) */}
-      <nav className="bg-[#280205] border-b border-amber-500/30 sticky top-0 z-30 shadow-md backdrop-blur-md hidden sm:block">
+      <nav className="clan-nav border-b border-amber-500/30 sticky top-0 z-30 shadow-md backdrop-blur-md hidden sm:block">
         <div className="max-w-7xl mx-auto px-2 sm:px-6">
           <div className="flex items-center gap-1.5 overflow-x-auto py-2 scrollbar-none">
             {/* Mobile Menu Opener Button */}
@@ -1280,7 +1285,7 @@ export default function App() {
       )}
 
       {/* MOBILE BOTTOM QUICK NAVIGATION BAR */}
-      <nav className="mobile-bottom-nav-safe fixed bottom-0 left-0 right-0 z-40 bg-[#240205]/95 border-t border-amber-500/40 backdrop-blur-lg flex justify-around items-center py-2 px-1 sm:hidden shadow-2xl">
+      <nav className="clan-mobile-nav mobile-bottom-nav-safe fixed bottom-0 left-0 right-0 z-40 border-t border-amber-500/40 backdrop-blur-lg flex justify-around items-center py-2 px-1 sm:hidden shadow-2xl">
         <button
           type="button"
           onClick={() => setActiveTab('tree')}

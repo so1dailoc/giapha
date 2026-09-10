@@ -18,8 +18,9 @@ function getAncestors(memberId: string, map: Map<string, Member>): AncestorVisit
   if (!start) return result;
   queue.push({ member: start, distance: 0 });
   const visited = new Set<string>();
-  while (queue.length) {
-    const current = queue.shift()!;
+  let cursor = 0;
+  while (cursor < queue.length) {
+    const current = queue[cursor++];
     if (visited.has(current.member.id)) continue;
     visited.add(current.member.id);
     result.push(current);
@@ -75,116 +76,103 @@ function spouseOf(member: Member, map: Map<string, Member>): Member[] {
  * Ưu tiên quan hệ huyết thống + hôn phối gần nhất trước khi tính họ hàng xa.
  */
 function directInLawRelation(a: Member, b: Member, map: Map<string, Member>): Partial<RelationshipResult> | null {
-  // A là con dâu/con rể của B (B là cha/mẹ của một người mà A kết hôn).
-  const bChildren = map.size ? Array.from(map.values()).filter(c => parentsOf(c).includes(b.id)) : [];
-  const spouseChild = bChildren.find(child => isSpouse(a, child.id) || isSpouse(child, a.id));
-  if (spouseChild) {
-    const childIsMale = spouseChild.gender === 'male';
-    const aIsFemale = a.gender === 'female';
-    const aToB = b.gender === 'male'
-      ? (childIsMale ? 'Cha chồng' : 'Cha vợ')
-      : (childIsMale ? 'Mẹ chồng' : 'Mẹ vợ');
-    const bToA = aIsFemale ? 'Con dâu' : 'Con rể';
-    const formalAToB = childIsMale
-      ? (b.gender === 'male' ? 'Thân phụ của phu quân' : 'Thân mẫu của phu quân')
-      : (b.gender === 'male' ? 'Nhạc phụ' : 'Nhạc mẫu');
-    const formalBToA = aIsFemale ? 'Tức phụ / Con dâu' : 'Con rể';
-    return {
-      relationshipTitleAtoB: aToB,
-      relationshipTitleBtoA: bToA,
-      formalTitleAtoB: formalAToB,
-      formalTitleBtoA: formalBToA,
-      folkTitleAtoB: aToB,
-      folkTitleBtoA: bToA,
-      generationalDifference: a.generation - b.generation,
-      kinshipType: 'hôn phối',
-      pathDescription: `${a.fullName} là ${bToA.toLowerCase()} của ${b.fullName}.`,
-      culturalNote: 'Xưng hô con dâu/con rể với cha mẹ của người phối ngẫu được ưu tiên theo quan hệ hôn phối thực tế; tuổi không thay thế vai vế gia phả.',
-    };
-  }
-
-  // A là cha/mẹ vợ/chồng của B.
-  const aChildren = Array.from(map.values()).filter(c => parentsOf(c).includes(a.id));
-  const bSpouseChild = aChildren.find(child => isSpouse(b, child.id) || isSpouse(child, b.id));
-  if (bSpouseChild) {
-    const bToA = a.gender === 'male'
-      ? (bSpouseChild.gender === 'male' ? 'Cha chồng' : 'Cha vợ')
-      : (bSpouseChild.gender === 'male' ? 'Mẹ chồng' : 'Mẹ vợ');
-    const aToB = b.gender === 'female' ? 'Con dâu' : 'Con rể';
-    const formalBToA = bSpouseChild.gender === 'male'
-      ? (a.gender === 'male' ? 'Thân phụ của phu quân' : 'Thân mẫu của phu quân')
-      : (a.gender === 'male' ? 'Nhạc phụ' : 'Nhạc mẫu');
-    return {
-      relationshipTitleAtoB: aToB,
-      relationshipTitleBtoA: bToA,
-      formalTitleAtoB: b.gender === 'female' ? 'Tức phụ / Con dâu' : 'Con rể',
-      formalTitleBtoA: formalBToA,
-      folkTitleAtoB: aToB,
-      folkTitleBtoA: bToA,
-      generationalDifference: a.generation - b.generation,
-      kinshipType: 'hôn phối',
-      pathDescription: `${a.fullName} và ${b.fullName} có quan hệ thông gia qua ${bSpouseChild.fullName}.`,
-      culturalNote: 'Đây là quan hệ thông gia trực tiếp qua cha/mẹ của người phối ngẫu.',
-    };
-  }
-
-  // Anh/chị/em của người phối ngẫu: B gọi A là anh/chị/em dâu/rể theo giới tính của A.
-  const aSiblings = Array.from(map.values()).filter(s =>
-    s.id !== a.id && ((s.fatherId && s.fatherId === a.fatherId) || (s.motherId && s.motherId === a.motherId))
+  const siblingsOf = (member: Member) => Array.from(map.values()).filter(s =>
+    s.id !== member.id && ((s.fatherId && s.fatherId === member.fatherId) || (s.motherId && s.motherId === member.motherId))
   );
-  const spouseSibling = aSiblings.find(s => isSpouse(s, b.id) || isSpouse(b, s.id));
-  if (spouseSibling) {
-    const older = a.orderInFamily < spouseSibling.orderInFamily;
-    const siblingCall = spouseSibling.gender === 'male'
-      ? (older ? 'Anh' : 'Em trai')
-      : (older ? 'Chị' : 'Em gái');
-    const aToB = a.gender === 'female' ? `${siblingCall} dâu` : `${siblingCall} rể`;
-    const bToA = spouseSibling.gender === 'female'
-      ? (a.orderInFamily < spouseSibling.orderInFamily ? 'Chị' : 'Em gái')
-      : (a.orderInFamily < spouseSibling.orderInFamily ? 'Anh' : 'Em trai');
-    return {
-      relationshipTitleAtoB: aToB,
-      relationshipTitleBtoA: bToA,
-      formalTitleAtoB: aToB,
-      formalTitleBtoA: bToA,
-      folkTitleAtoB: aToB,
-      folkTitleBtoA: bToA,
-      generationalDifference: a.generation - b.generation,
-      kinshipType: 'hôn phối',
-      pathDescription: `${a.fullName} là người phối ngẫu của anh/chị/em ruột của ${b.fullName}.`,
-      culturalNote: 'Quan hệ anh/chị/em dâu/rể được suy ra từ anh chị em ruột của người phối ngẫu.',
-    };
+  const relationRank = (person: Member, sibling: Member) => {
+    const older = sibling.orderInFamily < person.orderInFamily;
+    return sibling.gender === 'male' ? (older ? 'Anh' : 'Em trai') : (older ? 'Chị' : 'Em gái');
+  };
+  const result = (aToB: string, bToA: string, formalA: string, formalB: string, path: string): Partial<RelationshipResult> => ({
+    relationshipTitleAtoB: aToB,
+    relationshipTitleBtoA: bToA,
+    formalTitleAtoB: formalA,
+    formalTitleBtoA: formalB,
+    folkTitleAtoB: aToB,
+    folkTitleBtoA: bToA,
+    generationalDifference: a.generation - b.generation,
+    kinshipType: 'hôn phối',
+    pathDescription: path,
+    culturalNote: 'Quan hệ hôn phối được xác định theo đường huyết thống của người phối ngẫu; vai vế gia phả ưu tiên hơn tuổi.'
+  });
+
+  // A là con dâu/con rể của B: B là cha/mẹ của một người phối ngẫu với A.
+  for (const spouseId of a.spouseIds || []) {
+    const spouse = map.get(spouseId);
+    if (!spouse) continue;
+    if (spouse.fatherId === b.id || spouse.motherId === b.id) {
+      const spouseMale = spouse.gender === 'male';
+      const bMale = b.gender === 'male';
+      const aFemale = a.gender === 'female';
+      const aToB = bMale ? (spouseMale ? 'Cha chồng' : 'Cha vợ') : (spouseMale ? 'Mẹ chồng' : 'Mẹ vợ');
+      const bToA = aFemale ? 'Con dâu' : 'Con rể';
+      const formalA = spouseMale ? (bMale ? 'Thân phụ của phu quân' : 'Thân mẫu của phu quân') : (bMale ? 'Nhạc phụ' : 'Nhạc mẫu');
+      return result(aToB, bToA, formalA, aFemale ? 'Tức phụ / Con dâu' : 'Con rể', `${a.fullName} là ${bToA.toLowerCase()} của ${b.fullName}.`);
+    }
   }
 
-  // B là anh/chị/em của người phối ngẫu của A: cùng mẫu logic đảo chiều.
-  const bSiblings = Array.from(map.values()).filter(s =>
-    s.id !== b.id && ((s.fatherId && s.fatherId === b.fatherId) || (s.motherId && s.motherId === b.motherId))
-  );
-  const spouseOfA = spouseOf(a, map);
-  const spouseSiblingB = bSiblings.find(s => spouseOfA.some(sp => sp.id === s.id));
-  if (spouseSiblingB) {
-    const older = b.orderInFamily < spouseSiblingB.orderInFamily;
-    const siblingCall = b.gender === 'female'
-      ? (older ? 'Chị' : 'Em gái')
-      : (older ? 'Anh' : 'Em trai');
-    const bToA = b.gender === 'female' ? `${siblingCall} dâu` : `${siblingCall} rể`;
-    const aToB = spouseSiblingB.gender === 'female'
-      ? (a.orderInFamily < spouseSiblingB.orderInFamily ? 'Chị' : 'Em gái')
-      : (a.orderInFamily < spouseSiblingB.orderInFamily ? 'Anh' : 'Em trai');
-    return {
-      relationshipTitleAtoB: aToB,
-      relationshipTitleBtoA: bToA,
-      formalTitleAtoB: aToB,
-      formalTitleBtoA: bToA,
-      folkTitleAtoB: aToB,
-      folkTitleBtoA: bToA,
-      generationalDifference: a.generation - b.generation,
-      kinshipType: 'hôn phối',
-      pathDescription: `${a.fullName} và ${b.fullName} có quan hệ dâu/rể qua người phối ngẫu.`,
-      culturalNote: 'Xưng hô được suy ra từ quan hệ anh chị em của người phối ngẫu.',
-    };
+  // B là con dâu/con rể của A (chiều ngược lại).
+  for (const spouseId of b.spouseIds || []) {
+    const spouse = map.get(spouseId);
+    if (!spouse) continue;
+    if (spouse.fatherId === a.id || spouse.motherId === a.id) {
+      const spouseMale = spouse.gender === 'male';
+      const aMale = a.gender === 'male';
+      const bFemale = b.gender === 'female';
+      const bToA = aMale ? (spouseMale ? 'Cha chồng' : 'Cha vợ') : (spouseMale ? 'Mẹ chồng' : 'Mẹ vợ');
+      const aToB = bFemale ? 'Con dâu' : 'Con rể';
+      const formalB = spouseMale ? (aMale ? 'Thân phụ của phu quân' : 'Thân mẫu của phu quân') : (aMale ? 'Nhạc phụ' : 'Nhạc mẫu');
+      return result(aToB, bToA, bFemale ? 'Tức phụ / Con dâu' : 'Con rể', formalB, `${b.fullName} là ${aToB.toLowerCase()} của ${a.fullName}.`);
+    }
   }
 
+  // A là phối ngẫu của anh/chị/em ruột của B.
+  for (const spouseId of a.spouseIds || []) {
+    const spouse = map.get(spouseId);
+    if (!spouse) continue;
+    if (siblingsOf(b).some(s => s.id === spouse.id)) {
+      const siblingCall = relationRank(b, spouse);
+      const spouseSide = spouse.gender === 'male' ? 'chồng' : 'vợ';
+      const aToB = spouse.gender === 'male'
+        ? `${siblingCall} ${spouseSide}`
+        : `${siblingCall} ${spouseSide}`;
+      const bToA = a.gender === 'female' ? `${relationRank(spouse, b)} dâu` : `${relationRank(spouse, b)} rể`;
+      return result(aToB, bToA, aToB, bToA, `${a.fullName} là phối ngẫu của ${spouse.fullName}, là ${siblingCall.toLowerCase()} của ${b.fullName}.`);
+    }
+  }
+
+  // B là phối ngẫu của anh/chị/em ruột của A.
+  for (const spouseId of b.spouseIds || []) {
+    const spouse = map.get(spouseId);
+    if (!spouse) continue;
+    if (siblingsOf(a).some(s => s.id === spouse.id)) {
+      const siblingCall = relationRank(a, spouse);
+      const spouseSide = spouse.gender === 'male' ? 'chồng' : 'vợ';
+      const bToA = `${siblingCall} ${spouseSide}`;
+      const aToB = b.gender === 'female' ? `${relationRank(spouse, a)} dâu` : `${relationRank(spouse, a)} rể`;
+      return result(aToB, bToA, aToB, bToA, `${b.fullName} là phối ngẫu của ${spouse.fullName}, là ${siblingCall.toLowerCase()} của ${a.fullName}.`);
+    }
+  }
+
+  // Quan hệ anh/chị/em của người phối ngẫu: dùng "anh/chị/em chồng/vợ" khi người gọi là dâu/rể.
+  const aSpouses = (a.spouseIds || []).map(id => map.get(id)).filter(Boolean) as Member[];
+  const bSpouses = (b.spouseIds || []).map(id => map.get(id)).filter(Boolean) as Member[];
+  for (const as of aSpouses) {
+    if (siblingsOf(as).some(s => s.id === b.id)) {
+      const siblingCall = relationRank(as, b);
+      const aToB = `${siblingCall} ${as.gender === 'male' ? 'chồng' : 'vợ'}`;
+      const bToA = a.gender === 'female' ? `${relationRank(b, as)} dâu` : `${relationRank(b, as)} rể`;
+      return result(aToB, bToA, aToB, bToA, `${b.fullName} là ${siblingCall.toLowerCase()} của người phối ngẫu ${as.fullName} của ${a.fullName}.`);
+    }
+  }
+  for (const bs of bSpouses) {
+    if (siblingsOf(bs).some(s => s.id === a.id)) {
+      const siblingCall = relationRank(bs, a);
+      const bToA = `${siblingCall} ${bs.gender === 'male' ? 'chồng' : 'vợ'}`;
+      const aToB = b.gender === 'female' ? `${relationRank(a, bs)} dâu` : `${relationRank(a, bs)} rể`;
+      return result(aToB, bToA, aToB, bToA, `${a.fullName} là ${siblingCall.toLowerCase()} của người phối ngẫu ${bs.fullName} của ${b.fullName}.`);
+    }
+  }
   return null;
 }
 

@@ -215,6 +215,16 @@ export interface FamilyTreeSettings {
   cardBorderColor?: string;
   cardVerticalGap?: number;
   cardThemePreset?: 'traditional' | 'modern' | 'ivory' | 'emerald' | 'midnight';
+
+  // Theme toàn website (AdminCP đặt mặc định cho giao diện chung).
+  interfaceThemePreset?: 'traditional' | 'paper' | 'modern' | 'forest' | 'midnight';
+  interfacePrimaryColor?: string;
+  interfaceAccentColor?: string;
+  interfacePageBackground?: string;
+  interfaceSurfaceColor?: string;
+  interfaceTextColor?: string;
+  interfaceFontFamily?: 'be-vietnam' | 'merriweather' | 'sans';
+  interfaceRadius?: 'compact' | 'soft' | 'rounded';
 }
 
 export interface RelationshipResult {

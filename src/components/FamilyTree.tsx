@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useDeferredValue } from 'react';
+import React, { useMemo, useState, useEffect, useDeferredValue, useRef } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -115,9 +115,9 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     focusMobileOffsetY: adminDefaults?.focusMobileOffsetY ?? 0,
     focusDesktopOffsetY: adminDefaults?.focusDesktopOffsetY ?? 0,
     horizontalCardWidth: adminDefaults?.horizontalCardWidth ?? 260,
-    horizontalCardHeight: adminDefaults?.horizontalCardHeight ?? 0,
+    horizontalCardHeight: adminDefaults?.horizontalCardHeight ?? 210,
     verticalCardWidth: adminDefaults?.verticalCardWidth ?? 78,
-    verticalCardHeight: adminDefaults?.verticalCardHeight ?? 0,
+    verticalCardHeight: adminDefaults?.verticalCardHeight ?? 180,
     cardNameFontSize: adminDefaults?.cardNameFontSize ?? 14,
     horizontalCardFontSize: adminDefaults?.horizontalCardFontSize ?? adminDefaults?.cardNameFontSize ?? 14,
     horizontalCardNameColor: adminDefaults?.horizontalCardNameColor ?? adminDefaults?.cardNameColor ?? '',
@@ -537,9 +537,14 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
 
     const getGenNodeWidth = (gen: number) => {
       if (isGenVertical(gen)) return Math.max(50, settings.verticalCardWidth ?? 78);
-      if (settings.showSpouses) return Math.max(180, settings.horizontalCardWidth ?? 330);
-      if (isMinimalCard) return Math.max(150, settings.horizontalCardWidth ?? 195);
-      return Math.max(180, settings.horizontalCardWidth ?? 255);
+      // Tôn trọng tuyệt đối kích thước thẻ ngang do Admin đặt; không để layout
+      // dùng 330px trong khi card thực tế chỉ 260px. Đây là nguyên nhân gây chồng thẻ.
+      if (typeof settings.horizontalCardWidth === 'number' && settings.horizontalCardWidth > 0) {
+        return Math.max(150, settings.horizontalCardWidth);
+      }
+      if (settings.showSpouses) return 330;
+      if (isMinimalCard) return 195;
+      return 255;
     };
 
     const getGenGap = (gen: number) => {
@@ -561,7 +566,9 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       genYMap.set(gen, cumulativeY);
 
       const genMembers = genGroups.get(gen) || [];
-      let maxGenHeight = settings.horizontalCardHeight ? settings.horizontalCardHeight : (isMinimalCard ? 170 : 210);
+      let maxGenHeight = settings.horizontalCardHeight && settings.horizontalCardHeight > 0
+        ? settings.horizontalCardHeight
+        : (isMinimalCard ? 170 : (settings.showSpouses ? 260 : 210));
 
       if (isGenVertical(gen)) {
         maxGenHeight = Math.max(80, settings.verticalCardHeight || 180);
@@ -868,6 +875,9 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  // ReactFlow giữ vị trí kéo trong state. Không được reset vị trí chỉ vì parent
+  // render lại (đây là nguyên nhân v6/v7 làm thẻ vừa kéo xong bị nhảy về chỗ cũ).
+  const lastInitialNodesRef = useRef(initialNodes);
 
   // Trên mobile không fit toàn bộ 332+ node vào một màn hình vì sẽ làm cây cực nhỏ.
   // Sau khi ReactFlow khởi tạo, dùng zoom do Admin cấu hình thay vì ép fit toàn bộ cây.
@@ -879,10 +889,30 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     return () => window.clearTimeout(timer);
   }, [rfInstance, initialNodes.length, isMobileViewport, focusedSubtreeRootId, settings.mobileInitialZoom]);
 
-  // Sync state when layout inputs change
+  // Đồng bộ khi dữ liệu/layout thật sự thay đổi, nhưng giữ vị trí người dùng đã kéo
+  // nếu danh sách node và layout position không đổi. Nếu Admin đổi kích thước/gap
+  // hoặc dữ liệu làm layout thay đổi, nhận layout mới từ initialNodes.
   useEffect(() => {
-    setNodes(initialNodes);
+    const previous = lastInitialNodesRef.current;
+    const sameIds = previous.length === initialNodes.length && previous.every((n, i) => n.id === initialNodes[i]?.id);
+    const sameLayoutPositions = sameIds && previous.every((n, i) => {
+      const next = initialNodes[i];
+      return Math.abs(n.position.x - next.position.x) < 0.01 && Math.abs(n.position.y - next.position.y) < 0.01;
+    });
+
+    if (!sameLayoutPositions) {
+      setNodes(initialNodes);
+    } else {
+      setNodes((current) => {
+        const currentById = new Map(current.map((n) => [n.id, n]));
+        return initialNodes.map((n) => {
+          const live = currentById.get(n.id);
+          return live ? { ...n, position: live.position } : n;
+        });
+      });
+    }
     setEdges(initialEdges);
+    lastInitialNodesRef.current = initialNodes;
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
   // Khi xem một nhánh cụ thể: căn chính xác tâm NODE, không cộng offset cố định theo kích thước thẻ.

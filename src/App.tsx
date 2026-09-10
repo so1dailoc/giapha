@@ -83,6 +83,7 @@ import {
   Lock,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { getInterfaceThemePreset } from './utils/themeDefaults';
 
 function wouldCreateParentCycle(memberId: string, parentId: string | null | undefined, members: Member[]): boolean {
   if (!parentId) return false;
@@ -125,6 +126,21 @@ export default function App() {
 
   // Vai trò luôn lấy từ hồ sơ đã xác thực trong Supabase, không tin dữ liệu localStorage.
   const [userRole, setUserRole] = useState<UserRole>('visitor');
+
+  // Áp dụng theme mặc định toàn website do AdminCP cấu hình.
+  useEffect(() => {
+    const root = document.documentElement;
+    const theme = getInterfaceThemePreset(clanInfo.defaultTreeSettings?.interfaceThemePreset || 'traditional');
+    const s = clanInfo.defaultTreeSettings || {};
+    root.style.setProperty('--clan-primary', s.interfacePrimaryColor || theme.interfacePrimaryColor);
+    root.style.setProperty('--clan-accent', s.interfaceAccentColor || theme.interfaceAccentColor);
+    root.style.setProperty('--clan-page-bg', s.interfacePageBackground || theme.interfacePageBackground);
+    root.style.setProperty('--clan-surface', s.interfaceSurfaceColor || theme.interfaceSurfaceColor);
+    root.style.setProperty('--clan-text', s.interfaceTextColor || theme.interfaceTextColor);
+    root.style.setProperty('--clan-font', s.interfaceFontFamily === 'merriweather' ? 'Merriweather, serif' : s.interfaceFontFamily === 'sans' ? 'system-ui, sans-serif' : 'Be Vietnam Pro, system-ui, sans-serif');
+    root.style.setProperty('--clan-radius', s.interfaceRadius === 'compact' ? '0.5rem' : s.interfaceRadius === 'rounded' ? '1.25rem' : '0.75rem');
+    root.dataset.clanTheme = s.interfaceThemePreset || theme.interfaceThemePreset;
+  }, [clanInfo.defaultTreeSettings]);
 
   // Kiểm tra quyền quản trị: Chỉ Super Admin hoặc Trưởng Chi khi ĐÃ ĐĂNG NHẬP
   const isAdmin = Boolean(
@@ -567,7 +583,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#180204] text-amber-50 flex flex-col font-sans selection:bg-amber-500 selection:text-amber-950 pb-16 sm:pb-0">
+    <div className="clan-app-shell min-h-screen text-amber-50 flex flex-col font-sans selection:bg-amber-500 selection:text-amber-950 pb-16 sm:pb-0" style={{ backgroundColor: 'var(--clan-page-bg)' }}>
       {/* Topmost Royal Hoành Phi Banner */}
       <header className="relative bg-gradient-to-r from-[#3b0207] via-[#5c0612] to-[#3b0207] border-b-2 border-amber-500/50 shadow-2xl overflow-hidden">
         {/* Decorative corner motifs */}

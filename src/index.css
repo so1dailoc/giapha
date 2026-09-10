@@ -135,3 +135,12 @@ textarea:focus-visible {
     padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
 }
+
+/* Theme toàn hệ thống: AdminCP chỉ cần thay CSS variables, không phá bố cục cũ. */
+.clan-app-shell { color: var(--clan-text, #fef3c7); }
+.clan-app-shell .theme-surface { background-color: var(--clan-surface, #fffaf0); color: var(--clan-text, #2f1a14); }
+.clan-app-shell .theme-accent { color: var(--clan-accent, #d4a72c); }
+.clan-app-shell .theme-primary { background-color: var(--clan-primary, #5c0612); }
+
+.clan-app-shell { font-family: var(--clan-font, 'Be Vietnam Pro', system-ui, sans-serif); }
+.clan-app-shell .rounded-xl, .clan-app-shell .rounded-2xl { border-radius: var(--clan-radius, .75rem); }

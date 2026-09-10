@@ -119,6 +119,16 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     verticalCardWidth: adminDefaults?.verticalCardWidth ?? 78,
     verticalCardHeight: adminDefaults?.verticalCardHeight ?? 0,
     cardNameFontSize: adminDefaults?.cardNameFontSize ?? 14,
+    horizontalCardFontSize: adminDefaults?.horizontalCardFontSize ?? adminDefaults?.cardNameFontSize ?? 14,
+    horizontalCardNameColor: adminDefaults?.horizontalCardNameColor ?? adminDefaults?.cardNameColor ?? '',
+    horizontalCardNameBackgroundColor: adminDefaults?.horizontalCardNameBackgroundColor ?? adminDefaults?.cardNameBackgroundColor ?? '',
+    horizontalCardBackgroundColor: adminDefaults?.horizontalCardBackgroundColor ?? adminDefaults?.cardBackgroundColor ?? '',
+    horizontalCardBorderColor: adminDefaults?.horizontalCardBorderColor ?? adminDefaults?.cardBorderColor ?? '',
+    verticalCardFontSize: adminDefaults?.verticalCardFontSize ?? Math.max(9, (adminDefaults?.cardNameFontSize ?? 14) - 1),
+    verticalCardNameColor: adminDefaults?.verticalCardNameColor ?? adminDefaults?.cardNameColor ?? '',
+    verticalCardNameBackgroundColor: adminDefaults?.verticalCardNameBackgroundColor ?? adminDefaults?.cardNameBackgroundColor ?? '',
+    verticalCardBackgroundColor: adminDefaults?.verticalCardBackgroundColor ?? adminDefaults?.cardBackgroundColor ?? '',
+    verticalCardBorderColor: adminDefaults?.verticalCardBorderColor ?? adminDefaults?.cardBorderColor ?? '',
     cardNameColor: adminDefaults?.cardNameColor ?? '',
     cardNameBackgroundColor: adminDefaults?.cardNameBackgroundColor ?? '',
     cardBackgroundColor: adminDefaults?.cardBackgroundColor ?? '',
@@ -526,10 +536,10 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     };
 
     const getGenNodeWidth = (gen: number) => {
-      if (isGenVertical(gen)) return 78;
-      if (settings.showSpouses) return 330;
-      if (isMinimalCard) return 195;
-      return 255;
+      if (isGenVertical(gen)) return Math.max(50, settings.verticalCardWidth ?? 78);
+      if (settings.showSpouses) return Math.max(180, settings.horizontalCardWidth ?? 330);
+      if (isMinimalCard) return Math.max(150, settings.horizontalCardWidth ?? 195);
+      return Math.max(180, settings.horizontalCardWidth ?? 255);
     };
 
     const getGenGap = (gen: number) => {
@@ -551,15 +561,15 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       genYMap.set(gen, cumulativeY);
 
       const genMembers = genGroups.get(gen) || [];
-      let maxGenHeight = isMinimalCard ? 130 : 160;
+      let maxGenHeight = settings.horizontalCardHeight ? settings.horizontalCardHeight : (isMinimalCard ? 170 : 210);
 
       if (isGenVertical(gen)) {
-        maxGenHeight = 225; // Chiều cao chuẩn thẻ dọc bài vị truyền thống
+        maxGenHeight = Math.max(80, settings.verticalCardHeight || 180);
       } else if (settings.showSpouses) {
         maxGenHeight = 230;
         genMembers.forEach((m) => {
           const spouseCount = m.spouseIds?.length || 0;
-          const estHeight = 180 + spouseCount * 125;
+          const estHeight = (settings.horizontalCardHeight || 210) + spouseCount * 125;
           if (estHeight > maxGenHeight) maxGenHeight = estHeight;
         });
       } else if (settings.showAvatars) {
@@ -775,6 +785,16 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
           cardNameBackgroundColor: settings.cardNameBackgroundColor,
           cardBackgroundColor: settings.cardBackgroundColor,
           cardBorderColor: settings.cardBorderColor,
+          horizontalCardFontSize: settings.horizontalCardFontSize,
+          horizontalCardNameColor: settings.horizontalCardNameColor,
+          horizontalCardNameBackgroundColor: settings.horizontalCardNameBackgroundColor,
+          horizontalCardBackgroundColor: settings.horizontalCardBackgroundColor,
+          horizontalCardBorderColor: settings.horizontalCardBorderColor,
+          verticalCardFontSize: settings.verticalCardFontSize,
+          verticalCardNameColor: settings.verticalCardNameColor,
+          verticalCardNameBackgroundColor: settings.verticalCardNameBackgroundColor,
+          verticalCardBackgroundColor: settings.verticalCardBackgroundColor,
+          verticalCardBorderColor: settings.verticalCardBorderColor,
         },
       });
 
@@ -1731,7 +1751,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
             zoomOnScroll
             zoomOnDoubleClick={false}
             onlyRenderVisibleElements
-            nodesDraggable={false}
+            nodesDraggable={true}
             nodesConnectable={false}
             selectionOnDrag={false}
             nodesFocusable={!isMobileViewport}

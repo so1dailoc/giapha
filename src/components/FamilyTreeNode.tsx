@@ -42,6 +42,16 @@ export interface FamilyTreeNodeData extends Record<string, unknown> {
   cardNameBackgroundColor?: string;
   cardBackgroundColor?: string;
   cardBorderColor?: string;
+  horizontalCardFontSize?: number;
+  horizontalCardNameColor?: string;
+  horizontalCardNameBackgroundColor?: string;
+  horizontalCardBackgroundColor?: string;
+  horizontalCardBorderColor?: string;
+  verticalCardFontSize?: number;
+  verticalCardNameColor?: string;
+  verticalCardNameBackgroundColor?: string;
+  verticalCardBackgroundColor?: string;
+  verticalCardBorderColor?: string;
 }
 
 export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>>) => {
@@ -79,6 +89,16 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
     cardNameBackgroundColor,
     cardBackgroundColor,
     cardBorderColor,
+    horizontalCardFontSize,
+    horizontalCardNameColor,
+    horizontalCardNameBackgroundColor,
+    horizontalCardBackgroundColor,
+    horizontalCardBorderColor,
+    verticalCardFontSize,
+    verticalCardNameColor,
+    verticalCardNameBackgroundColor,
+    verticalCardBackgroundColor,
+    verticalCardBorderColor,
   } = data;
 
   const isTraditional = theme === 'traditional';
@@ -97,11 +117,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
   const isMinimalCard = !showSpouse && !showAvatar && !showDates && !showTitles && !showBirthPlace;
 
   // Traditional Theme Styles (Hoành phi, đỏ thẫm & viền vàng hoàng gia)
-  const nodeWidthClass = showSpouse
-    ? 'w-[330px] min-w-[330px] max-w-[340px]'
-    : isMinimalCard
-    ? 'w-[200px] min-w-[195px] max-w-[210px]'
-    : 'w-[260px] min-w-[250px] max-w-[270px]';
+  const nodeWidthClass = '';
 
   const traditionalNodeClass = `
     relative rounded-xl transition-all duration-300 shadow-xl border-2
@@ -158,7 +174,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
   if (isVerticalCard) {
     const nameWords = member.fullName.trim().split(/\s+/);
     const verticalNodeClass = isTraditional
-      ? `relative rounded-xl transition-all duration-300 shadow-xl border-2 cursor-pointer select-none group w-[78px] min-w-[78px] max-w-[78px] ${
+      ? `relative rounded-xl transition-all duration-300 shadow-xl border-2 cursor-pointer select-none group ${
           isHighlighted
             ? 'border-yellow-300 ring-4 ring-yellow-400/60 scale-105 z-30'
             : isSubtreeRoot
@@ -169,7 +185,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
             ? 'border-amber-500/80 bg-gradient-to-b from-[#5c0612] via-[#45050e] to-[#2c0309]'
             : 'border-yellow-700/70 bg-gradient-to-b from-[#400207] via-[#2f0105] to-[#1c0103]'
         } text-amber-50`
-      : `relative rounded-xl transition-all duration-300 shadow-md border cursor-pointer select-none group w-[78px] min-w-[78px] max-w-[78px] ${
+      : `relative rounded-xl transition-all duration-300 shadow-md border cursor-pointer select-none group ${
           isHighlighted
             ? 'border-blue-500 ring-4 ring-blue-300 scale-105 z-30'
             : member.isAlive
@@ -180,7 +196,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
     return (
       <div
         className={`${verticalNodeClass} ${fontClass}`}
-        style={{ width: cardWidth || undefined, minWidth: cardWidth || undefined, maxWidth: cardWidth || undefined, height: cardHeight || undefined, backgroundColor: cardBackgroundColor || undefined, borderColor: cardBorderColor || undefined }}
+        style={{ width: cardWidth || undefined, minWidth: cardWidth || undefined, maxWidth: cardWidth || undefined, height: cardHeight || undefined, backgroundColor: verticalCardBackgroundColor || cardBackgroundColor || undefined, borderColor: verticalCardBorderColor || cardBorderColor || undefined }}
         onClick={() => onSelectMember(member)}
         title={`${member.fullName} (Đời ${member.generation}) - Nhấp để xem hồ sơ chi tiết`}
       >
@@ -253,7 +269,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
                   isTraditional
                     ? 'text-amber-100 text-xs sm:text-[13px] drop-shadow-sm uppercase'
                     : 'text-slate-800 text-xs font-bold uppercase'
-                }`} style={{ fontSize: cardNameFontSize ? `${Math.max(9, cardNameFontSize - 1)}px` : undefined, color: cardNameColor || undefined, backgroundColor: cardNameBackgroundColor || undefined }}
+                }`} style={{ fontSize: (verticalCardFontSize || cardNameFontSize) ? `${Math.max(9, (verticalCardFontSize || cardNameFontSize) - 1)}px` : undefined, color: verticalCardNameColor || cardNameColor || undefined, backgroundColor: verticalCardNameBackgroundColor || cardNameBackgroundColor || undefined }}
               >
                 {word}
               </span>
@@ -395,7 +411,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
   }
 
   return (
-    <div className={`${isTraditional ? traditionalNodeClass : modernNodeClass} ${fontClass}`} style={{ width: cardWidth || undefined, minWidth: cardWidth || undefined, maxWidth: cardWidth || undefined, height: cardHeight || undefined, backgroundColor: cardBackgroundColor || undefined, borderColor: cardBorderColor || undefined }}>
+    <div className={`${isTraditional ? traditionalNodeClass : modernNodeClass} ${fontClass}`} style={{ width: cardWidth || undefined, minWidth: cardWidth || undefined, maxWidth: cardWidth || undefined, height: cardHeight || undefined, backgroundColor: horizontalCardBackgroundColor || cardBackgroundColor || undefined, borderColor: horizontalCardBorderColor || cardBorderColor || undefined }}>
       {/* Top Handle for Parent connections */}
       {!member.isRootAncestor && (
         <Handle
@@ -512,6 +528,11 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
               isTraditional ? 'text-amber-100 drop-shadow-sm' : 'text-slate-900'
             }`}
             title={member.fullName}
+            style={{
+              fontSize: `${Math.max(9, horizontalCardFontSize || cardNameFontSize)}px`,
+              color: horizontalCardNameColor || cardNameColor || undefined,
+              backgroundColor: horizontalCardNameBackgroundColor || cardNameBackgroundColor || undefined,
+            }}
           >
             {member.fullName.toUpperCase()}
           </h3>

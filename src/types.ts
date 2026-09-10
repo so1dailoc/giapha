@@ -199,6 +199,16 @@ export interface FamilyTreeSettings {
   verticalCardWidth?: number;
   verticalCardHeight?: number;
   cardNameFontSize?: number;
+  horizontalCardFontSize?: number;
+  horizontalCardNameColor?: string;
+  horizontalCardNameBackgroundColor?: string;
+  horizontalCardBackgroundColor?: string;
+  horizontalCardBorderColor?: string;
+  verticalCardFontSize?: number;
+  verticalCardNameColor?: string;
+  verticalCardNameBackgroundColor?: string;
+  verticalCardBackgroundColor?: string;
+  verticalCardBorderColor?: string;
   cardNameColor?: string;
   cardNameBackgroundColor?: string;
   cardBackgroundColor?: string;

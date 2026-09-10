@@ -114,6 +114,17 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     focusDesktopZoom: adminDefaults?.focusDesktopZoom ?? 1.0,
     focusMobileOffsetY: adminDefaults?.focusMobileOffsetY ?? 0,
     focusDesktopOffsetY: adminDefaults?.focusDesktopOffsetY ?? 0,
+    horizontalCardWidth: adminDefaults?.horizontalCardWidth ?? 260,
+    horizontalCardHeight: adminDefaults?.horizontalCardHeight ?? 0,
+    verticalCardWidth: adminDefaults?.verticalCardWidth ?? 78,
+    verticalCardHeight: adminDefaults?.verticalCardHeight ?? 0,
+    cardNameFontSize: adminDefaults?.cardNameFontSize ?? 14,
+    cardNameColor: adminDefaults?.cardNameColor ?? '',
+    cardNameBackgroundColor: adminDefaults?.cardNameBackgroundColor ?? '',
+    cardBackgroundColor: adminDefaults?.cardBackgroundColor ?? '',
+    cardBorderColor: adminDefaults?.cardBorderColor ?? '',
+    cardVerticalGap: adminDefaults?.cardVerticalGap ?? 150,
+    cardThemePreset: adminDefaults?.cardThemePreset ?? adminDefaults?.theme ?? 'traditional',
   }));
 
   // Đồng bộ cấu hình Admin từ Supabase sau khi dữ liệu cloud tải xong.
@@ -567,7 +578,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
         maxGenHeight += isGenVertical(gen) ? 140 : 160; // Extra room for second tier
       }
 
-      const verticalGap = isGenVertical(gen) ? 120 : (settings.showSpouses ? 190 : (isMinimalCard ? 135 : 150));
+      const verticalGap = isGenVertical(gen) ? Math.max(20, settings.cardVerticalGap ?? 120) : Math.max(20, settings.cardVerticalGap ?? (settings.showSpouses ? 190 : (isMinimalCard ? 135 : 150)));
       cumulativeY += maxGenHeight + verticalGap;
     });
 
@@ -757,6 +768,13 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
           isDirectAncestor: directAncestorIds.has(m.id),
           isZigZagTier2: pos.isZigZagTier2,
           isVerticalCard: isGenVertical(m.generation),
+          cardWidth: isGenVertical(m.generation) ? settings.verticalCardWidth : settings.horizontalCardWidth,
+          cardHeight: isGenVertical(m.generation) ? settings.verticalCardHeight : settings.horizontalCardHeight,
+          cardNameFontSize: settings.cardNameFontSize,
+          cardNameColor: settings.cardNameColor,
+          cardNameBackgroundColor: settings.cardNameBackgroundColor,
+          cardBackgroundColor: settings.cardBackgroundColor,
+          cardBorderColor: settings.cardBorderColor,
         },
       });
 

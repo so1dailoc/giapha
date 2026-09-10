@@ -239,7 +239,7 @@ export const RelationshipModal: React.FC<RelationshipModalProps> = ({
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-amber-500" />
               <h3 className="text-lg font-bold text-slate-900 font-serif">
-                Kết Quả Phân Tích Mối Quan Hệ
+                Kết Quả Vai Vế & Xưng Hô
               </h3>
             </div>
             <span className="text-xs px-2.5 py-1 rounded-full font-semibold uppercase bg-amber-100 text-amber-900 border border-amber-300">
@@ -255,11 +255,10 @@ export const RelationshipModal: React.FC<RelationshipModalProps> = ({
                 {result.personB.fullName} xưng hô với {result.personA.fullName}:
               </span>
               <div className="text-2xl font-black text-amber-900 font-serif">
-                {result.relationshipTitleAtoB}
+                {result.folkTitleAtoB || result.relationshipTitleAtoB}
               </div>
               <p className="text-xs text-amber-700/90">
-                (Gọi là <b>{result.relationshipTitleAtoB}</b>, xưng là{' '}
-                <b>{result.relationshipTitleBtoA}</b>)
+                Cách gọi dân gian: <b>{result.folkTitleAtoB || result.relationshipTitleAtoB}</b>
               </p>
             </div>
 
@@ -269,13 +268,60 @@ export const RelationshipModal: React.FC<RelationshipModalProps> = ({
                 {result.personA.fullName} xưng hô với {result.personB.fullName}:
               </span>
               <div className="text-2xl font-black text-blue-900 font-serif">
-                {result.relationshipTitleBtoA}
+                {result.folkTitleBtoA || result.relationshipTitleBtoA}
               </div>
               <p className="text-xs text-blue-700/90">
-                (Gọi là <b>{result.relationshipTitleBtoA}</b>, xưng là{' '}
-                <b>{result.relationshipTitleAtoB}</b>)
+                Cách gọi dân gian: <b>{result.folkTitleBtoA || result.relationshipTitleBtoA}</b>
               </p>
             </div>
+          </div>
+
+          {/* Hai lớp thuật ngữ: chính thống cho phả ký/văn cúng và dân gian cho giao tiếp */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="rounded-xl border border-amber-300 bg-amber-50/70 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <BookOpen className="w-4 h-4 text-amber-700" />
+                <h4 className="font-bold text-amber-950 text-sm">Chuẩn phả ký / văn cúng</h4>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="bg-white rounded-lg border border-amber-200 p-3">
+                  <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">B → A</div>
+                  <div className="font-serif font-black text-amber-900 text-base">{result.formalTitleAtoB || result.relationshipTitleAtoB}</div>
+                </div>
+                <div className="bg-white rounded-lg border border-amber-200 p-3">
+                  <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">A → B</div>
+                  <div className="font-serif font-black text-amber-900 text-base">{result.formalTitleBtoA || result.relationshipTitleBtoA}</div>
+                </div>
+              </div>
+              <p className="mt-3 text-[11px] leading-relaxed text-amber-900/80">Dùng lớp thuật ngữ này khi biên soạn phả ký, văn tế, văn cúng, cáo yết từ đường; không trộn với cách gọi khẩu ngữ.</p>
+            </div>
+
+            <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Users className="w-4 h-4 text-blue-700" />
+                <h4 className="font-bold text-blue-950 text-sm">Cách gọi dân gian / xứ Quảng</h4>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="bg-white rounded-lg border border-blue-200 p-3">
+                  <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">B gọi A</div>
+                  <div className="font-black text-blue-900 text-base">{result.folkTitleAtoB || result.relationshipTitleAtoB}</div>
+                </div>
+                <div className="bg-white rounded-lg border border-blue-200 p-3">
+                  <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">A gọi B</div>
+                  <div className="font-black text-blue-900 text-base">{result.folkTitleBtoA || result.relationshipTitleBtoA}</div>
+                </div>
+              </div>
+              <p className="mt-3 text-[11px] leading-relaxed text-blue-900/80">Vai vế trong họ được ưu tiên theo đời và nhánh; tuổi tác chỉ là yếu tố giao tiếp, không tự động làm thay đổi thứ bậc phả hệ.</p>
+            </div>
+          </div>
+
+          {/* Dấu vết phân chi */}
+          <div className="flex flex-wrap gap-2 text-[10px]">
+            {[result.personA, result.personB].map((m) => (
+              <span key={m.id} className="px-2.5 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600">
+                <b>{m.fullName}</b> • Đời {m.generation}{m.phaiName ? ` • ${m.phaiName}` : ''}{m.chiName ? ` • ${m.chiName}` : ''}{m.nhanhName ? ` • ${m.nhanhName}` : ''}
+              </span>
+            ))}
           </div>
 
           {/* Kinship Diagnostics & Common Ancestor */}

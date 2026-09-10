@@ -86,6 +86,53 @@ interface AdminCPProps {
   onBurialLocationApproved?: (memberId: string, coordinates: { lat: number; lng: number }) => void;
 }
 
+const GenealogyIntegrityPanel: React.FC<{ members: Member[]; onEdit: (member: Member) => void }> = ({ members, onEdit }) => {
+  const byId = new Map(members.map((m) => [m.id, m]));
+  const issues: { member: Member; message: string }[] = [];
+  const seen = new Set<string>();
+  for (const member of members) {
+    if (seen.has(member.id)) issues.push({ member, message: 'ID thành viên bị trùng.' });
+    seen.add(member.id);
+    if (member.fatherId && !byId.has(member.fatherId)) issues.push({ member, message: `Không tìm thấy Cha (${member.fatherId}).` });
+    if (member.motherId && !byId.has(member.motherId)) issues.push({ member, message: `Không tìm thấy Mẹ (${member.motherId}).` });
+    for (const spouseId of member.spouseIds || []) {
+      const spouse = byId.get(spouseId);
+      if (!spouse) issues.push({ member, message: `Không tìm thấy phối ngẫu (${spouseId}).` });
+      else if (!(spouse.spouseIds || []).includes(member.id)) issues.push({ member, message: `Liên kết phối ngẫu chưa đối xứng với ${spouse.fullName}.` });
+    }
+    const father = member.fatherId ? byId.get(member.fatherId) : undefined;
+    const mother = member.motherId ? byId.get(member.motherId) : undefined;
+    const expected = Math.max(father?.generation || 0, mother?.generation || 0) + 1;
+    if (expected > 1 && member.generation !== expected) issues.push({ member, message: `Đời đang là ${member.generation}, nhưng theo Cha/Mẹ nên là ${expected}.` });
+    if (member.fatherId === member.id || member.motherId === member.id || (member.spouseIds || []).includes(member.id)) issues.push({ member, message: 'Quan hệ tự trỏ vào chính mình.' });
+  }
+  const uniqueIssues = issues.filter((item, index, arr) => arr.findIndex(x => x.member.id === item.member.id && x.message === item.message) === index);
+  return (
+    <div className="p-4 rounded-2xl border border-slate-200 bg-white shadow-sm space-y-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h3 className="font-bold text-slate-900 flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-600" /> Kiểm tra tính toàn vẹn gia phả</h3>
+          <p className="text-[11px] text-slate-500 mt-0.5">Quét liên kết Cha/Mẹ, phối ngẫu, đời và lỗi dữ liệu trước khi biên soạn phả ký.</p>
+        </div>
+        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${uniqueIssues.length ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+          {uniqueIssues.length ? `${uniqueIssues.length} cảnh báo` : 'Dữ liệu đang nhất quán'}
+        </span>
+      </div>
+      {uniqueIssues.length > 0 && (
+        <div className="max-h-64 overflow-y-auto space-y-1.5">
+          {uniqueIssues.slice(0, 80).map((issue, idx) => (
+            <div key={`${issue.member.id}-${idx}`} className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 border border-amber-100 text-xs">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <button type="button" onClick={() => onEdit(issue.member)} className="font-bold text-amber-950 hover:underline truncate">{issue.member.fullName}</button>
+              <span className="text-amber-800 truncate flex-1">{issue.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const AdminCP: React.FC<AdminCPProps> = ({
   clanInfo,
   onUpdateClanInfo,
@@ -825,6 +872,7 @@ export const AdminCP: React.FC<AdminCPProps> = ({
       {/* TAB 1: QUẢN LÝ CÂY GIA PHẢ & THÀNH VIÊN */}
       {activeTab === 'tree' && (
         <div className="space-y-4">
+          <GenealogyIntegrityPanel members={members} onEdit={onSelectMemberForEdit} />
           {/* PDF Genealogy Import & Download Banner */}
           <div className="bg-gradient-to-r from-amber-900 via-[#4a0812] to-amber-950 rounded-2xl border-2 border-amber-500/60 p-5 text-amber-50 shadow-lg space-y-3">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -2054,6 +2102,33 @@ export const AdminCP: React.FC<AdminCPProps> = ({
                       Bật: Người xem có thể bấm các nút chuyển đổi trên thanh công cụ Cây Phả Hệ. Tắt: Cố định theo cấu hình Ban Quản Trị chỉ định ở trên.
                     </p>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* BỘ THIẾT KẾ THẺ + THEME */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 text-amber-900 border-b pb-3"><Settings className="w-5 h-5 text-amber-600" /><h3 className="font-bold text-sm font-serif">Thiết Kế Thẻ & Giao Diện Mặc Định</h3></div>
+              <p className="text-[11px] text-slate-500">Cài đặt mặc định cho toàn bộ cây. Thay đổi sẽ được lưu cùng Thiết Lập Dòng Tộc và có xem trước ngay bên dưới.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <label className="text-[11px] font-semibold">Theme<select value={clanForm.defaultTreeSettings?.cardThemePreset ?? 'traditional'} onChange={(e)=>{const v=e.target.value as any; const p:any={traditional:{theme:'traditional',cardBackgroundColor:'#5c0612',cardBorderColor:'#d4a72c',cardNameColor:'#fef3c7',cardNameBackgroundColor:'#350207'},modern:{theme:'modern',cardBackgroundColor:'#ffffff',cardBorderColor:'#cbd5e1',cardNameColor:'#0f172a',cardNameBackgroundColor:'#f8fafc'},ivory:{theme:'modern',cardBackgroundColor:'#fffaf0',cardBorderColor:'#d6b36a',cardNameColor:'#4a2c10',cardNameBackgroundColor:'#fff1c2'},emerald:{theme:'modern',cardBackgroundColor:'#f0fdf4',cardBorderColor:'#86efac',cardNameColor:'#14532d',cardNameBackgroundColor:'#dcfce7'},midnight:{theme:'modern',cardBackgroundColor:'#0f172a',cardBorderColor:'#64748b',cardNameColor:'#f8fafc',cardNameBackgroundColor:'#1e293b'}}[v];setClanForm({...clanForm,defaultTreeSettings:{...clanForm.defaultTreeSettings,cardThemePreset:v,...p}})}} className="w-full mt-1 p-2 border rounded-lg bg-white"><option value="traditional">Cổ điển Đỏ - Vàng</option><option value="modern">Hiện đại Sáng</option><option value="ivory">Giấy Ngà</option><option value="emerald">Ngọc Lục Bảo</option><option value="midnight">Dạ Lam</option></select></label>
+                <label className="text-[11px] font-semibold">Font chữ<select value={clanForm.defaultTreeSettings?.fontFamily ?? 'be-vietnam'} onChange={(e)=>setClanForm({...clanForm,defaultTreeSettings:{...clanForm.defaultTreeSettings,fontFamily:e.target.value as any}})} className="w-full mt-1 p-2 border rounded-lg bg-white"><option value="be-vietnam">Be Vietnam Pro</option><option value="merriweather">Merriweather</option><option value="sans">Plus Jakarta Sans</option></select></label>
+                <label className="text-[11px] font-semibold">Cỡ chữ tên (px)<input type="number" min="9" max="30" value={clanForm.defaultTreeSettings?.cardNameFontSize ?? 14} onChange={(e)=>setClanForm({...clanForm,defaultTreeSettings:{...clanForm.defaultTreeSettings,cardNameFontSize:Number(e.target.value)}})} className="w-full mt-1 p-2 border rounded-lg" /></label>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+                {([['Ngang - Rộng','horizontalCardWidth',180,500,260],['Ngang - Cao','horizontalCardHeight',0,500,0],['Dọc - Rộng','verticalCardWidth',50,180,78],['Dọc - Cao','verticalCardHeight',0,500,0],['Khoảng cách trên/dưới','cardVerticalGap',20,300,150],['Khoảng cách ngang','cardHorizontalGap',10,200,30]] as const).map(([label,key,min,max,def])=><label key={key} className="text-[10px] font-semibold text-slate-700">{label}<input type="number" min={min} max={max} value={(clanForm.defaultTreeSettings as any)?.[key] ?? def} onChange={(e)=>setClanForm({...clanForm,defaultTreeSettings:{...clanForm.defaultTreeSettings,[key]:Number(e.target.value)}})} className="w-full mt-1 p-2 border rounded-lg bg-white" /></label>)}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <label className="text-[10px] font-semibold">Màu chữ<input type="color" value={clanForm.defaultTreeSettings?.cardNameColor || '#fef3c7'} onChange={(e)=>setClanForm({...clanForm,defaultTreeSettings:{...clanForm.defaultTreeSettings,cardNameColor:e.target.value}})} className="w-full h-10 mt-1 rounded-lg border p-1 bg-white" /></label>
+                <label className="text-[10px] font-semibold">Nền tên<input type="color" value={clanForm.defaultTreeSettings?.cardNameBackgroundColor || "#350207"} onChange={(e)=>setClanForm({...clanForm,defaultTreeSettings:{...clanForm.defaultTreeSettings,cardNameBackgroundColor:e.target.value}})} className="w-full h-10 mt-1 rounded-lg border p-1 bg-white" /></label>
+                <label className="text-[10px] font-semibold">Màu nền thẻ<input type="color" value={clanForm.defaultTreeSettings?.cardBackgroundColor || '#5c0612'} onChange={(e)=>setClanForm({...clanForm,defaultTreeSettings:{...clanForm.defaultTreeSettings,cardBackgroundColor:e.target.value}})} className="w-full h-10 mt-1 rounded-lg border p-1 bg-white" /></label>
+                <label className="text-[10px] font-semibold">Màu viền<input type="color" value={clanForm.defaultTreeSettings?.cardBorderColor || '#d4a72c'} onChange={(e)=>setClanForm({...clanForm,defaultTreeSettings:{...clanForm.defaultTreeSettings,cardBorderColor:e.target.value}})} className="w-full h-10 mt-1 rounded-lg border p-1 bg-white" /></label>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-3">Xem trước thẻ</div>
+                <div className="flex items-center justify-center gap-8 flex-wrap min-h-32">
+                  <div style={{width:Math.min(Number(clanForm.defaultTreeSettings?.horizontalCardWidth||260),320),height:Number(clanForm.defaultTreeSettings?.horizontalCardHeight||120)||120,backgroundColor:clanForm.defaultTreeSettings?.cardBackgroundColor||'#5c0612',borderColor:clanForm.defaultTreeSettings?.cardBorderColor||'#d4a72c'}} className="rounded-xl border-2 p-3 shadow-lg flex flex-col justify-center"><div style={{color:clanForm.defaultTreeSettings?.cardNameColor||'#fef3c7',backgroundColor:clanForm.defaultTreeSettings?.cardNameBackgroundColor||'transparent',fontSize:`${clanForm.defaultTreeSettings?.cardNameFontSize||14}px`}} className="font-bold uppercase text-center">NGUYỄN VĂN A</div><div className="text-[10px] text-center opacity-70 mt-1">Đời 5 • Trưởng nam</div></div>
+                  <div style={{width:Math.min(Number(clanForm.defaultTreeSettings?.verticalCardWidth||78),130),height:Number(clanForm.defaultTreeSettings?.verticalCardHeight||180)||180,backgroundColor:clanForm.defaultTreeSettings?.cardBackgroundColor||'#5c0612',borderColor:clanForm.defaultTreeSettings?.cardBorderColor||'#d4a72c'}} className="rounded-xl border-2 p-2 shadow-lg flex flex-col items-center justify-center"><div style={{color:clanForm.defaultTreeSettings?.cardNameColor||'#fef3c7',backgroundColor:clanForm.defaultTreeSettings?.cardNameBackgroundColor||'transparent',fontSize:`${Math.max(9,(clanForm.defaultTreeSettings?.cardNameFontSize||14)-1)}px`}} className="font-bold text-center leading-tight">NGUYỄN<br/>VĂN<br/>A</div><div className="text-[8px] opacity-70 mt-2">Đời 6</div></div>
                 </div>
               </div>
             </div>

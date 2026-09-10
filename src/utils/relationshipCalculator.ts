@@ -1,4 +1,5 @@
 import { Member, RelationshipResult } from '../types';
+import { formalAncestorTitle, formalDescendantTitle, formalSameGenerationTitle, folkDirectAncestorTitle, folkDirectDescendantTitle } from './kinshipTerminology';
 
 type AncestorVisit = { member: Member; distance: number };
 
@@ -43,20 +44,50 @@ function siblingTitle(from: Member, to: Member, sameParents: boolean): [string, 
 }
 
 function directTitle(ancestor: Member, descendant: Member, distance: number): [string, string] {
-  if (distance === 1) {
-    return [sexTitle(ancestor, 'Cha', 'Mẹ'), sexTitle(descendant, 'Con trai', 'Con gái')];
-  }
-  if (distance === 2) {
-    return [sexTitle(ancestor, 'Ông', 'Bà'), sexTitle(descendant, 'Cháu trai', 'Cháu gái')];
-  }
-  if (distance === 3) {
-    return [sexTitle(ancestor, 'Cụ', 'Cụ'), sexTitle(descendant, 'Chắt trai', 'Chắt gái')];
-  }
-  if (distance === 4) {
-    return [sexTitle(ancestor, 'Kỵ', 'Kỵ'), sexTitle(descendant, 'Chút trai', 'Chút gái')];
-  }
-  return [`Tiền nhân đời trước (${distance} đời)`, `Hậu duệ (${distance} đời sau)`];
+  return [formalAncestorTitle(ancestor, distance), formalDescendantTitle(descendant, distance)];
 }
+
+function findParentBetween(descendant: Member, ancestorId: string, map: Map<string, Member>): Member | undefined {
+  for (const parentId of [descendant.fatherId, descendant.motherId]) {
+    if (!parentId) continue;
+    const parent = map.get(parentId);
+    if (!parent) continue;
+    if (parent.id === ancestorId) return parent;
+    const queue = [parent];
+    const visited = new Set<string>();
+    while (queue.length) {
+      const current = queue.shift()!;
+      if (visited.has(current.id)) continue;
+      visited.add(current.id);
+      if (current.id === ancestorId) return parent;
+      for (const pid of [current.fatherId, current.motherId]) {
+        const next = pid ? map.get(pid) : undefined;
+        if (next && !visited.has(next.id)) queue.push(next);
+      }
+    }
+  }
+  return undefined;
+}
+
+function lateralOneGenerationTitle(elder: Member, junior: Member, commonAncestor: Member | undefined, map: Map<string, Member>): string {
+  // A là anh/chị/em của cha hoặc mẹ B. Xét đúng bên nội/ngoại trước khi chọn danh xưng.
+  const candidateParents = [junior.fatherId, junior.motherId]
+    .map(id => id ? map.get(id) : undefined)
+    .filter(Boolean) as Member[];
+  const parent = candidateParents.find(p => commonAncestor && [p.fatherId, p.motherId].includes(commonAncestor.id));
+  if (parent) {
+    const parentIsFather = junior.fatherId === parent.id;
+    const older = elder.orderInFamily < parent.orderInFamily;
+    if (parentIsFather) {
+      if (elder.gender === 'female') return 'Cô (O)';
+      return older ? 'Bác' : 'Chú';
+    }
+    if (elder.gender === 'female') return 'Dì';
+    return 'Cậu';
+  }
+  return elder.gender === 'female' ? 'Cô họ' : 'Bác/Chú họ';
+}
+
 
 export function calculateRelationship(
   personAId: string,
@@ -91,6 +122,10 @@ export function calculateRelationship(
       pathDescription: `${personA.fullName} và ${personB.fullName} là vợ chồng/phối ngẫu`,
       kinshipType: 'hôn phối',
       culturalNote: 'Quan hệ hôn phối; cách xưng hô thực tế có thể thay đổi theo tuổi và vai vế của từng gia đình.',
+      formalTitleAtoB: personA.gender === 'female' ? 'Phối ngẫu / Phu nhân' : 'Phối ngẫu / Phu quân',
+      formalTitleBtoA: personB.gender === 'female' ? 'Phối ngẫu / Phu nhân' : 'Phối ngẫu / Phu quân',
+      folkTitleAtoB: personA.gender === 'female' ? 'Vợ' : 'Chồng',
+      folkTitleBtoA: personB.gender === 'female' ? 'Vợ' : 'Chồng',
     };
   }
 
@@ -113,6 +148,11 @@ export function calculateRelationship(
       pathDescription: `${personA.fullName} là tổ tiên trực hệ cách ${personB.fullName} ${directB.distance} đời.`,
       kinshipType: 'tổ tiên',
       culturalNote: 'Quan hệ trực hệ được ưu tiên theo sơ đồ cha/mẹ thực tế trong dữ liệu.',
+      formalTitleAtoB: titleA,
+      formalTitleBtoA: titleB,
+      folkTitleAtoB: folkDirectAncestorTitle(personA, directB.distance),
+      folkTitleBtoA: folkDirectDescendantTitle(personB, directB.distance),
+      ancestorDistance: directB.distance,
     };
   }
 
@@ -129,6 +169,11 @@ export function calculateRelationship(
       pathDescription: `${personB.fullName} là tổ tiên trực hệ cách ${personA.fullName} ${directA.distance} đời.`,
       kinshipType: 'hậu duệ',
       culturalNote: 'Quan hệ trực hệ được ưu tiên theo sơ đồ cha/mẹ thực tế trong dữ liệu.',
+      formalTitleAtoB: titleA,
+      formalTitleBtoA: titleB,
+      folkTitleAtoB: folkDirectAncestorTitle(personA, directA.distance),
+      folkTitleBtoA: folkDirectDescendantTitle(personB, directA.distance),
+      ancestorDistance: directA.distance,
     };
   }
 
@@ -185,14 +230,18 @@ export function calculateRelationship(
       culturalNote: sameParents
         ? 'Thứ bậc anh chị em dựa trên orderInFamily.'
         : 'Trong họ tộc Việt Nam, vai vế thường theo thứ bậc của nhánh và đời, không chỉ theo tuổi.',
+      formalTitleAtoB: formalSameGenerationTitle(personB, personA, sameParents),
+      formalTitleBtoA: formalSameGenerationTitle(personA, personB, sameParents),
+      folkTitleAtoB: titleA,
+      folkTitleBtoA: titleB,
     };
   }
 
   // Bàng hệ lệch thế hệ: gọi theo vai trên/dưới, tránh khẳng định Bác/Chú khi dữ liệu chưa đủ.
   if (generationDifference < 0) {
     const gap = Math.abs(generationDifference);
-    const elder = sexTitle(personA, gap === 1 ? 'Bác/Chú họ' : 'Bề trên nam', gap === 1 ? 'Cô họ' : 'Bề trên nữ');
-    const junior = sexTitle(personB, 'Cháu trai họ', 'Cháu gái họ');
+    const elder = gap === 1 ? lateralOneGenerationTitle(personA, personB, commonAncestor, map) : sexTitle(personA, 'Bề trên nam', 'Bề trên nữ');
+    const junior = gap === 1 ? (personB.gender === 'male' ? 'Cháu' : 'Cháu') : sexTitle(personB, 'Cháu trai họ', 'Cháu gái họ');
 
     return {
       personA,
@@ -203,13 +252,17 @@ export function calculateRelationship(
       commonAncestor,
       pathDescription: `${personA.fullName} ở trên ${personB.fullName} ${gap} đời; tổ tiên chung là ${commonAncestor.fullName}.`,
       kinshipType: personA.branchId === personB.branchId ? 'bàng hệ cùng chi' : 'bàng hệ khác chi',
-      culturalNote: 'Tên gọi Bác/Chú/Cô cụ thể cần xét thứ tự của các anh chị em thuộc thế hệ trung gian.',
+      culturalNote: 'Tên gọi Bác/Chú/Cậu/Dì/Cô cụ thể cần xét giới tính của người trung gian và thứ tự anh chị em; khi không đủ dữ liệu hệ thống dùng cách gọi an toàn.',
+      formalTitleAtoB: gap === 1 ? elder : 'Bề trên',
+      formalTitleBtoA: gap === 1 ? 'Tử tôn / Hậu duệ' : 'Hậu duệ',
+      folkTitleAtoB: elder,
+      folkTitleBtoA: junior,
     };
   }
 
   const gap = generationDifference;
-  const junior = sexTitle(personA, 'Cháu trai họ', 'Cháu gái họ');
-  const elder = sexTitle(personB, gap === 1 ? 'Bác/Chú họ' : 'Bề trên nam', gap === 1 ? 'Cô họ' : 'Bề trên nữ');
+  const junior = gap === 1 ? 'Cháu' : sexTitle(personA, 'Cháu trai họ', 'Cháu gái họ');
+  const elder = gap === 1 ? lateralOneGenerationTitle(personB, personA, commonAncestor, map) : sexTitle(personB, 'Bề trên nam', 'Bề trên nữ');
 
   return {
     personA,
@@ -220,6 +273,10 @@ export function calculateRelationship(
     commonAncestor,
     pathDescription: `${personB.fullName} ở trên ${personA.fullName} ${gap} đời; tổ tiên chung là ${commonAncestor.fullName}.`,
     kinshipType: personA.branchId === personB.branchId ? 'bàng hệ cùng chi' : 'bàng hệ khác chi',
-    culturalNote: 'Tên gọi Bác/Chú/Cô cụ thể cần xét thứ tự của các anh chị em thuộc thế hệ trung gian.',
+    culturalNote: 'Tên gọi Bác/Chú/Cậu/Dì/Cô cụ thể cần xét giới tính của người trung gian và thứ tự anh chị em; khi không đủ dữ liệu hệ thống dùng cách gọi an toàn.',
+    formalTitleAtoB: 'Hậu duệ',
+    formalTitleBtoA: gap === 1 ? elder : 'Bề trên',
+    folkTitleAtoB: junior,
+    folkTitleBtoA: elder,
   };
 }

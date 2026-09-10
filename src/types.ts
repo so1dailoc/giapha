@@ -192,6 +192,19 @@ export interface FamilyTreeSettings {
   focusDesktopZoom?: number; // Zoom khi mở một nhánh cụ thể trên desktop
   focusMobileOffsetY?: number; // Dịch tâm node trên mobile (px)
   focusDesktopOffsetY?: number; // Dịch tâm node trên desktop (px)
+
+  // Tùy biến giao diện thẻ trong AdminCP
+  horizontalCardWidth?: number;
+  horizontalCardHeight?: number;
+  verticalCardWidth?: number;
+  verticalCardHeight?: number;
+  cardNameFontSize?: number;
+  cardNameColor?: string;
+  cardNameBackgroundColor?: string;
+  cardBackgroundColor?: string;
+  cardBorderColor?: string;
+  cardVerticalGap?: number;
+  cardThemePreset?: 'traditional' | 'modern' | 'ivory' | 'emerald' | 'midnight';
 }
 
 export interface RelationshipResult {
@@ -204,6 +217,13 @@ export interface RelationshipResult {
   pathDescription: string;
   kinshipType: 'trực hệ' | 'bàng hệ cùng chi' | 'bàng hệ khác chi' | 'hôn phối' | 'hậu duệ' | 'tổ tiên';
   culturalNote?: string; // Ghi chú xưng hô theo phong tục Việt Nam
+  // Chuẩn gọi vai vế dùng cho phả ký/văn cúng; tách khỏi cách gọi dân gian trên giao diện.
+  formalTitleAtoB?: string;
+  formalTitleBtoA?: string;
+  folkTitleAtoB?: string;
+  folkTitleBtoA?: string;
+  ancestorDistance?: number;
+  commonAncestorPath?: string[];
 }
 
 export interface ClanInfo {

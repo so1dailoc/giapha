@@ -157,3 +157,14 @@ Ban quản trị vào **AdminCP → Xác Nhận Vị Trí Mộ** để mở Goog
 Chạy file `supabase/migration_burial_location_submissions.sql` một lần trên Supabase SQL Editor nếu database hiện tại chưa có bảng đề xuất vị trí mộ. Schema đầy đủ trong AdminCP cũng đã bao gồm bảng này.
 
 > Trên iPhone/Android, chức năng GPS yêu cầu website chạy HTTPS và người dùng cho phép trình duyệt truy cập vị trí.
+
+## Chuẩn vai vế Hán-Việt & xưng hô xứ Quảng
+
+Hệ thống tra cứu quan hệ hiện tách thành **2 lớp danh xưng**:
+
+- **Phả ký / văn cúng:** Phụ thân, Mẫu thân, Hiển khảo, Hiển tỷ, Tổ phụ, Tổ mẫu, Tằng tổ, Cao tổ; xuống dưới là Tử/Nữ, Tôn, Tằng tôn, Huyền tôn, Lai tôn và các đời sâu hơn.
+- **Giao tiếp dân gian:** Cha/Mẹ, Ông/Bà, Cố, Sơ; Con, Cháu, Chắt, Chút, Chít; bàng hệ ưu tiên Bác/Chú/Cô (O), Cậu/Dì khi dữ liệu cha/mẹ và thứ tự anh chị em đủ để xác định.
+
+Vai vế được ưu tiên theo **đời + quan hệ phả hệ + Phái/Chi/Nhánh**, không tự động đổi chỉ vì chênh lệch tuổi. Khi dữ liệu chưa đủ, hệ thống dùng danh xưng an toàn thay vì đoán Bác/Chú/Cậu/Dì.
+
+AdminCP có thêm **Kiểm tra tính toàn vẹn gia phả** để phát hiện liên kết cha/mẹ mồ côi, phối ngẫu không đối xứng, đời không khớp với cha/mẹ, quan hệ tự trỏ và các lỗi cơ bản trước khi biên soạn văn bản.

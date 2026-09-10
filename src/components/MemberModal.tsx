@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { DefaultAvatar } from './DefaultAvatar';
 import { submitBurialLocationSuggestion } from '../lib/supabaseService';
+import { MemberPicker } from './MemberPicker';
 
 interface MemberModalProps {
   member: Member;
@@ -356,6 +357,28 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                   </div>
                 </div>
 
+                <div className="sm:col-span-2 p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-4">
+                  <div>
+                    <div className="font-bold text-slate-900">Quan hệ cha mẹ & phối ngẫu</div>
+                    <p className="text-[10px] text-slate-500">Có thể đổi cha, mẹ, phối ngẫu hoặc đời ngay tại đây. Không cần xóa rồi tạo lại thành viên.</p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <MemberPicker members={allMembers} value={formData.fatherId || ''} onChange={(id) => { const father = allMembers.find((m) => m.id === id); setFormData({ ...formData, fatherId: id || null, generation: father ? father.generation + 1 : formData.generation }); }} label="Cha (Phụ thân)" gender="male" excludeIds={[member.id, formData.motherId || '']} hint="Tìm kiếm" />
+                    <MemberPicker members={allMembers} value={formData.motherId || ''} onChange={(id) => { const mother = allMembers.find((m) => m.id === id); const father = allMembers.find((m) => m.id === (formData.fatherId || '')); setFormData({ ...formData, motherId: id || null, generation: father ? father.generation + 1 : mother ? mother.generation + 1 : formData.generation }); }} label="Mẹ (Mẫu thân)" gender="female" excludeIds={[member.id, formData.fatherId || '']} hint="Tìm kiếm" />
+                  </div>
+                  <MemberPicker members={allMembers} value="" onChange={(id) => { if (!id) return; setFormData({ ...formData, spouseIds: Array.from(new Set([...(formData.spouseIds || []), id])) }); }} label="Thêm phối ngẫu" excludeIds={[member.id, ...(formData.spouseIds || []), formData.fatherId || '', formData.motherId || '']} hint="Có thể có nhiều phối ngẫu" />
+                  {(formData.spouseIds || []).length > 0 && <div className="flex flex-wrap gap-2">{(formData.spouseIds || []).map((sid) => { const sp = allMembers.find((m) => m.id === sid); return sp ? <button key={sid} type="button" onClick={() => setFormData({ ...formData, spouseIds: (formData.spouseIds || []).filter((id) => id !== sid) })} className="px-2.5 py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-[11px] font-semibold">{sp.fullName} ×</button> : null; })}</div>}
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Giới tính</label>
+                  <select value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value as Member['gender'] })} className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none"><option value="male">Nam</option><option value="female">Nữ</option><option value="other">Khác</option></select>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Đời (có thể thay đổi)</label>
+                  <input type="number" min="1" max="100" value={formData.generation} onChange={(e) => setFormData({ ...formData, generation: Math.max(1, Number(e.target.value) || 1) })} className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none font-bold text-amber-900" />
+                </div>
+
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Tên Tự / Tên Chữ</label>
                   <input
@@ -440,6 +463,12 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                     onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
                     className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none"
                   />
+                </div>
+
+                <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div><label className="block font-bold text-slate-700 mb-1">Điện thoại</label><input value={formData.phone || ''} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full p-2.5 border rounded-lg" /></div>
+                  <div><label className="block font-bold text-slate-700 mb-1">Email</label><input type="email" value={formData.email || ''} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full p-2.5 border rounded-lg" /></div>
+                  <div><label className="block font-bold text-slate-700 mb-1">Địa chỉ hiện tại</label><input value={formData.currentAddress || ''} onChange={(e) => setFormData({ ...formData, currentAddress: e.target.value })} className="w-full p-2.5 border rounded-lg" /></div>
                 </div>
 
                 {/* Công Đức, Bằng Khen & Thành Tựu */}

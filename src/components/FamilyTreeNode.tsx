@@ -35,6 +35,13 @@ export interface FamilyTreeNodeData extends Record<string, unknown> {
   isDirectAncestor?: boolean; // Tổ tiên trực hệ của nhánh đang xem
   isZigZagTier2?: boolean;
   isVerticalCard?: boolean; // Phương án thẻ dọc từ đời thứ 6 trở xuống
+  cardWidth?: number;
+  cardHeight?: number;
+  cardNameFontSize?: number;
+  cardNameColor?: string;
+  cardNameBackgroundColor?: string;
+  cardBackgroundColor?: string;
+  cardBorderColor?: string;
 }
 
 export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>>) => {
@@ -65,6 +72,13 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
     isSubtreeRoot = false,
     isDirectAncestor = false,
     isVerticalCard = false,
+    cardWidth,
+    cardHeight,
+    cardNameFontSize = 14,
+    cardNameColor,
+    cardNameBackgroundColor,
+    cardBackgroundColor,
+    cardBorderColor,
   } = data;
 
   const isTraditional = theme === 'traditional';
@@ -166,6 +180,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
     return (
       <div
         className={`${verticalNodeClass} ${fontClass}`}
+        style={{ width: cardWidth || undefined, minWidth: cardWidth || undefined, maxWidth: cardWidth || undefined, height: cardHeight || undefined, backgroundColor: cardBackgroundColor || undefined, borderColor: cardBorderColor || undefined }}
         onClick={() => onSelectMember(member)}
         title={`${member.fullName} (Đời ${member.generation}) - Nhấp để xem hồ sơ chi tiết`}
       >
@@ -238,7 +253,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
                   isTraditional
                     ? 'text-amber-100 text-xs sm:text-[13px] drop-shadow-sm uppercase'
                     : 'text-slate-800 text-xs font-bold uppercase'
-                }`}
+                }`} style={{ fontSize: cardNameFontSize ? `${Math.max(9, cardNameFontSize - 1)}px` : undefined, color: cardNameColor || undefined, backgroundColor: cardNameBackgroundColor || undefined }}
               >
                 {word}
               </span>
@@ -319,6 +334,8 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
             </button>
           )}
 
+          {canEdit && onAddSpouse && <button type="button" title="Thêm phối ngẫu" onClick={(e) => { e.stopPropagation(); onAddSpouse(member); }} className="nodrag nopan p-1 rounded bg-rose-500 text-white shadow text-[9px] min-w-6 min-h-6 flex items-center justify-center"><Heart className="w-2.5 h-2.5" /></button>}
+
           {canEdit && onAddChild && (
             <button
               type="button"
@@ -378,7 +395,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
   }
 
   return (
-    <div className={`${isTraditional ? traditionalNodeClass : modernNodeClass} ${fontClass}`}>
+    <div className={`${isTraditional ? traditionalNodeClass : modernNodeClass} ${fontClass}`} style={{ width: cardWidth || undefined, minWidth: cardWidth || undefined, maxWidth: cardWidth || undefined, height: cardHeight || undefined, backgroundColor: cardBackgroundColor || undefined, borderColor: cardBorderColor || undefined }}>
       {/* Top Handle for Parent connections */}
       {!member.isRootAncestor && (
         <Handle

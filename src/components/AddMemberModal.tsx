@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Member, Branch, Gender } from '../types';
 import { UserPlus, Heart, X, Sparkles, MapPin, GitBranch, Award, Plus, Trash2 } from 'lucide-react';
+import { MemberPicker } from './MemberPicker';
 
 interface AddMemberModalProps {
   parentMember?: Member | null;
@@ -94,9 +95,10 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
     setAchievements((prev) => prev.filter((_, idx) => idx !== index));
   };
 
-  // Candidates for Father and Mother
-  const maleMembers = allMembers.filter((m) => m.gender === 'male');
-  const femaleMembers = allMembers.filter((m) => m.gender === 'female');
+  const selectedFather = allMembers.find((m) => m.id === fatherId);
+  const fatherWives = selectedFather?.spouseIds
+    ? allMembers.filter((f) => selectedFather.spouseIds?.includes(f.id))
+    : [];
 
   // Thông báo tính toán tự động đời
   const [autoGenNotice, setAutoGenNotice] = useState<string | null>(() => {
@@ -138,12 +140,6 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
       }
     }
   };
-
-  // If father is selected and has multiple wives (ví dụ bà B và bà C), filter candidate mothers
-  const selectedFather = allMembers.find((m) => m.id === fatherId);
-  const fatherWives = selectedFather?.spouseIds
-    ? femaleMembers.filter((f) => selectedFather.spouseIds?.includes(f.id))
-    : [];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -377,81 +373,27 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
             </div>
           </div>
 
-          {/* Section 3: Quan hệ phụ mẫu (Cha & Mẹ đẻ - Hỗ trợ cha có nhiều vợ: Bà B, Bà C) */}
+          {/* Section 3: Quan hệ - chọn bằng tìm kiếm, không dùng dropdown dài */}
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-4">
+            <div>
+              <div className="font-bold text-slate-900">Quan hệ gia đình</div>
+              <p className="text-[10px] text-slate-500 mt-0.5">Có thể tìm theo tên không dấu, đời, phái, chi, nhánh. Khi chọn cha/mẹ hệ thống tự tính đời và gợi ý phân cấp.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <MemberPicker members={allMembers} value={fatherId} onChange={handleFatherChange} label="Người Cha (Phụ thân)" gender="male" excludeIds={[motherId]} hint="Cha" />
+              <MemberPicker members={allMembers} value={motherId} onChange={handleMotherChange} label="Người Mẹ (Mẫu thân)" gender="female" excludeIds={[fatherId]} hint={fatherWives.length > 1 ? 'Cha có nhiều phối ngẫu' : 'Mẹ'} />
+            </div>
+            {fatherWives.length > 1 && <div className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2">Cha đã chọn có {fatherWives.length} phối ngẫu. Hãy chọn đúng người mẹ sinh ra thành viên này.</div>}
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block font-bold text-slate-700">Người Cha (Phụ thân)</label>
-                <span className="text-[10px] text-amber-800 font-semibold">Tự tính Đời con = Đời cha + 1</span>
-              </div>
-              <select
-                value={fatherId}
-                onChange={(e) => handleFatherChange(e.target.value)}
-                className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none"
-              >
-                <option value="">-- Không chọn hoặc Thủy Tổ --</option>
-                {maleMembers.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.fullName} (Đời thứ {m.generation}) {m.orderTitle ? `- ${m.orderTitle}` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-700 mb-1">
-                Người Mẹ (Mẫu thân) {fatherWives.length > 1 ? '- Chọn chính xác Mẹ Đẻ' : ''}
-              </label>
-              <select
-                value={motherId}
-                onChange={(e) => handleMotherChange(e.target.value)}
-                className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none"
-              >
-                <option value="">-- Không rõ hoặc Chưa cập nhật --</option>
-                {fatherWives.length > 0 && (
-                  <optgroup label="Các phu nhân của Cha đã chọn">
-                    {fatherWives.map((w) => (
-                      <option key={w.id} value={w.id}>
-                        ⭐ {w.fullName} ({w.orderTitle || 'Phu nhân'})
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                <optgroup label="Tất cả thành viên nữ">
-                  {femaleMembers.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.fullName} (Đời {m.generation})
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
-              {fatherWives.length > 1 && (
-                <span className="text-[10px] text-amber-700 mt-0.5 block font-medium">
-                  Cha có nhiều vợ (Ví dụ Bà B, Bà C) - Vui lòng chọn đúng người mẹ sinh ra thành viên này.
-                </span>
-              )}
-            </div>
-
-            <div>
               <label className="block font-bold text-slate-700 mb-1">Thứ bậc trong gia đình</label>
-              <input
-                type="text"
-                placeholder="Trưởng nam, Thứ nam, Tam nam, Trưởng nữ..."
-                value={orderTitle}
-                onChange={(e) => setOrderTitle(e.target.value)}
-                className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none"
-              />
+              <input type="text" placeholder="Trưởng nam, Thứ nam, Trưởng nữ..." value={orderTitle} onChange={(e) => setOrderTitle(e.target.value)} className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none" />
             </div>
-
             <div>
               <label className="block font-bold text-slate-700 mb-1">Tên Tự (Tên Chữ)</label>
-              <input
-                type="text"
-                placeholder="VD: Văn Minh"
-                value={courtesyName}
-                onChange={(e) => setCourtesyName(e.target.value)}
-                className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none"
-              />
+              <input type="text" placeholder="VD: Văn Minh" value={courtesyName} onChange={(e) => setCourtesyName(e.target.value)} className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none" />
             </div>
           </div>
 
@@ -505,6 +447,29 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
               </div>
             )}
           </div>
+
+          {!isAlive && (
+            <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
+              <label className="block font-bold text-blue-900 mb-1">Nơi an táng / Mộ phần</label>
+              <input type="text" placeholder="VD: Nghĩa trang..., khu..., hàng..." value={burialLocation} onChange={(e) => setBurialLocation(e.target.value)} className="w-full p-2.5 border rounded-lg focus:border-blue-500 focus:outline-none bg-white" />
+              <p className="text-[10px] text-blue-700 mt-1">Nếu chưa biết, để trống. Người thân có thể gửi GPS/Google Maps sau để Admin xác nhận.</p>
+            </div>
+          )}
+
+          {!isAddingSpouse && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200">
+              <MemberPicker members={allMembers} value={selectedSpouseId} onChange={(id) => { setSelectedSpouseId(id); const sp = allMembers.find((m) => m.id === id); if (sp) { setGeneration(sp.generation); setBranchId(sp.branchId || branchId); setAutoGenNotice(`Đặt Đời ${sp.generation} theo phối ngẫu ${sp.fullName}`); } }} label="Phối ngẫu (tùy chọn)" excludeIds={[fatherId, motherId]} hint="Ví dụ: thêm bà A là vợ ông B" />
+              <p className="text-[10px] text-rose-700 mt-1">Nếu chọn một thành viên hiện có, hệ thống sẽ tạo liên kết vợ/chồng hai chiều tự động. Phối ngẫu được đặt cùng đời với người được chọn.</p>
+            </div>
+          )}
+
+          {!isAlive && (
+            <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
+              <label className="block font-bold text-blue-900 mb-1">Nơi an táng / Mộ phần</label>
+              <input type="text" placeholder="VD: Nghĩa trang..., khu..., hàng..." value={burialLocation} onChange={(e) => setBurialLocation(e.target.value)} className="w-full p-2.5 border rounded-lg focus:border-blue-500 focus:outline-none bg-white" />
+              <p className="text-[10px] text-blue-700 mt-1">Nếu chưa biết, để trống. Người thân có thể gửi GPS/Google Maps sau để Admin xác nhận.</p>
+            </div>
+          )}
 
           {/* Section 5: Nghề nghiệp, Công Đức & Tiểu sử */}
           <div className="space-y-4">

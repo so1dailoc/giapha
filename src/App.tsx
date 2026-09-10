@@ -84,6 +84,25 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
+function wouldCreateParentCycle(memberId: string, parentId: string | null | undefined, members: Member[]): boolean {
+  if (!parentId) return false;
+  if (memberId === parentId) return true;
+  const byId = new Map(members.map((m) => [m.id, m]));
+  const visited = new Set<string>();
+  const queue = [parentId];
+  while (queue.length) {
+    const id = queue.shift()!;
+    if (id === memberId) return true;
+    if (visited.has(id)) continue;
+    visited.add(id);
+    const m = byId.get(id);
+    if (!m) continue;
+    if (m.fatherId) queue.push(m.fatherId);
+    if (m.motherId) queue.push(m.motherId);
+  }
+  return false;
+}
+
 export default function App() {
   type TabType = 'tree' | 'search' | 'relationship' | 'anniversaries' | 'archives' | 'community' | 'admin';
 
@@ -244,63 +263,91 @@ export default function App() {
   };
 
   const handleAddMember = async (newMember: Member) => {
-    setMembers((prev) => {
-      const updated = [...prev, newMember];
-      // If adding spouse, update spouseIds in target member
-      if (spouseForNewMember) {
-        return updated.map((m) => {
-          if (m.id === spouseForNewMember.id) {
-            return {
-              ...m,
-              spouseIds: [...(m.spouseIds || []), newMember.id],
-            };
-          }
-          return m;
-        });
-      }
-      return updated;
-    });
-
-    confetti({
-      particleCount: 35,
-      spread: 70,
-      origin: { y: 0.6 },
-    });
-
-    // Lưu vào Supabase an toàn (có cơ chế tự động fallback nếu thiếu cột burial_coordinates)
-    if (isSupabaseConfigured) {
-      const res = await saveMemberToSupabase(newMember);
-      if (res.missingBurialCoordinatesColumn) {
-        setSchemaWarningNotice(true);
-      }
-      if (spouseForNewMember) {
-        const updatedSpouse: Member = {
-          ...spouseForNewMember,
-          spouseIds: [...(spouseForNewMember.spouseIds || []), newMember.id],
-        };
-        const spouseResult = await saveMemberToSupabase(updatedSpouse);
-        if (!spouseResult.success) {
-          setSaveToast(spouseResult.error || 'Đã thêm người nhưng chưa đồng bộ quan hệ phối ngẫu');
-          setTimeout(() => setSaveToast(null), 3500);
-          return;
-        }
-      }
-      setSaveToast(res.success ? 'Đã lưu thành viên vào hệ thống thành công' : (res.error || 'Không thể lưu thành viên'));
+    if (wouldCreateParentCycle(newMember.id, newMember.fatherId, members) || wouldCreateParentCycle(newMember.id, newMember.motherId, members)) {
+      setSaveToast('Không thể tạo quan hệ: Cha/Mẹ được chọn nằm trong chính nhánh hậu duệ của người này.');
       setTimeout(() => setSaveToast(null), 3500);
+      return;
+    }
+    // Quan hệ được ghi hai chiều: thêm vợ/chồng ở bất kỳ màn hình nào cũng cập nhật cả hai hồ sơ.
+    const spouseIds: string[] = Array.from(new Set<string>(newMember.spouseIds || []));
+    const spouseTargets = members.filter((m) => spouseIds.includes(m.id));
+    const updatedNewMember = { ...newMember, spouseIds };
+    setMembers((prev) => [...prev, updatedNewMember].map((m) =>
+      spouseIds.includes(m.id) ? { ...m, spouseIds: Array.from(new Set([...(m.spouseIds || []), updatedNewMember.id])) } : m
+    ));
+
+    confetti({ particleCount: 35, spread: 70, origin: { y: 0.6 } });
+
+    if (isSupabaseConfigured) {
+      const res = await saveMemberToSupabase(updatedNewMember);
+      if (res.missingBurialCoordinatesColumn) setSchemaWarningNotice(true);
+      if (!res.success) { setSaveToast(res.error || 'Không thể lưu thành viên'); setTimeout(() => setSaveToast(null), 3500); return; }
+      for (const spouse of spouseTargets) {
+        const spouseResult = await saveMemberToSupabase({ ...spouse, spouseIds: Array.from(new Set([...(spouse.spouseIds || []), updatedNewMember.id])) });
+        if (!spouseResult.success) { setSaveToast(spouseResult.error || 'Đã thêm người nhưng chưa đồng bộ phối ngẫu'); setTimeout(() => setSaveToast(null), 3500); return; }
+      }
+      setSaveToast('Đã lưu thành viên và đồng bộ quan hệ gia đình'); setTimeout(() => setSaveToast(null), 3500);
     }
   };
 
   const handleUpdateMember = async (updated: Member) => {
-    setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
-    setSelectedMember(updated);
-
-    if (isSupabaseConfigured) {
-      const res = await saveMemberToSupabase(updated);
-      if (res.missingBurialCoordinatesColumn) {
-        setSchemaWarningNotice(true);
-      }
-      setSaveToast(res.success ? 'Đã cập nhật hồ sơ thành viên thành công' : (res.error || 'Không thể cập nhật hồ sơ'));
+    if (wouldCreateParentCycle(updated.id, updated.fatherId, members) || wouldCreateParentCycle(updated.id, updated.motherId, members)) {
+      setSaveToast('Không thể lưu: quan hệ Cha/Mẹ mới sẽ tạo vòng lặp gia phả.');
       setTimeout(() => setSaveToast(null), 3500);
+      return;
+    }
+    const previous = members.find((m) => m.id === updated.id);
+    const oldSpouses = new Set(previous?.spouseIds || []);
+    const newSpouses = new Set(updated.spouseIds || []);
+
+    // Nếu đổi/xóa phối ngẫu, tự tháo liên kết cũ và thêm liên kết mới ở hồ sơ đối phương.
+    const affectedIds = new Set<string>([...oldSpouses, ...newSpouses]);
+    const nextMembers = members.map((m) => {
+      if (m.id === updated.id) return { ...updated, spouseIds: Array.from(newSpouses) };
+      if (oldSpouses.has(m.id) && !newSpouses.has(m.id)) return { ...m, spouseIds: (m.spouseIds || []).filter((id) => id !== updated.id) };
+      if (newSpouses.has(m.id)) return { ...m, spouseIds: Array.from(new Set([...(m.spouseIds || []), updated.id])) };
+      return m;
+    });
+
+    // Quan hệ cha/mẹ quyết định đời của hậu duệ; đổi cha/mẹ sẽ tự lan đời xuống con cháu.
+    const byId = new Map<string, Member>(nextMembers.map((m) => [m.id, m] as [string, Member]));
+    const childrenByParent = new Map<string, string[]>();
+    nextMembers.forEach((child) => {
+      for (const parentId of [child.fatherId, child.motherId]) {
+        if (!parentId) continue;
+        const list = childrenByParent.get(parentId);
+        if (list) list.push(child.id); else childrenByParent.set(parentId, [child.id]);
+      }
+    });
+    const queue = [updated.id];
+    const visited = new Set<string>();
+    while (queue.length) {
+      const parentId = queue.shift()!;
+      if (visited.has(parentId)) continue;
+      visited.add(parentId);
+      for (const childId of childrenByParent.get(parentId) || []) {
+        const child = byId.get(childId);
+        if (!child) continue;
+        const father = child.fatherId ? byId.get(child.fatherId) : undefined;
+        const mother = child.motherId ? byId.get(child.motherId) : undefined;
+        const expected = Math.max(father?.generation || 0, mother?.generation || 0) + 1;
+        if (expected > 0 && child.generation !== expected) {
+          child.generation = expected;
+          queue.push(child.id);
+        }
+      }
+    }
+
+    setMembers(nextMembers);
+    setSelectedMember(byId.get(updated.id) || updated);
+    if (isSupabaseConfigured) {
+      const toSave = nextMembers.filter((m) => m.id === updated.id || affectedIds.has(m.id) || visited.has(m.id));
+      for (const item of toSave) {
+        const res = await saveMemberToSupabase(item);
+        if (res.missingBurialCoordinatesColumn) setSchemaWarningNotice(true);
+        if (!res.success) { setSaveToast(res.error || 'Không thể cập nhật hồ sơ'); setTimeout(() => setSaveToast(null), 3500); return; }
+      }
+      setSaveToast('Đã cập nhật hồ sơ và đồng bộ quan hệ liên quan'); setTimeout(() => setSaveToast(null), 3500);
     }
   };
 
@@ -309,21 +356,34 @@ export default function App() {
   };
 
   const handleDeleteMember = async (id: string) => {
-    setMembers((prev) => {
-      return prev
-        .filter((m) => m.id !== id)
-        .map((m) => ({
-          ...m,
-          fatherId: m.fatherId === id ? null : m.fatherId,
-          motherId: m.motherId === id ? null : m.motherId,
-          spouseIds: m.spouseIds ? m.spouseIds.filter((sId) => sId !== id) : [],
-        }));
-    });
+    const affected = members.filter((m) => m.id !== id && (m.fatherId === id || m.motherId === id || m.spouseIds?.includes(id)));
+    const nextMembers = members
+      .filter((m) => m.id !== id)
+      .map((m) => ({
+        ...m,
+        fatherId: m.fatherId === id ? null : m.fatherId,
+        motherId: m.motherId === id ? null : m.motherId,
+        spouseIds: m.spouseIds ? m.spouseIds.filter((sId) => sId !== id) : [],
+      }));
+    setMembers(nextMembers);
     setSelectedMember(null);
 
     if (isSupabaseConfigured) {
       const result = await deleteMemberFromSupabase(id);
-      setSaveToast(result.success ? 'Đã xóa thành viên khỏi hệ thống' : (result.error || 'Không thể xóa thành viên'));
+      if (!result.success) {
+        setSaveToast(result.error || 'Không thể xóa thành viên');
+      } else {
+        // Xóa người không làm mất liên kết mồ côi trong database. Đồng bộ lại các hồ sơ bị ảnh hưởng.
+        for (const member of nextMembers.filter((m) => affected.some((a) => a.id === m.id))) {
+          const sync = await saveMemberToSupabase(member);
+          if (!sync.success) {
+            setSaveToast(sync.error || 'Đã xóa nhưng chưa đồng bộ hết liên kết');
+            setTimeout(() => setSaveToast(null), 3500);
+            return;
+          }
+        }
+        setSaveToast('Đã xóa thành viên và làm sạch các liên kết cha/mẹ/phối ngẫu');
+      }
       setTimeout(() => setSaveToast(null), 3500);
     }
   };

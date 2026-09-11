@@ -4,6 +4,8 @@ import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 
 export default defineConfig(({ mode }) => ({
+  // Keep the production asset URLs absolute so Vercel serves the exact files emitted by Vite.
+  base: '/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

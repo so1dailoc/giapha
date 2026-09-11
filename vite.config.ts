@@ -26,5 +26,18 @@ export default defineConfig(({ mode }) => ({
     target: 'es2022',
     sourcemap: mode === 'development',
     chunkSizeWarningLimit: 800,
+    // Keep the main entry asset name stable. This also lets the Vercel rewrite
+    // below recover browsers that still hold the old hashed V10/V11 HTML shell.
+    rollupOptions: {
+      output: {
+        entryFileNames: 'assets/index.js',
+        chunkFileNames: 'assets/chunk-[name].js',
+        assetFileNames: (assetInfo) => {
+          const name = assetInfo.name ?? '';
+          if (name.endsWith('.css')) return 'assets/index.css';
+          return 'assets/[name]-[hash][extname]';
+        },
+      },
+    },
   },
 }));

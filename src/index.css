@@ -219,3 +219,125 @@ textarea:focus-visible {
 .clan-app-shell .bg-emerald-400, .clan-app-shell .bg-emerald-500 { background-color: var(--clan-success) !important; }
 .clan-app-shell .text-blue-500, .clan-app-shell .text-blue-600 { color: var(--clan-info) !important; }
 .clan-app-shell .bg-blue-500, .clan-app-shell .bg-blue-600 { background-color: var(--clan-info) !important; }
+
+/* ===== V11 card isolation + theme completion =====
+   Card design is an independent visual system. Global interface theme selectors
+   must never win over card-specific name/background/border settings. */
+.clan-app-shell .family-tree-card-content-aware {
+  background-color: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+}
+.clan-app-shell .family-tree-card-content-aware .family-tree-card-name {
+  color: var(--card-name-color) !important;
+  background-color: var(--card-name-bg) !important;
+  text-align: inherit;
+  margin-inline: auto;
+  padding-inline: .45rem;
+  border-radius: .35rem;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.clan-app-shell .family-tree-card-content-aware h3.family-tree-card-name { display: block; }
+.clan-app-shell .family-tree-card-content-aware .family-tree-card-name span { color: var(--card-name-color) !important; }
+
+.clan-app-shell .family-tree-card-actions {
+  width: 100%;
+  align-items: stretch;
+}
+.clan-app-shell .family-tree-card-actions .family-tree-action-btn {
+  min-width: 0 !important;
+  width: 100% !important;
+  min-height: 32px !important;
+  height: 32px !important;
+  padding-inline: .25rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: .25rem !important;
+  overflow: hidden;
+}
+.clan-app-shell .family-tree-card-actions .family-tree-action-btn svg { flex: 0 0 auto; }
+@media (max-width: 639px) {
+  .clan-app-shell .family-tree-card-actions .family-tree-action-btn { min-height: 34px !important; height: 34px !important; }
+}
+
+/* Semantic interface palette. Red/amber/blue/green utilities in legacy
+   components are remapped to semantic tokens, while genealogy cards remain
+   isolated above. */
+.clan-app-shell {
+  --clan-warning: var(--clan-accent);
+  --clan-danger: #dc2626;
+  --clan-success: #16a34a;
+  --clan-info: #2563eb;
+  --clan-surface-2: color-mix(in srgb, var(--clan-surface) 88%, var(--clan-primary));
+  --clan-on-primary: #ffffff;
+  --clan-on-accent: var(--clan-button-text);
+}
+.clan-app-shell .bg-yellow-300, .clan-app-shell .bg-yellow-400, .clan-app-shell .bg-yellow-500,
+.clan-app-shell .bg-yellow-600, .clan-app-shell .bg-yellow-700,
+.clan-app-shell .bg-amber-400 { background-color: var(--clan-accent) !important; }
+.clan-app-shell .text-yellow-200, .clan-app-shell .text-yellow-300, .clan-app-shell .text-yellow-400,
+.clan-app-shell .text-yellow-500, .clan-app-shell .text-yellow-600,
+.clan-app-shell .text-amber-200, .clan-app-shell .text-amber-300, .clan-app-shell .text-amber-400 { color: var(--clan-accent) !important; }
+.clan-app-shell .border-yellow-300, .clan-app-shell .border-yellow-400, .clan-app-shell .border-yellow-500,
+.clan-app-shell .border-yellow-600, .clan-app-shell .border-amber-200, .clan-app-shell .border-amber-300 { border-color: var(--clan-accent) !important; }
+
+.clan-app-shell .bg-red-500, .clan-app-shell .bg-red-600, .clan-app-shell .bg-red-700,
+.clan-app-shell .bg-red-800, .clan-app-shell .bg-red-900, .clan-app-shell .bg-red-950 { background-color: var(--clan-danger) !important; }
+.clan-app-shell .text-red-200, .clan-app-shell .text-red-300, .clan-app-shell .text-red-400,
+.clan-app-shell .text-red-500, .clan-app-shell .text-red-600, .clan-app-shell .text-red-700,
+.clan-app-shell .text-red-800 { color: var(--clan-danger) !important; }
+.clan-app-shell .border-red-200, .clan-app-shell .border-red-300, .clan-app-shell .border-red-400,
+.clan-app-shell .border-red-500, .clan-app-shell .border-red-600 { border-color: color-mix(in srgb, var(--clan-danger) 55%, var(--clan-surface)) !important; }
+
+.clan-app-shell .bg-blue-50, .clan-app-shell .bg-blue-100, .clan-app-shell .bg-blue-200 { background-color: color-mix(in srgb, var(--clan-info) 9%, var(--clan-surface)) !important; }
+.clan-app-shell .bg-blue-500, .clan-app-shell .bg-blue-600, .clan-app-shell .bg-blue-700 { background-color: var(--clan-info) !important; }
+.clan-app-shell .text-blue-500, .clan-app-shell .text-blue-600, .clan-app-shell .text-blue-700, .clan-app-shell .text-blue-800,
+.clan-app-shell .text-blue-900, .clan-app-shell .text-indigo-600, .clan-app-shell .text-indigo-700 { color: var(--clan-info) !important; }
+.clan-app-shell .border-blue-200, .clan-app-shell .border-blue-300, .clan-app-shell .border-blue-500,
+.clan-app-shell .border-indigo-200 { border-color: color-mix(in srgb, var(--clan-info) 35%, var(--clan-surface)) !important; }
+
+.clan-app-shell .bg-emerald-50, .clan-app-shell .bg-emerald-100 { background-color: color-mix(in srgb, var(--clan-success) 9%, var(--clan-surface)) !important; }
+.clan-app-shell .bg-emerald-400, .clan-app-shell .bg-emerald-500, .clan-app-shell .bg-emerald-600 { background-color: var(--clan-success) !important; }
+.clan-app-shell .text-emerald-600, .clan-app-shell .text-emerald-700, .clan-app-shell .text-emerald-800 { color: var(--clan-success) !important; }
+.clan-app-shell .border-emerald-200, .clan-app-shell .border-emerald-300, .clan-app-shell .border-emerald-400 { border-color: color-mix(in srgb, var(--clan-success) 35%, var(--clan-surface)) !important; }
+
+.clan-app-shell .bg-rose-50, .clan-app-shell .bg-rose-100 { background-color: color-mix(in srgb, var(--clan-danger) 7%, var(--clan-surface)) !important; }
+.clan-app-shell .bg-rose-500, .clan-app-shell .bg-rose-600, .clan-app-shell .bg-rose-700 { background-color: color-mix(in srgb, var(--clan-danger) 78%, var(--clan-accent)) !important; }
+.clan-app-shell .text-rose-200, .clan-app-shell .text-rose-300, .clan-app-shell .text-rose-400, .clan-app-shell .text-rose-500,
+.clan-app-shell .text-rose-600, .clan-app-shell .text-rose-700 { color: color-mix(in srgb, var(--clan-danger) 78%, var(--clan-accent)) !important; }
+
+/* Fixed legacy genealogy surfaces used outside the node component. These are
+   deliberately excluded from member cards, which have their own palette. */
+.clan-app-shell :not(.family-tree-card-content-aware):not(.family-tree-card-content-aware *)[class*="bg-[#5c0612]"],
+.clan-app-shell :not(.family-tree-card-content-aware):not(.family-tree-card-content-aware *)[class*="bg-[#400207]"],
+.clan-app-shell :not(.family-tree-card-content-aware):not(.family-tree-card-content-aware *)[class*="bg-[#1e0205]"],
+.clan-app-shell :not(.family-tree-card-content-aware):not(.family-tree-card-content-aware *)[class*="bg-[#180103]"],
+.clan-app-shell :not(.family-tree-card-content-aware):not(.family-tree-card-content-aware *)[class*="bg-[#2a0307]"],
+.clan-app-shell :not(.family-tree-card-content-aware):not(.family-tree-card-content-aware *)[class*="bg-[#3b0206]"],
+.clan-app-shell :not(.family-tree-card-content-aware):not(.family-tree-card-content-aware *)[class*="bg-[#1e0205]"] {
+  background-color: var(--clan-primary) !important;
+}
+.clan-app-shell :not(.family-tree-card-content-aware):not(.family-tree-card-content-aware *)[class*="bg-[#350207]"],
+.clan-app-shell :not(.family-tree-card-content-aware):not(.family-tree-card-content-aware *)[class*="bg-[#290104]"],
+.clan-app-shell :not(.family-tree-card-content-aware):not(.family-tree-card-content-aware *)[class*="bg-[#250104]"],
+.clan-app-shell :not(.family-tree-card-content-aware):not(.family-tree-card-content-aware *)[class*="bg-[#220205]"],
+.clan-app-shell :not(.family-tree-card-content-aware):not(.family-tree-card-content-aware *)[class*="bg-[#160103]"] {
+  background-color: color-mix(in srgb, var(--clan-primary) 78%, #000) !important;
+}
+
+/* Legacy neutral surfaces follow the selected surface instead of leaving
+   white/slate patches when the preset changes. */
+.clan-app-shell .bg-gray-50, .clan-app-shell .bg-gray-100,
+.clan-app-shell .bg-stone-50, .clan-app-shell .bg-stone-100 { background-color: var(--clan-surface-2) !important; }
+.clan-app-shell .text-gray-500, .clan-app-shell .text-gray-600, .clan-app-shell .text-gray-700,
+.clan-app-shell .text-stone-500, .clan-app-shell .text-stone-600 { color: var(--clan-muted) !important; }
+.clan-app-shell .border-gray-200, .clan-app-shell .border-gray-300,
+.clan-app-shell .border-stone-200, .clan-app-shell .border-stone-300 { border-color: var(--clan-border) !important; }
+
+/* Do not let the document-level dark color-scheme make light presets render
+   native form controls as dark widgets. */
+html[data-clan-theme="paper"], html[data-clan-theme="modern"], html[data-clan-theme="forest"] {
+  color-scheme: light;
+}
+html[data-clan-theme="traditional"], html[data-clan-theme="midnight"] { color-scheme: dark; }

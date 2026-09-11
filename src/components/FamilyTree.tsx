@@ -119,12 +119,14 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     verticalCardWidth: adminDefaults?.verticalCardWidth ?? 78,
     verticalCardHeight: adminDefaults?.verticalCardHeight ?? 180,
     cardNameFontSize: adminDefaults?.cardNameFontSize ?? 14,
-    horizontalCardFontSize: adminDefaults?.horizontalCardFontSize ?? adminDefaults?.cardNameFontSize ?? 14,
+    horizontalCardFontSize: adminDefaults?.horizontalCardFontSize ?? adminDefaults?.cardNameFontSize ?? 16,
+    horizontalCardNameAlignment: adminDefaults?.horizontalCardNameAlignment ?? 'auto',
     horizontalCardNameColor: adminDefaults?.horizontalCardNameColor ?? adminDefaults?.cardNameColor ?? '',
     horizontalCardNameBackgroundColor: adminDefaults?.horizontalCardNameBackgroundColor ?? adminDefaults?.cardNameBackgroundColor ?? '',
     horizontalCardBackgroundColor: adminDefaults?.horizontalCardBackgroundColor ?? adminDefaults?.cardBackgroundColor ?? '',
     horizontalCardBorderColor: adminDefaults?.horizontalCardBorderColor ?? adminDefaults?.cardBorderColor ?? '',
     verticalCardFontSize: adminDefaults?.verticalCardFontSize ?? Math.max(9, (adminDefaults?.cardNameFontSize ?? 14) - 1),
+    verticalCardNameAlignment: adminDefaults?.verticalCardNameAlignment ?? 'auto',
     verticalCardNameColor: adminDefaults?.verticalCardNameColor ?? adminDefaults?.cardNameColor ?? '',
     verticalCardNameBackgroundColor: adminDefaults?.verticalCardNameBackgroundColor ?? adminDefaults?.cardNameBackgroundColor ?? '',
     verticalCardBackgroundColor: adminDefaults?.verticalCardBackgroundColor ?? adminDefaults?.cardBackgroundColor ?? '',
@@ -541,7 +543,9 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     // stays in sync with the DOM.
     const getHorizontalCardHeight = (m: Member) => {
       const configured = typeof settings.horizontalCardHeight === 'number' ? settings.horizontalCardHeight : 0;
-      let h = 86; // header + name + padding + action bar
+      let h = 96; // header + name + padding + equal action bar
+      const nameCharsPerLine = Math.max(12, Math.floor((settings.horizontalCardWidth ?? 260) / Math.max(7, (settings.horizontalCardFontSize ?? 16) * 0.58)));
+      h += Math.max(0, Math.ceil(m.fullName.trim().length / nameCharsPerLine) - 1) * Math.max(18, (settings.horizontalCardFontSize ?? 16) * 1.15);
       if (settings.showAvatars) h += 62;
       if (settings.showTitles) h += (m.courtesyName || m.posthumousName ? 22 : 0) + (m.orderTitle ? 24 : 0);
       if (settings.showBirthPlace && m.birthPlace) h += 24;
@@ -552,12 +556,23 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       return Math.max(configured, h);
     };
 
-    const getVerticalCardHeight = () => {
+    const getVerticalCardHeight = (m?: Member) => {
       const configured = typeof settings.verticalCardHeight === 'number' ? settings.verticalCardHeight : 0;
-      return Math.max(110, configured || 180);
+      // Vertical cards need enough room for a 2x2 action grid, optional avatar,
+      // title/date rows and the collapse control. Treat the configured value as
+      // a minimum, never as a hard clipping height.
+      let h = 160; // header + name stack + 2x2 actions + safe room for collapse control
+      if (m) h += Math.max(0, m.fullName.trim().split(/\s+/).length - 3) * 14;
+      if (m && settings.showAvatars) h += 38;
+      if (m && settings.showTitles && (m.courtesyName || m.posthumousName || m.orderTitle)) h += 24;
+      if (m && settings.showDates) h += 22 + (!m.isAlive && m.deathDateLunar ? 12 : 0);
+      if (m && settings.showBirthPlace && m.birthPlace) h += 20;
+      if (m && settings.showSpouses && m.spouseIds?.length) h += 20;
+      return Math.max(110, configured || 0, h);
     };
 
-    const getGenNodeHeight = (gen: number) => isGenVertical(gen) ? getVerticalCardHeight() : Math.max(...(genGroups.get(gen) || []).map(getHorizontalCardHeight), 150);
+
+    const getGenNodeHeight = (gen: number) => isGenVertical(gen) ? Math.max(...(genGroups.get(gen) || []).map(getVerticalCardHeight), 110) : Math.max(...(genGroups.get(gen) || []).map(getHorizontalCardHeight), 150);
 
     const getGenNodeWidth = (gen: number) => {
       if (isGenVertical(gen)) return Math.max(50, settings.verticalCardWidth ?? 78);
@@ -796,18 +811,20 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
           isVerticalCard: isGenVertical(m.generation),
           cardWidth: isGenVertical(m.generation) ? settings.verticalCardWidth : settings.horizontalCardWidth,
           // Content-aware height prevents optional fields from escaping/clipping the card.
-          cardHeight: isGenVertical(m.generation) ? getVerticalCardHeight() : getHorizontalCardHeight(m),
+          cardHeight: isGenVertical(m.generation) ? getVerticalCardHeight(m) : getHorizontalCardHeight(m),
           cardNameFontSize: settings.cardNameFontSize,
           cardNameColor: settings.cardNameColor,
           cardNameBackgroundColor: settings.cardNameBackgroundColor,
           cardBackgroundColor: settings.cardBackgroundColor,
           cardBorderColor: settings.cardBorderColor,
           horizontalCardFontSize: settings.horizontalCardFontSize,
+          horizontalCardNameAlignment: settings.horizontalCardNameAlignment,
           horizontalCardNameColor: settings.horizontalCardNameColor,
           horizontalCardNameBackgroundColor: settings.horizontalCardNameBackgroundColor,
           horizontalCardBackgroundColor: settings.horizontalCardBackgroundColor,
           horizontalCardBorderColor: settings.horizontalCardBorderColor,
           verticalCardFontSize: settings.verticalCardFontSize,
+          verticalCardNameAlignment: settings.verticalCardNameAlignment,
           verticalCardNameColor: settings.verticalCardNameColor,
           verticalCardNameBackgroundColor: settings.verticalCardNameBackgroundColor,
           verticalCardBackgroundColor: settings.verticalCardBackgroundColor,

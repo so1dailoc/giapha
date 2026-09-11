@@ -200,11 +200,13 @@ export interface FamilyTreeSettings {
   verticalCardHeight?: number;
   cardNameFontSize?: number;
   horizontalCardFontSize?: number;
+  horizontalCardNameAlignment?: 'auto' | 'left' | 'center' | 'right';
   horizontalCardNameColor?: string;
   horizontalCardNameBackgroundColor?: string;
   horizontalCardBackgroundColor?: string;
   horizontalCardBorderColor?: string;
   verticalCardFontSize?: number;
+  verticalCardNameAlignment?: 'auto' | 'left' | 'center' | 'right';
   verticalCardNameColor?: string;
   verticalCardNameBackgroundColor?: string;
   verticalCardBackgroundColor?: string;

@@ -1,3 +1,10 @@
+
+## V11 visual refinement
+- Card-specific CSS variables isolate horizontal/vertical card colors from the global website theme.
+- Horizontal and vertical member-name alignment is configurable (auto/center/left/right).
+- Card action buttons use equal-size grid cells; vertical cards use a 2x2 action layout to prevent overlap with collapse controls.
+- Card heights are content-aware for avatars, spouses, dates, titles and birth place.
+- Website theme remaps legacy semantic colors and switches light/dark form-control color-scheme by preset.
 # Gia Phả Đại Tộc — V10
 
 ## Fixes

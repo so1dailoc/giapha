@@ -3,7 +3,8 @@ import { FamilyTreeSettings } from '../types';
 export const DEFAULT_TREE_CARD_SETTINGS: Partial<FamilyTreeSettings> = {
   horizontalCardWidth: 260,
   horizontalCardHeight: 210,
-  horizontalCardFontSize: 14,
+  horizontalCardFontSize: 16,
+  horizontalCardNameAlignment: 'auto',
   horizontalCardNameColor: '#fef3c7',
   horizontalCardNameBackgroundColor: '#350207',
   horizontalCardBackgroundColor: '#5c0612',
@@ -11,6 +12,7 @@ export const DEFAULT_TREE_CARD_SETTINGS: Partial<FamilyTreeSettings> = {
   verticalCardWidth: 78,
   verticalCardHeight: 180,
   verticalCardFontSize: 13,
+  verticalCardNameAlignment: 'auto',
   verticalCardNameColor: '#fef3c7',
   verticalCardNameBackgroundColor: '#350207',
   verticalCardBackgroundColor: '#5c0612',

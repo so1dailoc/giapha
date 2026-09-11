@@ -578,7 +578,7 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#180204] text-amber-100 flex items-center justify-center p-6">
+      <div className="clan-app-shell min-h-screen flex items-center justify-center p-6" style={{backgroundColor:'var(--clan-page-bg)', color:'var(--clan-text)'}}>
         <div className="text-center space-y-3">
           <div className="mx-auto w-10 h-10 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
           <p className="text-sm font-semibold">Đang kết nối dữ liệu gia phả…</p>
@@ -588,7 +588,7 @@ export default function App() {
   }
 
   return (
-    <div className="clan-app-shell min-h-screen text-amber-50 flex flex-col font-sans selection:bg-amber-500 selection:text-amber-950 pb-16 sm:pb-0" style={{ backgroundColor: 'var(--clan-page-bg)' }}>
+    <div className="clan-app-shell min-h-screen flex flex-col font-sans pb-16 sm:pb-0" style={{ backgroundColor: 'var(--clan-page-bg)' }}>
       {/* Topmost Royal Hoành Phi Banner */}
       <header className="clan-header relative border-b-2 border-amber-500/50 shadow-2xl overflow-hidden">
         {/* Decorative corner motifs */}

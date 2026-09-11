@@ -188,6 +188,9 @@ export interface FamilyTreeSettings {
   mobileMaxZoom?: number; // Zoom lớn nhất trên mobile
   mobileShowMiniMap?: boolean; // Hiện/ẩn MiniMap trên mobile
   mobileControlsPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  mobileCardMinWidth?: number; // Bề rộng tối thiểu thẻ ngang trên mobile
+  showBranchLabel?: boolean; // Hiển thị Phái/Chi/Nhánh ngắn trên thẻ
+  compactSpouseDisplay?: boolean; // Hiển thị phối ngẫu dạng gọn, tránh làm thẻ quá cao
   focusMobileZoom?: number; // Zoom khi mở một nhánh cụ thể trên mobile
   focusDesktopZoom?: number; // Zoom khi mở một nhánh cụ thể trên desktop
   focusMobileOffsetY?: number; // Dịch tâm node trên mobile (px)

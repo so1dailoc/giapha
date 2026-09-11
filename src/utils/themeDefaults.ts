@@ -20,6 +20,15 @@ export const DEFAULT_TREE_CARD_SETTINGS: Partial<FamilyTreeSettings> = {
   cardHorizontalGap: 30,
   cardVerticalGap: 150,
   interFamilyGap: 110,
+  mobileTreeHeight: 900,
+  mobileInitialZoom: 0.82,
+  mobileMinZoom: 0.35,
+  mobileMaxZoom: 2.4,
+  mobileShowMiniMap: false,
+  mobileControlsPosition: 'bottom-right',
+  mobileCardMinWidth: 240,
+  showBranchLabel: true,
+  compactSpouseDisplay: true,
 };
 
 export const DEFAULT_INTERFACE_THEME = {

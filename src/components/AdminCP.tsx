@@ -2033,6 +2033,18 @@ export const AdminCP: React.FC<AdminCPProps> = ({
                     </label>
 
                     <div className="p-3 rounded-lg bg-white border border-slate-200">
+                      <label className="text-xs font-bold text-slate-800 block mb-1">Bề rộng tối thiểu thẻ ngang trên Mobile</label>
+                      <div className="flex items-center gap-2">
+                        <input type="range" min={200} max={380} step={10}
+                          value={clanForm.defaultTreeSettings?.mobileCardMinWidth ?? 240}
+                          onChange={(e) => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, mobileCardMinWidth: Number(e.target.value) } })}
+                          className="flex-1 accent-amber-600" />
+                        <span className="w-14 text-center text-xs font-bold">{clanForm.defaultTreeSettings?.mobileCardMinWidth ?? 240}px</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-1">Giúp thẻ giống bố cục mẫu: đủ rộng cho tên và 2 nút thao tác.</p>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-white border border-slate-200">
                       <label className="text-xs font-bold text-slate-800 block mb-1">Zoom khi mở một nhánh</label>
                       <div className="flex gap-3">
                         <label className="flex-1 text-[10px] text-slate-500">Mobile
@@ -2080,6 +2092,21 @@ export const AdminCP: React.FC<AdminCPProps> = ({
                       </select>
                     </div>
                   </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                    <label className="p-3 rounded-lg bg-white border border-slate-200 flex items-start gap-2 cursor-pointer">
+                      <input type="checkbox" checked={clanForm.defaultTreeSettings?.showBranchLabel ?? true}
+                        onChange={(e) => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, showBranchLabel: e.target.checked } })}
+                        className="mt-0.5 rounded text-amber-600 focus:ring-amber-500" />
+                      <span><b className="text-xs block">Hiện Phái • Chi • Nhánh trên thẻ</b><small className="text-[10px] text-slate-500">Một dòng gọn dưới Đời, phù hợp bố cục thẻ mẫu.</small></span>
+                    </label>
+                    <label className="p-3 rounded-lg bg-white border border-slate-200 flex items-start gap-2 cursor-pointer">
+                      <input type="checkbox" checked={clanForm.defaultTreeSettings?.compactSpouseDisplay ?? true}
+                        onChange={(e) => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, compactSpouseDisplay: e.target.checked } })}
+                        className="mt-0.5 rounded text-amber-600 focus:ring-amber-500" />
+                      <span><b className="text-xs block">Hiển thị phối ngẫu dạng gọn</b><small className="text-[10px] text-slate-500">Khuyến nghị bật: tránh thẻ cao bất thường khi một người có nhiều phối ngẫu.</small></span>
+                    </label>
+                  </div>
                 </div>
 
                 {/* Quyền Người Xem Tự Do Chuyển Đổi */}
@@ -2115,11 +2142,11 @@ export const AdminCP: React.FC<AdminCPProps> = ({
                   <div className="flex items-center gap-2 text-amber-900"><Settings className="w-5 h-5 text-amber-600" /><h3 className="font-bold text-sm font-serif">Thiết Kế Thẻ & Giao Diện Mặc Định</h3></div>
                   <p className="text-[11px] text-slate-500 mt-1">Thiết lập độc lập cho thẻ ngang và thẻ dọc. Kích thước dùng chung với thuật toán bố trí nên không còn tình trạng thẻ thực tế rộng hơn vùng layout và chồng lên nhau.</p>
                 </div>
-                <button type="button" onClick={() => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, horizontalCardWidth: 260, horizontalCardHeight: 210, horizontalCardFontSize: 16, horizontalCardNameAlignment: 'auto', horizontalCardNameColor: '#fef3c7', horizontalCardNameBackgroundColor: '#350207', horizontalCardBackgroundColor: '#5c0612', horizontalCardBorderColor: '#d4a72c', verticalCardWidth: 78, verticalCardHeight: 180, verticalCardFontSize: 13, verticalCardNameAlignment: 'auto', verticalCardNameColor: '#fef3c7', verticalCardNameBackgroundColor: '#350207', verticalCardBackgroundColor: '#5c0612', verticalCardBorderColor: '#d4a72c', cardVerticalGap: 150, cardHorizontalGap: 30 } })} className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-[10px] font-bold"><RotateCcw className="w-3.5 h-3.5" /> Reset thẻ</button>
+                <button type="button" onClick={() => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, horizontalCardWidth: 320, horizontalCardHeight: 180, horizontalCardFontSize: 16, horizontalCardNameAlignment: 'auto', horizontalCardNameColor: '#fef3c7', horizontalCardNameBackgroundColor: '#350207', horizontalCardBackgroundColor: '#5c0612', horizontalCardBorderColor: '#d4a72c', verticalCardWidth: 82, verticalCardHeight: 180, verticalCardFontSize: 13, verticalCardNameAlignment: 'auto', verticalCardNameColor: '#fef3c7', verticalCardNameBackgroundColor: '#350207', verticalCardBackgroundColor: '#5c0612', verticalCardBorderColor: '#d4a72c', cardVerticalGap: 130, cardHorizontalGap: 28, mobileTreeHeight: 900, mobileInitialZoom: 0.82, mobileMinZoom: 0.35, mobileMaxZoom: 2.4, mobileShowMiniMap: false, mobileCardMinWidth: 240, showBranchLabel: true, compactSpouseDisplay: true } })} className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-[10px] font-bold"><RotateCcw className="w-3.5 h-3.5" /> Reset thẻ</button>
               </div>
 
               <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
-                <div className="flex items-center justify-between mb-3"><div><div className="font-black text-xs text-amber-950">A. THẺ NGANG</div><div className="text-[10px] text-slate-500">Dùng cho các đời đang hiển thị dạng thẻ ngang.</div></div><button type="button" onClick={() => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, horizontalCardWidth: 260, horizontalCardHeight: 210, horizontalCardFontSize: 16, horizontalCardNameAlignment: 'auto', horizontalCardNameColor: '#fef3c7', horizontalCardNameBackgroundColor: '#350207', horizontalCardBackgroundColor: '#5c0612', horizontalCardBorderColor: '#d4a72c' } })} className="text-[10px] font-bold text-amber-800 hover:underline">Khôi phục thẻ ngang</button></div>
+                <div className="flex items-center justify-between mb-3"><div><div className="font-black text-xs text-amber-950">A. THẺ NGANG</div><div className="text-[10px] text-slate-500">Dùng cho các đời đang hiển thị dạng thẻ ngang.</div></div><button type="button" onClick={() => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, horizontalCardWidth: 320, horizontalCardHeight: 180, horizontalCardFontSize: 16, horizontalCardNameAlignment: 'auto', horizontalCardNameColor: '#fef3c7', horizontalCardNameBackgroundColor: '#350207', horizontalCardBackgroundColor: '#5c0612', horizontalCardBorderColor: '#d4a72c' } })} className="text-[10px] font-bold text-amber-800 hover:underline">Khôi phục thẻ ngang</button></div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {([['Rộng (px)','horizontalCardWidth',180,500,260],['Cao (px)','horizontalCardHeight',0,500,0],['Cỡ tên (px)','horizontalCardFontSize',9,30,14]] as const).map(([label,key,min,max,def]) => <label key={key} className="text-[10px] font-semibold text-slate-700">{label}<input type="number" min={min} max={max} value={(clanForm.defaultTreeSettings as any)?.[key] ?? def} onChange={(e)=>setClanForm({...clanForm,defaultTreeSettings:{...clanForm.defaultTreeSettings,[key]:Number(e.target.value)}})} className="w-full mt-1 p-2 border rounded-lg bg-white" /></label>)}
                   <label className="text-[10px] font-semibold text-slate-700">Tên căn chỉnh<select value={clanForm.defaultTreeSettings?.horizontalCardNameAlignment ?? 'auto'} onChange={(e)=>setClanForm({...clanForm,defaultTreeSettings:{...clanForm.defaultTreeSettings,horizontalCardNameAlignment:e.target.value as any}})} className="w-full mt-1 p-2 border rounded-lg bg-white"><option value="auto">Tự động (khuyến nghị)</option><option value="center">Căn giữa</option><option value="left">Căn trái</option><option value="right">Căn phải</option></select></label>
@@ -2131,7 +2158,7 @@ export const AdminCP: React.FC<AdminCPProps> = ({
               </div>
 
               <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-4">
-                <div className="flex items-center justify-between mb-3"><div><div className="font-black text-xs text-blue-950">B. THẺ DỌC</div><div className="text-[10px] text-slate-500">Dùng từ đời được chọn ở “Bật thẻ dọc từ đời…”.</div></div><button type="button" onClick={() => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, verticalCardWidth: 78, verticalCardHeight: 180, verticalCardFontSize: 13, verticalCardNameAlignment: 'auto', verticalCardNameColor: '#fef3c7', verticalCardNameBackgroundColor: '#350207', verticalCardBackgroundColor: '#5c0612', verticalCardBorderColor: '#d4a72c' } })} className="text-[10px] font-bold text-blue-800 hover:underline">Khôi phục thẻ dọc</button></div>
+                <div className="flex items-center justify-between mb-3"><div><div className="font-black text-xs text-blue-950">B. THẺ DỌC</div><div className="text-[10px] text-slate-500">Dùng từ đời được chọn ở “Bật thẻ dọc từ đời…”.</div></div><button type="button" onClick={() => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, verticalCardWidth: 82, verticalCardHeight: 180, verticalCardFontSize: 13, verticalCardNameAlignment: 'auto', verticalCardNameColor: '#fef3c7', verticalCardNameBackgroundColor: '#350207', verticalCardBackgroundColor: '#5c0612', verticalCardBorderColor: '#d4a72c' } })} className="text-[10px] font-bold text-blue-800 hover:underline">Khôi phục thẻ dọc</button></div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {([['Rộng (px)','verticalCardWidth',50,220,78],['Cao (px)','verticalCardHeight',80,500,180],['Cỡ tên (px)','verticalCardFontSize',9,26,13]] as const).map(([label,key,min,max,def]) => <label key={key} className="text-[10px] font-semibold text-slate-700">{label}<input type="number" min={min} max={max} value={(clanForm.defaultTreeSettings as any)?.[key] ?? def} onChange={(e)=>setClanForm({...clanForm,defaultTreeSettings:{...clanForm.defaultTreeSettings,[key]:Number(e.target.value)}})} className="w-full mt-1 p-2 border rounded-lg bg-white" /></label>)}
                   <label className="text-[10px] font-semibold text-slate-700">Bắt đầu từ đời<input type="number" min={2} max={30} value={clanForm.defaultTreeSettings?.verticalCardStartGen ?? 6} onChange={(e)=>setClanForm({...clanForm,defaultTreeSettings:{...clanForm.defaultTreeSettings,verticalCardStartGen:Math.max(2,Number(e.target.value))}})} className="w-full mt-1 p-2 border rounded-lg bg-white" /></label>

@@ -195,8 +195,8 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
 
     return (
       <div
-        className={`${verticalNodeClass} ${fontClass}`}
-        style={{ width: cardWidth || undefined, minWidth: cardWidth || undefined, maxWidth: cardWidth || undefined, height: cardHeight || undefined, backgroundColor: verticalCardBackgroundColor || cardBackgroundColor || undefined, borderColor: verticalCardBorderColor || cardBorderColor || undefined }}
+        className={`${verticalNodeClass} ${fontClass} family-tree-card-content-aware`}
+        style={{ width: cardWidth || undefined, minWidth: cardWidth || undefined, maxWidth: cardWidth || undefined, minHeight: cardHeight || undefined, height: 'auto', boxSizing: 'border-box', overflow: 'visible', backgroundColor: verticalCardBackgroundColor || cardBackgroundColor || undefined, borderColor: verticalCardBorderColor || cardBorderColor || undefined }}
         onClick={() => onSelectMember(member)}
         title={`${member.fullName} (Đời ${member.generation}) - Nhấp để xem hồ sơ chi tiết`}
       >
@@ -375,7 +375,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
               e.stopPropagation();
               onToggleCollapse(member.id);
             }}
-            className={`absolute -bottom-2.5 left-1/2 -translate-x-1/2 z-40 px-1.5 py-0.2 rounded-full text-[8.5px] font-bold shadow-md flex items-center gap-0.5 transition-all whitespace-nowrap ${
+            className={`absolute -bottom-3 left-1/2 -translate-x-1/2 z-40 px-1.5 py-0.2 rounded-full text-[8.5px] font-bold shadow-md flex items-center gap-0.5 transition-all whitespace-nowrap ${
               isCollapsed
                 ? 'bg-amber-500 text-amber-950 ring-1 ring-amber-300 hover:scale-105'
                 : isTraditional
@@ -411,7 +411,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
   }
 
   return (
-    <div className={`${isTraditional ? traditionalNodeClass : modernNodeClass} ${fontClass}`} style={{ width: cardWidth || undefined, minWidth: cardWidth || undefined, maxWidth: cardWidth || undefined, height: cardHeight || undefined, backgroundColor: horizontalCardBackgroundColor || cardBackgroundColor || undefined, borderColor: horizontalCardBorderColor || cardBorderColor || undefined }}>
+    <div className={`${isTraditional ? traditionalNodeClass : modernNodeClass} ${fontClass} family-tree-card-content-aware`} style={{ width: cardWidth || undefined, minWidth: cardWidth || undefined, maxWidth: cardWidth || undefined, minHeight: cardHeight || undefined, height: 'auto', boxSizing: 'border-box', overflow: 'visible', backgroundColor: horizontalCardBackgroundColor || cardBackgroundColor || undefined, borderColor: horizontalCardBorderColor || cardBorderColor || undefined }}>
       {/* Top Handle for Parent connections */}
       {!member.isRootAncestor && (
         <Handle
@@ -500,7 +500,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
       )}
 
       {/* Main Card Body: Canh giữa tên thành viên và các thông tin */}
-      <div className={isMinimalCard ? 'p-2.5' : 'p-3'}>
+      <div className={`${isMinimalCard ? 'p-2.5' : 'p-3'} ${childrenCount > 0 ? 'pb-6' : ''}`}>
         <div className="flex flex-col items-center justify-center text-center w-full">
           {/* Avatar (Facebook style) - ONLY rendered when showAvatar is true */}
           {showAvatar && (
@@ -725,11 +725,11 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
         )}
 
         {/* Action Toolbar */}
-        <div className="mt-2.5 pt-2 border-t border-amber-500/20 flex items-center justify-between gap-1">
+        <div className="family-tree-card-actions mt-2.5 pt-2 border-t border-amber-500/20 flex items-stretch gap-1">
           <button
             type="button"
             onClick={() => onSelectMember(member)}
-            className={`nodrag nopan flex-1 py-1 px-1.5 text-[10.5px] font-medium rounded flex items-center justify-center gap-1 transition-colors min-h-8 ${
+            className={`nodrag nopan min-w-0 flex-1 basis-0 w-0 py-1 px-1 text-[10.5px] font-medium rounded flex items-center justify-center gap-1 transition-colors min-h-8 ${
               isTraditional
                 ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
@@ -748,7 +748,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
                 e.stopPropagation();
                 onFocusSubtree(member.id);
               }}
-              className={`nodrag nopan py-1 px-2 text-[10.5px] font-medium rounded flex items-center gap-1 transition-colors min-h-8 ${
+              className={`nodrag nopan min-w-0 flex-1 basis-0 w-0 py-1 px-1 text-[10.5px] font-medium rounded flex items-center gap-1 transition-colors min-h-8 ${
                 isTraditional
                   ? 'bg-amber-500/20 hover:bg-amber-500/40 text-amber-200 border border-amber-500/50'
                   : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200'
@@ -766,7 +766,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
                   type="button"
                   title="Thêm con cho thành viên này"
                   onClick={() => onAddChild(member)}
-                  className={`nodrag nopan py-1 px-2 text-[10.5px] font-medium rounded flex items-center gap-1 transition-colors min-h-8 ${
+                  className={`nodrag nopan min-w-0 flex-1 basis-0 w-0 py-1 px-1 text-[10.5px] font-medium rounded flex items-center gap-1 transition-colors min-h-8 ${
                     isTraditional
                       ? 'bg-red-800/80 hover:bg-red-700 text-amber-100 border border-amber-500/40'
                       : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200'
@@ -782,7 +782,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
                   type="button"
                   title="Thêm phối ngẫu (Vợ/Chồng)"
                   onClick={() => onAddSpouse(member)}
-                  className={`py-1 px-1.5 text-[10.5px] font-medium rounded flex items-center transition-colors ${
+                  className={`nodrag nopan min-w-0 flex-1 basis-0 w-0 py-1 px-1 text-[10.5px] font-medium rounded flex items-center transition-colors ${
                     isTraditional
                       ? 'bg-amber-700/60 hover:bg-amber-600 text-amber-100'
                       : 'bg-rose-50 hover:bg-rose-100 text-rose-700'
@@ -797,7 +797,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
                   type="button"
                   title="Xóa thành viên khỏi cây"
                   onClick={handleDeleteClick}
-                  className="py-1 px-1.5 text-[10.5px] font-medium rounded text-red-400 hover:text-red-200 hover:bg-red-950/60 transition-colors"
+                  className="nodrag nopan min-w-0 flex-1 basis-0 w-0 py-1 px-1 text-[10.5px] font-medium rounded text-red-400 hover:text-red-200 hover:bg-red-950/60 transition-colors"
                 >
                   <Trash2 className="w-3 h-3" />
                 </button>

@@ -535,6 +535,30 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       return (settings.enableVerticalCards ?? false) && gen >= (settings.verticalCardStartGen ?? 6);
     };
 
+    // Calculate a safe rendered height from the enabled content. A fixed card height
+    // must never clip optional fields (avatar/date/spouse/place/title). The same
+    // estimate is used by layout and passed to the node so ReactFlow's geometry
+    // stays in sync with the DOM.
+    const getHorizontalCardHeight = (m: Member) => {
+      const configured = typeof settings.horizontalCardHeight === 'number' ? settings.horizontalCardHeight : 0;
+      let h = 86; // header + name + padding + action bar
+      if (settings.showAvatars) h += 62;
+      if (settings.showTitles) h += (m.courtesyName || m.posthumousName ? 22 : 0) + (m.orderTitle ? 24 : 0);
+      if (settings.showBirthPlace && m.birthPlace) h += 24;
+      if (settings.showDates) h += 30 + (!m.isAlive && m.deathDateLunar ? 18 : 0);
+      if (settings.showSpouses && m.spouseIds?.length) {
+        h += 48 + Math.min(4, m.spouseIds.length) * 96;
+      }
+      return Math.max(configured, h);
+    };
+
+    const getVerticalCardHeight = () => {
+      const configured = typeof settings.verticalCardHeight === 'number' ? settings.verticalCardHeight : 0;
+      return Math.max(110, configured || 180);
+    };
+
+    const getGenNodeHeight = (gen: number) => isGenVertical(gen) ? getVerticalCardHeight() : Math.max(...(genGroups.get(gen) || []).map(getHorizontalCardHeight), 150);
+
     const getGenNodeWidth = (gen: number) => {
       if (isGenVertical(gen)) return Math.max(50, settings.verticalCardWidth ?? 78);
       // Tôn trọng tuyệt đối kích thước thẻ ngang do Admin đặt; không để layout
@@ -566,22 +590,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       genYMap.set(gen, cumulativeY);
 
       const genMembers = genGroups.get(gen) || [];
-      let maxGenHeight = settings.horizontalCardHeight && settings.horizontalCardHeight > 0
-        ? settings.horizontalCardHeight
-        : (isMinimalCard ? 170 : (settings.showSpouses ? 260 : 210));
-
-      if (isGenVertical(gen)) {
-        maxGenHeight = Math.max(80, settings.verticalCardHeight || 180);
-      } else if (settings.showSpouses) {
-        maxGenHeight = 230;
-        genMembers.forEach((m) => {
-          const spouseCount = m.spouseIds?.length || 0;
-          const estHeight = (settings.horizontalCardHeight || 210) + spouseCount * 125;
-          if (estHeight > maxGenHeight) maxGenHeight = estHeight;
-        });
-      } else if (settings.showAvatars) {
-        maxGenHeight = 180;
-      }
+      let maxGenHeight = getGenNodeHeight(gen);
 
       // Check if any family in this generation will be split into 2 zig-zag tiers
       const hasZigZagInThisGen =
@@ -786,7 +795,8 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
           isZigZagTier2: pos.isZigZagTier2,
           isVerticalCard: isGenVertical(m.generation),
           cardWidth: isGenVertical(m.generation) ? settings.verticalCardWidth : settings.horizontalCardWidth,
-          cardHeight: isGenVertical(m.generation) ? settings.verticalCardHeight : settings.horizontalCardHeight,
+          // Content-aware height prevents optional fields from escaping/clipping the card.
+          cardHeight: isGenVertical(m.generation) ? getVerticalCardHeight() : getHorizontalCardHeight(m),
           cardNameFontSize: settings.cardNameFontSize,
           cardNameColor: settings.cardNameColor,
           cardNameBackgroundColor: settings.cardNameBackgroundColor,

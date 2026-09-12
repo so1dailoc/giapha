@@ -19,6 +19,7 @@ export const DEFAULT_TREE_CARD_SETTINGS: Partial<FamilyTreeSettings> = {
   verticalCardBorderColor: '#d4a72c',
   cardHorizontalGap: 30,
   cardVerticalGap: 150,
+  collapseControlOffset: 8,
   interFamilyGap: 110,
 };
 

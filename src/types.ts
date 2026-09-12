@@ -216,6 +216,7 @@ export interface FamilyTreeSettings {
   cardBackgroundColor?: string;
   cardBorderColor?: string;
   cardVerticalGap?: number;
+  collapseControlOffset?: number; // Khoảng cách nút thu gọn/mở rộng nằm bên dưới thẻ (px)
   cardThemePreset?: 'traditional' | 'modern' | 'ivory' | 'emerald' | 'midnight';
 
   // Theme toàn website (AdminCP đặt mặc định cho giao diện chung).

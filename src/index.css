@@ -461,3 +461,42 @@ html[data-clan-theme="traditional"], html[data-clan-theme="midnight"] { color-sc
 .family-tree-card-actions-vertical .family-tree-action-primary {
   gap: 0 !important;
 }
+
+/* ===== V14 card composition =====
+   The card is a vertical composition: header -> flexible content -> fixed
+   bottom toolbar. The collapse pill is intentionally outside the card body. */
+.clan-app-shell .family-tree-card-shell {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: visible !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-card-body {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-card-actions {
+  margin-top: auto !important;
+  flex: 0 0 auto !important;
+  position: relative !important;
+  z-index: 12 !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-card-name {
+  flex-shrink: 0 !important;
+  overflow-wrap: anywhere !important;
+  word-break: normal !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-collapse-control {
+  left: 50% !important;
+  right: auto !important;
+  top: auto !important;
+  transform: translateX(-50%) !important;
+  z-index: 80 !important;
+  white-space: nowrap !important;
+}
+/* Do not let a website theme's typography leak into the member-name token. */
+.clan-app-shell .family-tree-card-shell .family-tree-card-name,
+.clan-app-shell .family-tree-card-shell .family-tree-card-name * {
+  color: var(--card-name-color) !important;
+}

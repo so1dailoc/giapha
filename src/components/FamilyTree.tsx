@@ -136,6 +136,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     cardBackgroundColor: adminDefaults?.cardBackgroundColor ?? '',
     cardBorderColor: adminDefaults?.cardBorderColor ?? '',
     cardVerticalGap: adminDefaults?.cardVerticalGap ?? 150,
+    collapseControlOffset: adminDefaults?.collapseControlOffset ?? 8,
     cardThemePreset: adminDefaults?.cardThemePreset ?? adminDefaults?.theme ?? 'traditional',
   }));
 
@@ -190,6 +191,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     showBirthPlace: settings.showBirthPlace,
     showHierarchy: settings.showHierarchy,
     enableZigZagRows: settings.enableZigZagRows,
+    collapseControlOffset: settings.collapseControlOffset,
   }), [settings]);
 
   const positionStorageKey = useMemo(() => {
@@ -683,7 +685,10 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
         maxGenHeight += isGenVertical(gen) ? 140 : 160; // Extra room for second tier
       }
 
-      const verticalGap = isGenVertical(gen) ? Math.max(20, settings.cardVerticalGap ?? 120) : Math.max(20, settings.cardVerticalGap ?? (settings.showSpouses ? 190 : (isMinimalCard ? 135 : 150)));
+      const collapseReserve = Math.max(0, settings.collapseControlOffset ?? 8) + 34;
+      const verticalGap = isGenVertical(gen)
+        ? Math.max(collapseReserve, settings.cardVerticalGap ?? 120)
+        : Math.max(collapseReserve, settings.cardVerticalGap ?? (settings.showSpouses ? 190 : (isMinimalCard ? 135 : 150)));
       cumulativeY += maxGenHeight + verticalGap;
     });
 
@@ -895,6 +900,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
           verticalCardBackgroundColor: settings.verticalCardBackgroundColor,
           verticalCardBorderColor: settings.verticalCardBorderColor,
           cardThemePreset: settings.cardThemePreset,
+          collapseControlOffset: settings.collapseControlOffset ?? 8,
         },
       });
 

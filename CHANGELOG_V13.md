@@ -1,4 +1,4 @@
-# V13 — Card System & UX Foundation
+# V14 — Card System & UX Foundation
 
 ## Đã sửa
 - Tách card theme khỏi interface theme.

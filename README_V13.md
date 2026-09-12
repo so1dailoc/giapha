@@ -1,6 +1,6 @@
-# Gia Phả Đại Tộc — V13
+# Gia Phả Đại Tộc — V14
 
-## Mục tiêu V13
+## Mục tiêu V14
 - Thẻ ngang và thẻ dọc có bố cục độc lập.
 - Tên thành viên độc lập màu giao diện website.
 - Thông tin tùy chọn (avatar, phối ngẫu, ngày tháng, nơi sinh, phái/chi/nhánh) tự mở rộng chiều cao thẻ.

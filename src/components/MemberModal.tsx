@@ -309,6 +309,9 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                     onChange={(e) => setFormData({ ...formData, orderTitle: e.target.value })}
                     className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none"
                   />
+                  <label className="block font-bold text-slate-700 mt-3 mb-1">Thứ tự trong gia đình</label>
+                  <input type="number" min={1} max={999} value={Math.max(1, Number(formData.orderInFamily) || 1)} onChange={(e) => setFormData({ ...formData, orderInFamily: Math.max(1, Number(e.target.value) || 1) })} className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none" />
+                  <p className="text-[10px] text-slate-500 mt-1">Số này dùng để sắp xếp anh chị em trên cây; tên thẻ chỉ hiển thị “Trưởng nam/Trưởng nữ...” nếu đã khai báo.</p>
                 </div>
 
                 {/* Phân cấp gia tộc: Phái > Chi > Nhánh */}

@@ -226,6 +226,7 @@ export interface FamilyTreeSettings {
   collapseControlExpandedColor?: string;
   collapseControlTextColor?: string;
   collapseControlBorderColor?: string;
+  deceasedAgeThreshold?: number; // Tuổi từ đó khi tạo mới sẽ mặc định là đã tạ thế
   horizontalCardNameBackgroundEnabled?: boolean;
   verticalCardNameBackgroundEnabled?: boolean;
   treeCanvasAutoTheme?: boolean; // Đồng bộ màu nền ReactFlow theo theme giao diện

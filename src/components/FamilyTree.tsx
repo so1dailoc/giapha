@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { resolveLayoutV3 } from '../utils/layoutEngineV3';
+import { resolveLayoutV4, compareFamilyMembers, getFamilyKey, repairLayoutCollisionsV4 } from '../utils/layoutEngineV4';
 import { getTreeCanvasPreset } from '../utils/themeDefaults';
 
 interface FamilyTreeProps {
@@ -149,6 +150,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     collapseControlExpandedColor: adminDefaults?.collapseControlExpandedColor ?? '#3b0206',
     collapseControlTextColor: adminDefaults?.collapseControlTextColor ?? '#fcd34d',
     collapseControlBorderColor: adminDefaults?.collapseControlBorderColor ?? '#d4a72c',
+    deceasedAgeThreshold: adminDefaults?.deceasedAgeThreshold ?? 100,
     horizontalCardNameBackgroundEnabled: adminDefaults?.horizontalCardNameBackgroundEnabled ?? false,
     verticalCardNameBackgroundEnabled: adminDefaults?.verticalCardNameBackgroundEnabled ?? false,
     treeCanvasAutoTheme: adminDefaults?.treeCanvasAutoTheme ?? true,
@@ -191,7 +193,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
   // trên thiết bị theo đúng cấu hình layout; khi đổi kích thước/gap/theme thẻ, layout
   // signature thay đổi và các vị trí cũ tự động không còn được áp dụng để tránh chồng thẻ.
   const layoutSignature = useMemo(() => JSON.stringify({
-    v: 16,
+    v: 18,
     algorithm: settings.layoutAlgorithm,
     layoutMode: settings.layoutMode,
     horizontalCardWidth: settings.horizontalCardWidth,
@@ -744,143 +746,63 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     // Position map for nodes: memberId -> { x, y, isZigZagTier2 }
     const nodePositions = new Map<string, { x: number; y: number; isZigZagTier2?: boolean }>();
 
-    // Calculate layout
-    if (isFamilyCluster) {
-      // SOLUTION 3: FAMILY CLUSTER ALGORITHM
-      // Hierarchically center sibling clusters under their parent
-      sortedGens.forEach((gen) => {
-        const genMembers = genGroups.get(gen) || [];
-        const baseY = genYMap.get(gen) ?? 0;
-        const nodeW = getGenNodeWidth(gen);
-        const gap = getGenGap(gen);
+    const memberDataOrder = new Map<string, number>(filteredMembers.map((m, index): [string, number] => [m.id, index]));
+    const stableFamilyCompare = (a: Member, b: Member) => {
+      const base = compareFamilyMembers(a, b);
+      return base || ((memberDataOrder.get(a.id) ?? 0) - (memberDataOrder.get(b.id) ?? 0));
+    };
 
-        if (gen === sortedGens[0]) {
-          // Root generation (or top generation in subtree)
-          const totalWidth = genMembers.length * (nodeW + gap) - gap;
-          const startX = -totalWidth / 2;
-          genMembers.forEach((m, idx) => {
-            nodePositions.set(m.id, {
-              x: startX + idx * (nodeW + gap),
-              y: baseY,
-            });
-          });
-        } else {
-          // Subsequent generations: group by parent
-          const parentGroups = new Map<string, Member[]>();
-          genMembers.forEach((m) => {
-            const pId = m.fatherId || m.motherId || 'orphan';
-            if (!parentGroups.has(pId)) parentGroups.set(pId, []);
-            parentGroups.get(pId)!.push(m);
-          });
+    // Layout Engine V4: family-first ordering + collision-safe placement.
+    // Thứ tự trong mỗi gia đình: orderInFamily tăng dần; nếu trùng/thiếu thì
+    // giữ thứ tự nhập (createdAt) và cuối cùng là thứ tự xuất hiện trong dữ liệu.
+    resolveLayoutV4({
+      members: filteredMembers,
+      positions: nodePositions,
+      generations: sortedGens,
+      getWidth: getGenNodeWidth,
+      getHeight: getGenNodeHeight,
+      horizontalGap: Math.max(12, settings.cardHorizontalGap ?? 30),
+      familyGap: Math.max(28, settings.interFamilyGap ?? 110),
+      verticalGap: Math.max(24, settings.cardVerticalGap ?? 150),
+      familyCluster: isFamilyCluster,
+      zigZag: isZigZag,
+      getFamilyKey: (m) => getFamilyKey(m),
+      compareMembers: stableFamilyCompare,
+    });
 
-          // Sort parent groups by parent X position
-          const sortedParentIds = Array.from(parentGroups.keys()).sort((a, b) => {
-            const posA = nodePositions.get(a)?.x ?? 0;
-            const posB = nodePositions.get(b)?.x ?? 0;
-            return posA - posB;
-          });
-
-          let currentMaxX = -Infinity;
-
-          sortedParentIds.forEach((pId) => {
-            const siblings = parentGroups.get(pId) || [];
-            siblings.sort((a, b) => (a.orderInFamily || 1) - (b.orderInFamily || 1));
-
-            const parentPos = nodePositions.get(pId);
-            const parentMember = memberById.get(pId);
-            const parentGen = parentMember?.generation || (gen - 1);
-            const parentWidth = getGenNodeWidth(parentGen);
-            const parentCenterX = parentPos ? parentPos.x + parentWidth / 2 : 0;
-
-            const childWidth = getGenNodeWidth(gen);
-            const childGap = getGenGap(gen);
-            const isChildVertical = isGenVertical(gen);
-            const useZigZag = isZigZag && siblings.length >= 5;
-
-            if (useZigZag) {
-              // SOLUTION 4: ZIG-ZAG 2-TIER SUB-ROWS
-              const cols = Math.ceil(siblings.length / 2);
-              const clusterWidth = cols * (childWidth + childGap) - childGap;
-              const targetStartX = parentCenterX - clusterWidth / 2;
-              const startX = Math.max(targetStartX, currentMaxX === -Infinity ? targetStartX : currentMaxX + interFamilyClusterGap);
-
-              siblings.forEach((c, i) => {
-                const isTier2 = i % 2 === 1;
-                const colIndex = Math.floor(i / 2);
-                const x = startX + colIndex * (childWidth + childGap) + (isTier2 ? (isChildVertical ? 14 : 25) : 0);
-                const y = baseY + (isTier2 ? (isChildVertical ? 130 : 155) : 0);
-
-                nodePositions.set(c.id, { x, y, isZigZagTier2: isTier2 });
-              });
-
-              currentMaxX = startX + clusterWidth;
-            } else {
-              // Single-tier linear cluster
-              const clusterWidth = siblings.length * (childWidth + childGap) - childGap;
-              const targetStartX = parentCenterX - clusterWidth / 2;
-              const startX = Math.max(targetStartX, currentMaxX === -Infinity ? targetStartX : currentMaxX + interFamilyClusterGap);
-
-              siblings.forEach((c, idx) => {
-                const x = startX + idx * (childWidth + childGap);
-                const y = baseY;
-                nodePositions.set(c.id, { x, y });
-              });
-
-              currentMaxX = startX + clusterWidth;
-            }
-          });
-
-          // Center the entire generation around 0
-          const allGenX = genMembers.map((m) => nodePositions.get(m.id)?.x ?? 0);
-          if (allGenX.length > 0) {
-            const minX = Math.min(...allGenX);
-            const maxX = Math.max(...allGenX);
-            const mid = (minX + maxX) / 2;
-            genMembers.forEach((m) => {
-              const pos = nodePositions.get(m.id);
-              if (pos) {
-                pos.x -= mid;
-              }
-            });
-          }
-        }
-      });
-    } else {
-      // Classic flat generation layout
-      sortedGens.forEach((gen) => {
-        const genMembers = genGroups.get(gen) || [];
-        const nodeW = getGenNodeWidth(gen);
-        const gap = getGenGap(gen);
-        const totalWidth = genMembers.length * (nodeW + gap) - gap;
-        const startX = -totalWidth / 2;
-        const baseY = genYMap.get(gen) ?? 0;
-
-        genMembers.sort((a, b) => {
-          const pA = a.fatherId || '';
-          const pB = b.fatherId || '';
-          if (pA !== pB) return pA.localeCompare(pB);
-          return (a.orderInFamily || 1) - (b.orderInFamily || 1);
-        });
-
-        genMembers.forEach((m, idx) => {
-          nodePositions.set(m.id, {
-            x: startX + idx * (nodeW + gap),
-            y: baseY,
-          });
-        });
-      });
+    // V3 giữ vai trò safety pass cho những dữ liệu cũ/ngoại lệ; V4 đã giải quyết
+    // family cluster trước nên pass này chỉ đẩy phần thực sự còn va chạm.
+    if (settings.layoutMode !== 'manual') {
+      resolveLayoutV3(
+        filteredMembers,
+        nodePositions,
+        getGenNodeWidth,
+        getGenNodeHeight,
+        Math.max(12, settings.cardHorizontalGap ?? 30),
+        Math.max(28, settings.interFamilyGap ?? 110)
+      );
     }
 
-    // Layout Engine V2: post-process every generation to prevent card overlap.
-    if (settings.layoutMode !== 'manual') {
-      resolveLayoutV3(filteredMembers, nodePositions, getGenNodeWidth, getGenNodeHeight, Math.max(8, settings.cardHorizontalGap ?? 30), Math.max(20, settings.interFamilyGap ?? 110));
+    // Apply saved/manual coordinates before ReactFlow receives nodes. Then repair
+    // only the real collisions so a stale saved layout can never stack cards.
+    const useManualLayout = settings.layoutMode === 'manual' || settings.layoutMode === 'hybrid';
+    const pinnedManualIds = new Set<string>();
+    if (useManualLayout) {
+      filteredMembers.forEach((m) => {
+        const saved = manualPositions[m.id];
+        if (!saved) return;
+        const p = nodePositions.get(m.id);
+        if (!p) return;
+        p.x = saved.x;
+        p.y = saved.y;
+        pinnedManualIds.add(m.id);
+      });
+      repairLayoutCollisionsV4(filteredMembers, nodePositions, getGenNodeWidth, getGenNodeHeight, Math.max(12, settings.cardHorizontalGap ?? 30), pinnedManualIds);
     }
 
     // Instantiate ReactFlow Node & Edge objects
     filteredMembers.forEach((m) => {
-      const autoPos = nodePositions.get(m.id) || { x: 0, y: 0 };
-      const useManual = settings.layoutMode === 'manual' || settings.layoutMode === 'hybrid';
-      const pos = useManual && manualPositions[m.id] ? { ...autoPos, ...manualPositions[m.id] } : autoPos;
+      const pos = nodePositions.get(m.id) || { x: 0, y: 0 };
       const childrenCount = childrenCountMap.get(m.id) || 0;
       const isCollapsed = collapsedNodeIds.has(m.id);
       const isSubtreeRoot = m.id === focusedSubtreeRootId;

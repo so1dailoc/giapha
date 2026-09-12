@@ -778,7 +778,7 @@ export const AdminCP: React.FC<AdminCPProps> = ({
       </div>
 
       {/* Admin Sub-Tabs Navigation */}
-      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-[#280205] border border-amber-500/30 text-xs">
+      <div className="admincp-tabs flex items-center gap-2 p-1.5 rounded-2xl bg-[#280205] border border-amber-500/30 text-xs overflow-x-auto overscroll-x-contain">
         <button
           type="button"
           onClick={() => setActiveTab('tree')}
@@ -1476,8 +1476,14 @@ export const AdminCP: React.FC<AdminCPProps> = ({
 
       {/* TAB 3: CÀI ĐẶT DÒNG TỘC & NHÀ THỜ */}
       {activeTab === 'settings' && (
-        <form onSubmit={handleSaveClanSettings} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5 text-xs text-slate-800 max-w-3xl">
-          <div className="border-b pb-3">
+        <form onSubmit={handleSaveClanSettings} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-5 lg:p-6 space-y-5 text-xs text-slate-800 w-full max-w-7xl mx-auto overflow-hidden">
+          <div className="admin-settings-subnav sticky top-2 z-20 flex gap-1.5 overflow-x-auto p-1 rounded-xl bg-slate-900/95 border border-slate-700 shadow-lg backdrop-blur-sm">
+            <a href="#clan-identity" className="shrink-0 px-3 py-2 rounded-lg bg-white/10 text-white font-bold">Dòng tộc & Từ đường</a>
+            <a href="#tree-defaults" className="shrink-0 px-3 py-2 rounded-lg bg-white/10 text-white font-bold">Cây gia phả</a>
+            <a href="#card-designer" className="shrink-0 px-3 py-2 rounded-lg bg-white/10 text-white font-bold">Thiết kế thẻ</a>
+            <a href="#interface-theme" className="shrink-0 px-3 py-2 rounded-lg bg-white/10 text-white font-bold">Giao diện</a>
+          </div>
+          <div id="clan-identity" className="border-b pb-3">
             <h2 className="text-base font-bold font-serif text-amber-950 uppercase">
               Thiết Lập Thông Tin Đại Tộc & Từ Đường
             </h2>
@@ -1493,7 +1499,9 @@ export const AdminCP: React.FC<AdminCPProps> = ({
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-3 sm:p-4 space-y-4">
+            <div className="flex items-start gap-3"><div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0"><Crown className="w-5 h-5 text-amber-700" /></div><div><h3 className="font-black text-sm text-amber-950">Thông tin dòng tộc & Từ đường</h3><p className="text-[10px] text-slate-500 mt-0.5">Thông tin nhận diện chính thức, dùng cho tiêu đề, chân trang, văn bản và các nghi lễ.</p></div></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
               <label className="block font-bold text-slate-700 mb-1">Tên Chính Thức Của Tộc *</label>
               <input
@@ -1565,8 +1573,10 @@ export const AdminCP: React.FC<AdminCPProps> = ({
               />
             </div>
 
+            </div>
+
             {/* Cấu Hình 5 Phương Án Hiển Thị Cây Phả Hệ Do Ban Quản Trị Chỉ Định */}
-            <div className="sm:col-span-2 pt-4 border-t border-slate-200 mt-2 space-y-4">
+            <div id="tree-defaults" className="sm:col-span-2 pt-4 border-t border-slate-200 mt-2 space-y-4 scroll-mt-20">
               <div>
                 <h3 className="text-sm font-bold font-serif text-amber-950 uppercase flex items-center gap-2">
                   <TreeDeciduous className="w-4 h-4 text-amber-600" />
@@ -1635,7 +1645,8 @@ export const AdminCP: React.FC<AdminCPProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <label className="text-[10px] font-semibold text-slate-700">Chế độ bố trí<select value={clanForm.defaultTreeSettings?.layoutMode || 'hybrid'} onChange={(e)=>setClanForm({...clanForm,defaultTreeSettings:{...clanForm.defaultTreeSettings,layoutMode:e.target.value as any}})} className="w-full mt-1 p-2 border rounded-lg bg-white"><option value="auto">Tự động hoàn toàn</option><option value="hybrid">Tự động + cho phép kéo chỉnh</option><option value="manual">Thủ công (ưu tiên vị trí đã lưu)</option></select></label>
                     <label className="text-[10px] font-semibold text-slate-700">Khoảng cách an toàn<input type="number" min={8} max={200} value={clanForm.defaultTreeSettings?.cardHorizontalGap ?? 30} onChange={(e)=>setClanForm({...clanForm,defaultTreeSettings:{...clanForm.defaultTreeSettings,cardHorizontalGap:Math.max(8,Math.min(200,Number(e.target.value)))}})} className="w-full mt-1 p-2 border rounded-lg bg-white" /></label>
-                    <div className="text-[10px] text-emerald-900 leading-relaxed pt-1">V15/V16 tự đo chiều rộng card rồi đẩy các card va chạm ra, sau đó giữ bố cục đã kéo khi Admin chỉnh thủ công.</div>
+                    <label className="text-[10px] font-semibold text-slate-700">Ngưỡng tuổi mặc định tạ thế<input type="number" min={50} max={130} value={clanForm.defaultTreeSettings?.deceasedAgeThreshold ?? 100} onChange={(e)=>setClanForm({...clanForm,defaultTreeSettings:{...clanForm.defaultTreeSettings,deceasedAgeThreshold:Math.max(50,Math.min(130,Number(e.target.value)||100))}})} className="w-full mt-1 p-2 border rounded-lg bg-white" /><span className="block mt-1 text-[9px] text-slate-500">Khi thêm người mới có ngày sinh đạt ngưỡng này, trạng thái sẽ mặc định “Đã tạ thế”; Admin vẫn có thể đổi lại.</span></label>
+                    <div className="text-[10px] text-emerald-900 leading-relaxed pt-1">V18 ưu tiên đúng cấu trúc gia đình: Trưởng (thứ tự 1) → thứ tự 2, 3, 4...; nếu cùng thứ tự hoặc chưa khai báo thì giữ thứ tự nhập dữ liệu. Cùng cha nhưng khác mẹ được tách thành cụm riêng để tránh rối và chồng thẻ.</div>
                   </div>
                 </div>
 
@@ -2118,13 +2129,13 @@ export const AdminCP: React.FC<AdminCPProps> = ({
             </div>
 
             {/* BỘ THIẾT KẾ THẺ + THEME */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+            <div id="card-designer" className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-5 scroll-mt-20">
               <div className="flex items-start justify-between gap-3 border-b pb-3">
                 <div>
                   <div className="flex items-center gap-2 text-amber-900"><Settings className="w-5 h-5 text-amber-600" /><h3 className="font-bold text-sm font-serif">Thiết Kế Thẻ & Giao Diện Mặc Định</h3></div>
                   <p className="text-[11px] text-slate-500 mt-1">Thiết lập độc lập cho thẻ ngang và thẻ dọc. Kích thước dùng chung với thuật toán bố trí nên không còn tình trạng thẻ thực tế rộng hơn vùng layout và chồng lên nhau.</p>
                 </div>
-                <button type="button" onClick={() => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, horizontalCardWidth: 280, horizontalCardHeight: 230, horizontalCardFontSize: 16, horizontalCardNameAlignment: 'auto', horizontalCardNameColor: '#fef3c7', horizontalCardNameBackgroundColor: '#350207', horizontalCardBackgroundColor: '#5c0612', horizontalCardBorderColor: '#d4a72c', verticalCardWidth: 92, verticalCardHeight: 220, verticalCardFontSize: 13, verticalCardNameAlignment: 'auto', verticalCardNameColor: '#fef3c7', verticalCardNameBackgroundColor: '#350207', verticalCardBackgroundColor: '#5c0612', verticalCardBorderColor: '#d4a72c', cardVerticalGap: 150, cardHorizontalGap: 30, collapseControlOffset: 18, collapseControlSize: 24, collapseControlCollapsedColor: '#f59e0b', collapseControlExpandedColor: '#3b0206', collapseControlTextColor: '#fcd34d', collapseControlBorderColor: '#d4a72c', layoutMode: 'hybrid', treeCanvasAutoTheme: true, horizontalCardNameBackgroundEnabled: false, verticalCardNameBackgroundEnabled: false, treeCanvasBackgroundColor: '#1e0205', treeCanvasGridColor: '#7b1113', treeCanvasGridGap: 24 } })} className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-[10px] font-bold"><RotateCcw className="w-3.5 h-3.5" /> Reset thẻ</button>
+                <button type="button" onClick={() => setClanForm({ ...clanForm, defaultTreeSettings: { ...clanForm.defaultTreeSettings, horizontalCardWidth: 280, horizontalCardHeight: 230, horizontalCardFontSize: 16, horizontalCardNameAlignment: 'auto', horizontalCardNameColor: '#fef3c7', horizontalCardNameBackgroundColor: '#350207', horizontalCardBackgroundColor: '#5c0612', horizontalCardBorderColor: '#d4a72c', verticalCardWidth: 92, verticalCardHeight: 220, verticalCardFontSize: 13, verticalCardNameAlignment: 'auto', verticalCardNameColor: '#fef3c7', verticalCardNameBackgroundColor: '#350207', verticalCardBackgroundColor: '#5c0612', verticalCardBorderColor: '#d4a72c', cardVerticalGap: 150, cardHorizontalGap: 30, collapseControlOffset: 18, collapseControlSize: 24, collapseControlCollapsedColor: '#f59e0b', collapseControlExpandedColor: '#3b0206', collapseControlTextColor: '#fcd34d', collapseControlBorderColor: '#d4a72c', deceasedAgeThreshold: 100, layoutMode: 'hybrid', treeCanvasAutoTheme: true, horizontalCardNameBackgroundEnabled: false, verticalCardNameBackgroundEnabled: false, treeCanvasBackgroundColor: '#1e0205', treeCanvasGridColor: '#7b1113', treeCanvasGridGap: 24 } })} className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-[10px] font-bold"><RotateCcw className="w-3.5 h-3.5" /> Reset thẻ</button>
               </div>
 
               <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
@@ -2218,7 +2229,7 @@ export const AdminCP: React.FC<AdminCPProps> = ({
             </div>
 
             {/* THEME TOÀN WEBSITE */}
-            <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-4 space-y-4">
+            <div id="interface-theme" className="rounded-xl border border-violet-200 bg-violet-50/40 p-4 space-y-4 scroll-mt-20">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div><div className="font-black text-xs text-violet-950">C. GIAO DIỆN TOÀN WEBSITE</div><div className="text-[10px] text-slate-500">Theme mặc định cho giao diện chung; thẻ ngang và dọc vẫn có thiết lập riêng.</div></div>
                 <button type="button" onClick={() => setClanForm({...clanForm, defaultTreeSettings:{...clanForm.defaultTreeSettings, ...DEFAULT_INTERFACE_THEME}})} className="text-[10px] font-bold text-violet-800 hover:underline">Reset giao diện</button>

@@ -10,6 +10,7 @@ interface AddMemberModalProps {
   allMembers: Member[];
   onClose: () => void;
   onAddMember: (newMember: Member) => void;
+  deceasedAgeThreshold?: number;
 }
 
 export const AddMemberModal: React.FC<AddMemberModalProps> = ({
@@ -19,6 +20,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
   allMembers,
   onClose,
   onAddMember,
+  deceasedAgeThreshold = 100,
 }) => {
   const isAddingChild = Boolean(parentMember);
   const isAddingSpouse = Boolean(spouseForMember);
@@ -49,6 +51,16 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
   const [gender, setGender] = useState<Gender>(
     isAddingSpouse && spouseForMember?.gender === 'male' ? 'female' : 'male'
   );
+  const suggestedOrderInFamily = React.useMemo(() => {
+    if (!isAddingChild) return 1;
+    const siblings = allMembers.filter((m) =>
+      (m.fatherId || null) === (parentMember?.gender === 'male' ? parentMember?.id || null : null) &&
+      (m.motherId || null) === (parentMember?.gender === 'female' ? parentMember?.id || null : null)
+    );
+    return Math.max(0, ...siblings.map((m) => Number(m.orderInFamily) || 0)) + 1;
+  }, [allMembers, isAddingChild, parentMember]);
+  const [orderInFamily, setOrderInFamily] = useState<number>(suggestedOrderInFamily);
+
   const [orderTitle, setOrderTitle] = useState(
     isAddingSpouse
       ? spouseForMember?.gender === 'male'
@@ -77,6 +89,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
   const [birthDate, setBirthDate] = useState('');
   const [birthDateLunar, setBirthDateLunar] = useState('');
   const [isAlive, setIsAlive] = useState(true);
+  const [ageNotice, setAgeNotice] = useState<string | null>(null);
   const [deathDateLunar, setDeathDateLunar] = useState('');
   const [burialLocation, setBurialLocation] = useState('');
   const [occupation, setOccupation] = useState('');
@@ -111,12 +124,21 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
     return null;
   });
 
+  const getNextSiblingOrder = (nextFatherId: string, nextMotherId: string) => {
+    const siblings = allMembers.filter((m) =>
+      (m.fatherId || null) === (nextFatherId || null) &&
+      (m.motherId || null) === (nextMotherId || null)
+    );
+    return Math.max(0, ...siblings.map((m) => Number(m.orderInFamily) || 0)) + 1;
+  };
+
   const handleFatherChange = (newFatherId: string) => {
     setFatherId(newFatherId);
     const father = allMembers.find((m) => m.id === newFatherId);
     if (father) {
       const nextGen = father.generation + 1;
       setGeneration(nextGen);
+      setOrderInFamily(getNextSiblingOrder(newFatherId, motherId));
       setAutoGenNotice(`Tự động nhảy sang Đời thứ ${nextGen} (con của ${father.fullName} - Đời thứ ${father.generation})`);
       // Kế thừa phái, chi, nhánh nếu đang để trống
       if (!phaiName && father.phaiName) setPhaiName(father.phaiName);
@@ -131,6 +153,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
 
   const handleMotherChange = (newMotherId: string) => {
     setMotherId(newMotherId);
+    setOrderInFamily(getNextSiblingOrder(fatherId, newMotherId));
     if (!fatherId) {
       const mother = allMembers.find((m) => m.id === newMotherId);
       if (mother) {
@@ -164,7 +187,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
       chiName: chiName.trim() || undefined,
       nhanhName: nhanhName.trim() || undefined,
       birthPlace: birthPlace.trim() || undefined,
-      orderInFamily: 1,
+      orderInFamily: Math.max(1, Number(orderInFamily) || 1),
       orderTitle: orderTitle.trim() || undefined,
       birthDate: birthDate || undefined,
       birthDateLunar: birthDateLunar || undefined,
@@ -390,6 +413,9 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
             <div>
               <label className="block font-bold text-slate-700 mb-1">Thứ bậc trong gia đình</label>
               <input type="text" placeholder="Trưởng nam, Thứ nam, Trưởng nữ..." value={orderTitle} onChange={(e) => setOrderTitle(e.target.value)} className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none" />
+              <label className="block font-bold text-slate-700 mt-3 mb-1">Thứ tự trong gia đình</label>
+              <input type="number" min={1} max={999} value={orderInFamily} onChange={(e) => setOrderInFamily(Math.max(1, Number(e.target.value) || 1))} className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none" />
+              <p className="text-[10px] text-slate-500 mt-1">1 = trưởng; 2, 3, 4... là thứ tự. Con nhập sau sẽ tự nối vào cuối nếu chưa đặt lại thứ tự.</p>
             </div>
             <div>
               <label className="block font-bold text-slate-700 mb-1">Tên Tự (Tên Chữ)</label>
@@ -404,7 +430,20 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
               <input
                 type="date"
                 value={birthDate}
-                onChange={(e) => setBirthDate(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setBirthDate(value);
+                  if (!value || !deceasedAgeThreshold) { setAgeNotice(null); return; }
+                  const birth = new Date(`${value}T00:00:00`);
+                  const now = new Date();
+                  let age = now.getFullYear() - birth.getFullYear();
+                  const md = now.getMonth() - birth.getMonth();
+                  if (md < 0 || (md === 0 && now.getDate() < birth.getDate())) age--;
+                  if (age >= deceasedAgeThreshold) {
+                    setIsAlive(false);
+                    setAgeNotice(`Tuổi hiện tại khoảng ${age}; hệ thống mặc định “Đã tạ thế” theo ngưỡng ${deceasedAgeThreshold} tuổi. Bạn vẫn có thể đổi lại.`);
+                  } else setAgeNotice(null);
+                }}
                 className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none"
               />
             </div>

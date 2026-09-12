@@ -289,6 +289,35 @@ export default function App() {
       setTimeout(() => setSaveToast(null), 3500);
       return;
     }
+
+    // Thứ tự con được xác định ổn định theo cùng một cặp cha/mẹ. Nếu người dùng
+    // không nhập thứ bậc cụ thể, thành viên mới đứng sau người đã có dữ liệu;
+    // trưởng nam/trưởng nữ có thể đặt orderInFamily = 1 để luôn đứng đầu.
+    const parentIds = [newMember.fatherId, newMember.motherId].filter(Boolean) as string[];
+    const siblingCandidates = parentIds.length
+      ? members.filter((m) => {
+          const sameFather = (m.fatherId || null) === (newMember.fatherId || null);
+          const sameMother = (m.motherId || null) === (newMember.motherId || null);
+          return sameFather && sameMother && m.id !== newMember.id;
+        })
+      : [];
+    const requestedOrder = Number(newMember.orderInFamily);
+    const nextOrder = siblingCandidates.length
+      ? Math.max(0, ...siblingCandidates.map((m) => Number(m.orderInFamily) || 0)) + 1
+      : 1;
+    const normalizedOrder = requestedOrder > 0 ? requestedOrder : nextOrder;
+    const ageThreshold = Number(clanInfo.defaultTreeSettings?.deceasedAgeThreshold ?? 100);
+    let normalizedAlive = newMember.isAlive;
+    if (newMember.birthDate && ageThreshold > 0) {
+      const birth = new Date(`${newMember.birthDate}T00:00:00`);
+      const now = new Date();
+      let age = now.getFullYear() - birth.getFullYear();
+      const md = now.getMonth() - birth.getMonth();
+      if (md < 0 || (md === 0 && now.getDate() < birth.getDate())) age--;
+      if (age >= ageThreshold && newMember.isAlive) normalizedAlive = false;
+    }
+    newMember = { ...newMember, orderInFamily: normalizedOrder, isAlive: normalizedAlive, deathDate: normalizedAlive ? newMember.deathDate : newMember.deathDate };
+
     // Quan hệ được ghi hai chiều: thêm vợ/chồng ở bất kỳ màn hình nào cũng cập nhật cả hai hồ sơ.
     const spouseIds: string[] = Array.from(new Set<string>(newMember.spouseIds || []));
     const spouseTargets = members.filter((m) => spouseIds.includes(m.id));
@@ -1073,6 +1102,7 @@ export default function App() {
           spouseForMember={spouseForNewMember}
           branches={branches}
           allMembers={members}
+          deceasedAgeThreshold={clanInfo.defaultTreeSettings?.deceasedAgeThreshold ?? 100}
           onClose={() => setIsAddingMember(false)}
           onAddMember={handleAddMember}
         />

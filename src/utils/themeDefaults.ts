@@ -27,6 +27,7 @@ export const DEFAULT_TREE_CARD_SETTINGS: Partial<FamilyTreeSettings> = {
   collapseControlExpandedColor: '#3b0206',
   collapseControlTextColor: '#fcd34d',
   collapseControlBorderColor: '#d4a72c',
+  deceasedAgeThreshold: 100,
   layoutMode: 'hybrid',
   treeCanvasAutoTheme: true,
   treeCanvasBackgroundColor: '#1e0205',

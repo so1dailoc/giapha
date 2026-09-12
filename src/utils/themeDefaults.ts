@@ -21,8 +21,10 @@ export const DEFAULT_TREE_CARD_SETTINGS: Partial<FamilyTreeSettings> = {
   verticalCardBorderColor: '#d4a72c',
   cardHorizontalGap: 30,
   cardVerticalGap: 150,
-  collapseControlOffset: 12,
-  collapseControlSize: 20,
+  collapseControlOffset: 18,
+  collapseControlSize: 24,
+  layoutMode: 'hybrid',
+  treeCanvasAutoTheme: true,
   treeCanvasBackgroundColor: '#1e0205',
   treeCanvasGridColor: '#7b1113',
   treeCanvasGridGap: 24,
@@ -54,4 +56,16 @@ export function getInterfaceThemePreset(name: string): Partial<FamilyTreeSetting
     midnight: { ...DEFAULT_INTERFACE_THEME, interfaceThemePreset: 'midnight', interfacePrimaryColor: '#0f172a', interfaceAccentColor: '#818cf8', interfacePageBackground: '#020617', interfaceSurfaceColor: '#111827', interfaceTextColor: '#e5e7eb', interfaceHeaderColor: '#0f172a', interfaceNavColor: '#020617', interfaceButtonColor: '#818cf8', interfaceButtonTextColor: '#ffffff', interfaceMutedTextColor: '#a5b4fc' },
   } as const;
   return presets[name as keyof typeof presets] || presets.traditional;
+}
+
+
+export function getTreeCanvasPreset(theme: string) {
+  const map: Record<string, { background: string; grid: string }> = {
+    traditional: { background: '#1e0205', grid: '#7b1113' },
+    paper: { background: '#f4ead7', grid: '#d8c8ad' },
+    modern: { background: '#f1f5f9', grid: '#cbd5e1' },
+    forest: { background: '#eaf7ef', grid: '#b7d9c4' },
+    midnight: { background: '#07111f', grid: '#334155' },
+  };
+  return map[theme] || map.traditional;
 }

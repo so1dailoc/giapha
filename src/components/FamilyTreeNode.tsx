@@ -339,7 +339,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
                 className={`block font-bold leading-none my-0.5 ${fontClass} ${
                   isTraditional ? 'text-amber-100 drop-shadow-sm uppercase' : 'text-slate-800 font-bold uppercase'
                 }`}
-                style={{ fontSize: `${verticalNameFontSize}px`, textAlign: resolvedNameAlignment, lineHeight: 1.05, width: '100%', whiteSpace: 'nowrap', overflow: 'visible', letterSpacing: '0.01em' }}
+                style={{ fontSize: `${verticalNameFontSize}px`, textAlign: resolvedNameAlignment, lineHeight: 1.08, width: '100%', whiteSpace: 'nowrap', overflow: 'visible', letterSpacing: '0', display: 'block' }}
               >
                 {word}
               </span>
@@ -442,7 +442,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
                 : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
             }`}
             title={isCollapsed ? `Mở rộng ${childrenCount} con` : `Thu gọn ${childrenCount} con`}
-            style={{ top: `calc(100% + ${Math.max(0, collapseControlOffset)}px)`, height: `${Math.max(18, collapseControlSize)}px`, minHeight: `${Math.max(18, collapseControlSize)}px` }}
+            style={{ top: `calc(100% + ${Math.max(0, collapseControlOffset)}px)`, height: `${Math.max(20, collapseControlSize)}px`, minHeight: `${Math.max(20, collapseControlSize)}px`, left: '50%', transform: 'translateX(-50%)' }}
           >
             {isCollapsed ? (
               <>
@@ -848,7 +848,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
               : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 shadow'
           }`}
           title={isCollapsed ? `Bấm để mở rộng ${childrenCount} con cháu` : `Bấm để thu gọn nhánh ${childrenCount} con cháu`}
-          style={{ top: `calc(100% + ${Math.max(0, collapseControlOffset)}px)`, height: `${Math.max(18, collapseControlSize)}px`, minHeight: `${Math.max(18, collapseControlSize)}px` }}
+          style={{ top: `calc(100% + ${Math.max(0, collapseControlOffset)}px)`, height: `${Math.max(20, collapseControlSize)}px`, minHeight: `${Math.max(20, collapseControlSize)}px`, left: '50%', transform: 'translateX(-50%)' }}
         >
           {isCollapsed ? (
             <>

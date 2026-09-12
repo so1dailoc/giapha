@@ -546,3 +546,30 @@ html[data-clan-theme="traditional"], html[data-clan-theme="midnight"] { color-sc
     min-height: 34px !important;
   }
 }
+
+/* V16 hardening: vertical names are a true column; collapse pill is centered on the card geometry. */
+.clan-app-shell .family-tree-card-shell .family-tree-card-name {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.125rem !important;
+  text-align: center !important;
+  overflow: visible !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-card-name span {
+  display: block !important;
+  width: 100% !important;
+  flex: 0 0 auto !important;
+  line-height: 1.08 !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow: visible !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-collapse-control {
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+  transform-origin: center center !important;
+  margin-left: 0 !important;
+}

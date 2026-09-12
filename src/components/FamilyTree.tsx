@@ -38,8 +38,12 @@ import {
   Eye,
   Settings2,
   Layers,
+  MapPin,
+  X as XIcon,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { resolveGenerationCollisions } from '../utils/layoutEngineV2';
+import { getTreeCanvasPreset } from '../utils/themeDefaults';
 
 interface FamilyTreeProps {
   members: Member[];
@@ -94,7 +98,9 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     zoomLevel: adminDefaults?.zoomLevel || 1,
     // 5 Solutions:
     viewMode: adminDefaults?.viewMode || 'graph_canvas', // PA 5: Cây 2D vs Sổ Phả Hệ
-    layoutAlgorithm: adminDefaults?.layoutAlgorithm || 'family_cluster', // PA 3: Cụm gia đình vs Dàn phẳng
+    layoutAlgorithm: adminDefaults?.layoutAlgorithm || 'family_cluster', // PA 3
+    layoutMode: adminDefaults?.layoutMode || 'hybrid',
+    manualTreeLayout: adminDefaults?.manualTreeLayout || {},
     enableCollapsible: adminDefaults?.enableCollapsible ?? true, // PA 1: Thu gọn cành [+] / [-]
     autoCollapseDeepGens: adminDefaults?.autoCollapseDeepGens ?? true, // PA 1: Mặc định thu gọn Đời 7+
     enableZigZagRows: adminDefaults?.enableZigZagRows ?? true, // PA 4: Xếp so le 2 tầng
@@ -136,12 +142,13 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     cardBackgroundColor: adminDefaults?.cardBackgroundColor ?? '',
     cardBorderColor: adminDefaults?.cardBorderColor ?? '',
     cardVerticalGap: adminDefaults?.cardVerticalGap ?? 150,
-    collapseControlOffset: adminDefaults?.collapseControlOffset ?? 12,
-    collapseControlSize: adminDefaults?.collapseControlSize ?? 20,
+    collapseControlOffset: adminDefaults?.collapseControlOffset ?? 18,
+    collapseControlSize: adminDefaults?.collapseControlSize ?? 24,
     horizontalCardNameBackgroundEnabled: adminDefaults?.horizontalCardNameBackgroundEnabled ?? false,
     verticalCardNameBackgroundEnabled: adminDefaults?.verticalCardNameBackgroundEnabled ?? false,
-    treeCanvasBackgroundColor: adminDefaults?.treeCanvasBackgroundColor ?? (adminDefaults?.theme === 'traditional' ? '#1e0205' : '#f8fafc'),
-    treeCanvasGridColor: adminDefaults?.treeCanvasGridColor ?? (adminDefaults?.theme === 'traditional' ? '#7b1113' : '#cbd5e1'),
+    treeCanvasAutoTheme: adminDefaults?.treeCanvasAutoTheme ?? true,
+    treeCanvasBackgroundColor: adminDefaults?.treeCanvasBackgroundColor ?? getTreeCanvasPreset(adminDefaults?.interfaceThemePreset || adminDefaults?.theme || 'traditional').background,
+    treeCanvasGridColor: adminDefaults?.treeCanvasGridColor ?? getTreeCanvasPreset(adminDefaults?.interfaceThemePreset || adminDefaults?.theme || 'traditional').grid,
     treeCanvasGridGap: adminDefaults?.treeCanvasGridGap ?? 24,
     cardThemePreset: adminDefaults?.cardThemePreset ?? adminDefaults?.theme ?? 'traditional',
   }));
@@ -161,6 +168,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
   const [isCardDisplayModalOpen, setIsCardDisplayModalOpen] = useState(false);
   const [isMobileControlsOpen, setIsMobileControlsOpen] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640);
+  const [mobileSheetMember, setMobileSheetMember] = useState<Member | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -178,8 +186,9 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
   // trên thiết bị theo đúng cấu hình layout; khi đổi kích thước/gap/theme thẻ, layout
   // signature thay đổi và các vị trí cũ tự động không còn được áp dụng để tránh chồng thẻ.
   const layoutSignature = useMemo(() => JSON.stringify({
-    v: 13,
+    v: 16,
     algorithm: settings.layoutAlgorithm,
+    layoutMode: settings.layoutMode,
     horizontalCardWidth: settings.horizontalCardWidth,
     horizontalCardHeight: settings.horizontalCardHeight,
     horizontalCardFontSize: settings.horizontalCardFontSize,
@@ -209,7 +218,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     if (typeof window === 'undefined') return {};
     try {
       const raw = window.localStorage.getItem(positionStorageKey);
-      return raw ? JSON.parse(raw) : {};
+      return raw ? JSON.parse(raw) : (adminDefaults?.manualTreeLayout || {});
     } catch {
       return {};
     }
@@ -227,6 +236,12 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
   }, [positionStorageKey]);
 
   useEffect(() => {
+    if (adminDefaults?.manualTreeLayout && Object.keys(adminDefaults.manualTreeLayout).length) {
+      setManualPositions(adminDefaults.manualTreeLayout);
+    }
+  }, [adminDefaults?.manualTreeLayout]);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
       if (Object.keys(manualPositions).length) window.localStorage.setItem(positionStorageKey, JSON.stringify(manualPositions));
@@ -235,6 +250,24 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       // localStorage can be unavailable in private browsing; dragging still works in memory.
     }
   }, [manualPositions, positionStorageKey]);
+
+  // Layout Engine V2: Admin layout is persisted to clan_info.default_tree_settings.
+  useEffect(() => {
+    if (!onUpdateClanInfo || !clanInfo || (userRole !== 'super_admin' && userRole !== 'branch_admin')) return;
+    if (settings.layoutMode === 'auto' || !Object.keys(manualPositions).length) return;
+    const currentSaved = clanInfo.defaultTreeSettings?.manualTreeLayout || {};
+    if (JSON.stringify(currentSaved) === JSON.stringify(manualPositions)) return;
+    const timer = window.setTimeout(() => {
+      onUpdateClanInfo({
+        ...clanInfo,
+        defaultTreeSettings: {
+          ...clanInfo.defaultTreeSettings,
+          manualTreeLayout: manualPositions,
+        },
+      });
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [manualPositions, settings.layoutMode, clanInfo, onUpdateClanInfo, userRole]);
 
   // Map of children count per parent
   const childrenCountMap = useMemo(() => {
@@ -550,6 +583,11 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
   // non-essential edge animation for a much smoother 5,000+ member canvas.
   const isLargeTree = filteredMembers.length >= 2500;
 
+  const handleTreeMemberSelect = useCallback((member: Member) => {
+    if (isMobileViewport) setMobileSheetMember(member);
+    else onSelectMember(member);
+  }, [isMobileViewport, onSelectMember]);
+
   // Build tree nodes and edges with hierarchical layout calculation (PA 3 & PA 4)
   const { initialNodes, initialEdges } = useMemo(() => {
     const nodes: Node<FamilyTreeNodeData>[] = [];
@@ -828,10 +866,16 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       });
     }
 
+    // Layout Engine V2: post-process every generation to prevent card overlap.
+    if (settings.layoutMode !== 'manual') {
+      resolveGenerationCollisions(filteredMembers, nodePositions, getGenNodeWidth, Math.max(8, settings.cardHorizontalGap ?? 30));
+    }
+
     // Instantiate ReactFlow Node & Edge objects
     filteredMembers.forEach((m) => {
       const autoPos = nodePositions.get(m.id) || { x: 0, y: 0 };
-      const pos = manualPositions[m.id] ? { ...autoPos, ...manualPositions[m.id] } : autoPos;
+      const useManual = settings.layoutMode === 'manual' || settings.layoutMode === 'hybrid';
+      const pos = useManual && manualPositions[m.id] ? { ...autoPos, ...manualPositions[m.id] } : autoPos;
       const childrenCount = childrenCountMap.get(m.id) || 0;
       const isCollapsed = collapsedNodeIds.has(m.id);
       const isSubtreeRoot = m.id === focusedSubtreeRootId;
@@ -869,7 +913,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
           showHierarchy: settings.showHierarchy ?? false,
           showBirthPlace: settings.showBirthPlace ?? false,
           userRole,
-          onSelectMember,
+          onSelectMember: handleTreeMemberSelect,
           onAddChild,
           onAddSpouse,
           onDeleteMember,
@@ -906,8 +950,8 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
           verticalCardBackgroundColor: settings.verticalCardBackgroundColor,
           verticalCardBorderColor: settings.verticalCardBorderColor,
           cardThemePreset: settings.cardThemePreset,
-          collapseControlOffset: settings.collapseControlOffset ?? 12,
-          collapseControlSize: settings.collapseControlSize ?? 20,
+          collapseControlOffset: settings.collapseControlOffset ?? 18,
+          collapseControlSize: settings.collapseControlSize ?? 24,
           horizontalCardNameBackgroundEnabled: settings.horizontalCardNameBackgroundEnabled ?? false,
           verticalCardNameBackgroundEnabled: settings.verticalCardNameBackgroundEnabled ?? false,
         },
@@ -967,6 +1011,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     settings,
     userRole,
     onSelectMember,
+    handleTreeMemberSelect,
     onAddChild,
     onAddSpouse,
     onDeleteMember,
@@ -1000,6 +1045,9 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
 
   const handleResetCardPositions = useCallback(() => {
     setManualPositions({});
+    if (onUpdateClanInfo && clanInfo && (userRole === 'super_admin' || userRole === 'branch_admin')) {
+      onUpdateClanInfo({ ...clanInfo, defaultTreeSettings: { ...clanInfo.defaultTreeSettings, manualTreeLayout: {} } });
+    }
     window.setTimeout(() => rfInstance?.fitView?.({ padding: 0.15, duration: 650 }), 50);
   }, [rfInstance]);
   // ReactFlow giữ vị trí kéo trong state. Không được reset vị trí chỉ vì parent
@@ -1138,6 +1186,9 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
   }, [members]);
 
   const isTraditional = settings.theme === 'traditional';
+  const canvasPreset = getTreeCanvasPreset(settings.interfaceThemePreset || settings.theme || 'traditional');
+  const canvasBackground = settings.treeCanvasAutoTheme === false ? (settings.treeCanvasBackgroundColor || canvasPreset.background) : canvasPreset.background;
+  const canvasGrid = settings.treeCanvasAutoTheme === false ? (settings.treeCanvasGridColor || canvasPreset.grid) : canvasPreset.grid;
 
   return (
     <div
@@ -1145,7 +1196,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
         'border-amber-500/40 text-amber-50'
       }`}
       style={{
-        backgroundColor: settings.treeCanvasBackgroundColor ?? (isTraditional ? '#1e0205' : '#f8fafc'),
+        backgroundColor: canvasBackground,
         ...(isMobileViewport ? { height: `${Math.max(560, settings.mobileTreeHeight ?? 760)}px` } : {}),
       }}
     >
@@ -1903,7 +1954,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
 
           <div
             className="absolute inset-0 transition-colors duration-200"
-            style={{ backgroundColor: settings.treeCanvasBackgroundColor ?? (isTraditional ? '#1e0205' : '#f8fafc') }}
+            style={{ backgroundColor: canvasBackground }}
           />
           <ReactFlow
             nodes={nodes}
@@ -1931,7 +1982,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
             className={isMobileViewport ? 'family-tree-touch-canvas' : undefined}
           >
             <Background
-              color={settings.treeCanvasGridColor ?? (isTraditional ? '#7b1113' : '#cbd5e1')}
+              color={canvasGrid}
               gap={Math.max(8, settings.treeCanvasGridGap ?? 24)}
               size={1.5}
               variant={BackgroundVariant.Dots}
@@ -1961,6 +2012,26 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
               />
             )}
           </ReactFlow>
+
+          {mobileSheetMember && (
+            <div className="fixed inset-0 z-[200] sm:hidden" role="dialog" aria-modal="true">
+              <button className="absolute inset-0 bg-black/45 backdrop-blur-[2px]" onClick={() => setMobileSheetMember(null)} aria-label="Đóng" />
+              <div className="absolute left-0 right-0 bottom-0 rounded-t-3xl border-t border-[color:var(--clan-border)] bg-[color:var(--clan-surface)] text-[color:var(--clan-text)] shadow-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+                <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-current opacity-20" />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0"><div className="text-xs opacity-60">Đời {mobileSheetMember.generation}</div><div className="text-xl font-black truncate">{mobileSheetMember.fullName}</div></div>
+                  <button className="p-2 rounded-full border border-current/20" onClick={() => setMobileSheetMember(null)}><XIcon className="w-5 h-5" /></button>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-4">
+                  <button className="min-h-11 rounded-xl border border-current/15 font-bold flex items-center justify-center gap-2" onClick={() => { setMobileSheetMember(null); onSelectMember(mobileSheetMember); }}><Eye className="w-4 h-4" /> Chi tiết</button>
+                  <button className="min-h-11 rounded-xl border border-current/15 font-bold flex items-center justify-center gap-2" onClick={() => { setMobileSheetMember(null); handleFocusSubtree(mobileSheetMember.id); }}><GitFork className="w-4 h-4" /> Cành nhánh</button>
+                  {(userRole === 'super_admin' || userRole === 'branch_admin') && <button className="min-h-11 rounded-xl border border-current/15 font-bold flex items-center justify-center gap-2" onClick={() => { setMobileSheetMember(null); onAddSpouse(mobileSheetMember); }}><Heart className="w-4 h-4" /> Thêm phối ngẫu</button>}
+                  {(userRole === 'super_admin' || userRole === 'branch_admin') && <button className="min-h-11 rounded-xl border border-current/15 font-bold flex items-center justify-center gap-2" onClick={() => { setMobileSheetMember(null); onAddChild(mobileSheetMember); }}><UserPlus className="w-4 h-4" /> Thêm con</button>}
+                  {mobileSheetMember.burialCoordinates && <button className="col-span-2 min-h-11 rounded-xl border border-current/15 font-bold flex items-center justify-center gap-2" onClick={() => window.open(`https://www.google.com/maps?q=${mobileSheetMember.burialCoordinates!.lat},${mobileSheetMember.burialCoordinates!.lng}`, '_blank', 'noopener,noreferrer')}><MapPin className="w-4 h-4" /> Mở vị trí mộ</button>}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Bottom Floating Traditional Motto Scroll */}
           <div

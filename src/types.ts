@@ -153,6 +153,8 @@ export interface FundRecord {
 
 export type TreeViewMode = 'graph_canvas' | 'book_outline';
 export type LayoutAlgorithm = 'family_cluster' | 'flat_generation';
+export type TreeLayoutMode = 'auto' | 'hybrid' | 'manual';
+export type ManualTreeLayout = Record<string, { x: number; y: number }>;
 
 export interface FamilyTreeSettings {
   theme: 'traditional' | 'modern';
@@ -170,7 +172,9 @@ export interface FamilyTreeSettings {
   // 5 Optimization Solutions for Dense / Wide Generations:
   viewMode?: TreeViewMode; // PA 5: Cây Đồ Họa 2D vs Sổ Phả Hệ Dọc
   layoutAlgorithm?: LayoutAlgorithm; // PA 3: Thuật toán Cụm Gia Đình vs Dàn Đều Hàng Ngang
-  enableCollapsible?: boolean; // PA 1: Nút Thu Gọn / Mở Rộng Nhánh Con [+] / [-]
+  enableCollapsible?: boolean;
+  layoutMode?: TreeLayoutMode; // Layout Engine V2: tự động / lai / thủ công
+  manualTreeLayout?: ManualTreeLayout; // Bố cục đã lưu của Admin // PA 1: Nút Thu Gọn / Mở Rộng Nhánh Con [+] / [-]
   autoCollapseDeepGens?: boolean; // PA 1: Tự động thu gọn từ Đời 7 trở đi
   enableZigZagRows?: boolean; // PA 4: Xếp so le 2 tầng cho gia đình >= 5 con
   focusedSubtreeRootId?: string | null; // PA 2: Xem riêng nhánh con cháu của một cụ
@@ -220,6 +224,7 @@ export interface FamilyTreeSettings {
   collapseControlSize?: number; // Cỡ nút thu gọn/mở rộng (px)
   horizontalCardNameBackgroundEnabled?: boolean;
   verticalCardNameBackgroundEnabled?: boolean;
+  treeCanvasAutoTheme?: boolean; // Đồng bộ màu nền ReactFlow theo theme giao diện
   treeCanvasBackgroundColor?: string; // Nền riêng của vùng ReactFlow, không phụ thuộc theme website
   treeCanvasGridColor?: string; // Màu chấm/lưới ReactFlow
   treeCanvasGridGap?: number;

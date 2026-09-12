@@ -218,7 +218,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
 
   const positionStorageKey = useMemo(() => {
     const clanKey = (clanInfo?.name || 'default-clan').trim().toLowerCase().replace(/[^a-z0-9\u00C0-\u024F]+/gi, '-').slice(0, 80);
-    return `gia-pha-tree-positions-v13:${clanKey}:${layoutSignature}`;
+    return `gia-pha-tree-positions-v20:${clanKey}:${layoutSignature}`;
   }, [clanInfo?.name, layoutSignature]);
 
   const [manualPositions, setManualPositions] = useState<Record<string, { x: number; y: number }>>(() => {

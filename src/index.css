@@ -341,3 +341,123 @@ html[data-clan-theme="paper"], html[data-clan-theme="modern"], html[data-clan-th
   color-scheme: light;
 }
 html[data-clan-theme="traditional"], html[data-clan-theme="midnight"] { color-scheme: dark; }
+
+/* ===== V13 CARD DESIGN SYSTEM =====
+   Member cards are an independent visual surface. The website theme supplies
+   the page chrome; these tokens control only the genealogy cards. */
+.clan-app-shell .family-tree-card-shell {
+  background-color: var(--card-bg) !important;
+  background-image: none !important;
+  border-color: var(--card-border) !important;
+  color: var(--card-name-color) !important;
+  isolation: isolate;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-card-header {
+  background: color-mix(in srgb, var(--card-surface) 88%, var(--card-bg)) !important;
+  border-color: color-mix(in srgb, var(--card-accent) 28%, transparent) !important;
+  color: var(--card-muted) !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-card-name {
+  color: var(--card-name-color) !important;
+  background-color: var(--card-name-bg) !important;
+  border-color: color-mix(in srgb, var(--card-accent) 28%, transparent) !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-card-name span {
+  color: var(--card-name-color) !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-card-primary-actions {
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.clan-app-shell .family-tree-card-shell .family-tree-action-btn {
+  min-width: 0 !important;
+  width: 100% !important;
+  min-height: 34px !important;
+  height: 34px !important;
+  box-sizing: border-box !important;
+  padding: 0 .35rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: .35rem !important;
+  overflow: hidden;
+  white-space: nowrap;
+  border-radius: .55rem;
+  font-size: 10px;
+  line-height: 1;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-action-primary {
+  background: color-mix(in srgb, var(--card-action-bg) 92%, var(--card-bg)) !important;
+  color: var(--card-action-text) !important;
+  border: 1px solid color-mix(in srgb, var(--card-accent) 48%, transparent) !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-action-primary:hover {
+  background: color-mix(in srgb, var(--card-accent) 22%, var(--card-action-bg)) !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-action-secondary {
+  color: var(--card-action-text) !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-card-admin-actions {
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.clan-app-shell .family-tree-card-shell .family-tree-action-admin {
+  background: color-mix(in srgb, var(--card-admin-bg) 90%, var(--card-bg)) !important;
+  color: var(--card-accent) !important;
+  border: 1px solid color-mix(in srgb, var(--card-accent) 28%, transparent) !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-action-admin:hover {
+  background: color-mix(in srgb, var(--card-accent) 18%, var(--card-admin-bg)) !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-action-danger {
+  color: var(--card-danger) !important;
+  border-color: color-mix(in srgb, var(--card-danger) 35%, transparent) !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-action-danger:hover {
+  background: color-mix(in srgb, var(--card-danger) 12%, var(--card-bg)) !important;
+}
+/* Card metadata follows the card palette rather than the website palette. */
+.clan-app-shell .family-tree-card-shell .text-amber-200,
+.clan-app-shell .family-tree-card-shell .text-amber-300,
+.clan-app-shell .family-tree-card-shell .text-amber-400,
+.clan-app-shell .family-tree-card-shell .text-amber-500 { color: var(--card-muted) !important; }
+.clan-app-shell .family-tree-card-shell .text-red-400,
+.clan-app-shell .family-tree-card-shell .text-red-500,
+.clan-app-shell .family-tree-card-shell .text-rose-300,
+.clan-app-shell .family-tree-card-shell .text-rose-400,
+.clan-app-shell .family-tree-card-shell .text-rose-500 { color: var(--card-accent) !important; }
+.clan-app-shell .family-tree-card-shell .border-amber-400,
+.clan-app-shell .family-tree-card-shell .border-amber-500,
+.clan-app-shell .family-tree-card-shell .border-rose-300,
+.clan-app-shell .family-tree-card-shell .border-rose-400 { border-color: color-mix(in srgb, var(--card-accent) 35%, transparent) !important; }
+.clan-app-shell .family-tree-card-shell .bg-amber-950,
+.clan-app-shell .family-tree-card-shell .bg-red-950,
+.clan-app-shell .family-tree-card-shell .bg-rose-950 { background-color: color-mix(in srgb, var(--card-bg) 80%, #000) !important; }
+.clan-app-shell .family-tree-card-shell .bg-rose-50 { background-color: color-mix(in srgb, var(--card-danger) 8%, var(--card-bg)) !important; }
+
+/* The collapse control belongs to the tree connector layer, never the action toolbar. */
+.clan-app-shell .family-tree-card-shell .family-tree-collapse-control {
+  z-index: 50 !important;
+  pointer-events: auto !important;
+}
+@media (max-width: 639px) {
+  .clan-app-shell .family-tree-card-shell .family-tree-action-btn {
+    min-height: 36px !important;
+    height: 36px !important;
+  }
+}
+
+@media (min-width: 640px) {
+  /* Desktop cards expose their two primary actions at equal width; admin tools
+     are deliberately separated below instead of squeezing five buttons into one row. */
+  .clan-app-shell .family-tree-card-shell .family-tree-card-primary-actions,
+  .clan-app-shell .family-tree-card-shell .family-tree-card-admin-actions {
+    align-items: stretch;
+  }
+}
+.family-tree-card-actions-vertical .family-tree-action-primary span:not(.sr-only) {
+  display: none;
+}
+.family-tree-card-actions-vertical .family-tree-action-primary {
+  gap: 0 !important;
+}

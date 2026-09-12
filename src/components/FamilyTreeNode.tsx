@@ -54,6 +54,7 @@ export interface FamilyTreeNodeData extends Record<string, unknown> {
   verticalCardNameBackgroundColor?: string;
   verticalCardBackgroundColor?: string;
   verticalCardBorderColor?: string;
+  cardThemePreset?: 'traditional' | 'modern' | 'ivory' | 'emerald' | 'midnight';
 }
 
 export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>>) => {
@@ -103,11 +104,20 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
     verticalCardNameBackgroundColor,
     verticalCardBackgroundColor,
     verticalCardBorderColor,
+    cardThemePreset = theme === 'traditional' ? 'traditional' : 'modern',
   } = data;
 
-  const isTraditional = theme === 'traditional';
+  const isTraditional = cardThemePreset === 'traditional';
   const canEdit = userRole === 'super_admin' || userRole === 'branch_admin';
   const canDelete = userRole === 'super_admin';
+  const cardPresetPalette = {
+    traditional: { accent: '#d4a72c', muted: '#f3c969', surface: '#350207', action: '#6b2a08', actionText: '#fff7d6', name: '#fef3c7', admin: '#4a1808', danger: '#9f1239', info: '#fbbf24' },
+    modern: { accent: '#0ea5e9', muted: '#64748b', surface: '#f8fafc', action: '#e0f2fe', actionText: '#0f172a', name: '#0f172a', admin: '#eef2ff', danger: '#e11d48', info: '#2563eb' },
+    ivory: { accent: '#b88746', muted: '#765b3b', surface: '#fff1c2', action: '#f7e6bb', actionText: '#4a2c10', name: '#4a2c10', admin: '#f8edd7', danger: '#b42318', info: '#8b5e34' },
+    emerald: { accent: '#65a30d', muted: '#4d7c0f', surface: '#dcfce7', action: '#dcfce7', actionText: '#14532d', name: '#14532d', admin: '#ecfdf5', danger: '#be123c', info: '#15803d' },
+    midnight: { accent: '#818cf8', muted: '#a5b4fc', surface: '#1e293b', action: '#312e81', actionText: '#f8fafc', name: '#f8fafc', admin: '#1e1b4b', danger: '#be123c', info: '#818cf8' },
+  }[cardThemePreset] || undefined;
+  const cardPalette = cardPresetPalette || { accent: '#d4a72c', muted: '#f3c969', surface: '#350207', action: '#6b2a08', actionText: '#fff7d6', name: '#fef3c7', admin: '#4a1808', danger: '#9f1239', info: '#fbbf24' };
 
   // Font family class mapping to prevent broken Vietnamese diacritics
   const fontClass =
@@ -125,8 +135,8 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
   // background. CSS custom properties let the values remain configurable while
   // safely surviving global theme selectors that use !important.
   const activeNameColor = isVerticalCard
-    ? (verticalCardNameColor || cardNameColor || (isTraditional ? '#fef3c7' : '#0f172a'))
-    : (horizontalCardNameColor || cardNameColor || (isTraditional ? '#fef3c7' : '#0f172a'));
+    ? (verticalCardNameColor || cardNameColor || cardPalette.name)
+    : (horizontalCardNameColor || cardNameColor || cardPalette.name);
   const activeNameBackground = isVerticalCard
     ? (verticalCardNameBackgroundColor || cardNameBackgroundColor || 'transparent')
     : (horizontalCardNameBackgroundColor || cardNameBackgroundColor || 'transparent');
@@ -137,7 +147,9 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
     ? (verticalCardBorderColor || cardBorderColor || undefined)
     : (horizontalCardBorderColor || cardBorderColor || undefined);
   const nameAlignment = isVerticalCard ? verticalCardNameAlignment : horizontalCardNameAlignment;
-  const resolvedNameAlignment = nameAlignment === 'auto' ? 'center' : nameAlignment;
+  const resolvedNameAlignment = nameAlignment === 'auto'
+    ? (isVerticalCard ? 'center' : (showAvatar || showSpouse || showDates || showTitles || showBirthPlace ? 'left' : 'center'))
+    : nameAlignment;
   const nameSizeBase = isVerticalCard ? (verticalCardFontSize || cardNameFontSize) : (horizontalCardFontSize || cardNameFontSize);
   const nameFontSize = isVerticalCard
     ? Math.max(11, Math.min(18, nameSizeBase))
@@ -145,8 +157,16 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
   const cardTokenStyle = {
     '--card-name-color': activeNameColor,
     '--card-name-bg': activeNameBackground,
-    '--card-bg': activeCardBackground,
-    '--card-border': activeCardBorder,
+    '--card-bg': activeCardBackground || (isTraditional ? '#5c0612' : cardPalette.surface),
+    '--card-border': activeCardBorder || cardPalette.accent,
+    '--card-accent': cardPalette.accent,
+    '--card-muted': cardPalette.muted,
+    '--card-surface': cardPalette.surface,
+    '--card-action-bg': cardPalette.action,
+    '--card-action-text': cardPalette.actionText,
+    '--card-admin-bg': cardPalette.admin,
+    '--card-danger': cardPalette.danger,
+    '--card-info': cardPalette.info,
   } as React.CSSProperties;
 
   // Traditional Theme Styles (Hoành phi, đỏ thẫm & viền vàng hoàng gia)
@@ -228,7 +248,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
 
     return (
       <div
-        className={`${verticalNodeClass} ${fontClass} family-tree-card-content-aware`}
+        className={`${verticalNodeClass} ${fontClass} family-tree-card-content-aware family-tree-card-shell`}
         style={{ ...cardTokenStyle, width: cardWidth || undefined, minWidth: cardWidth || undefined, maxWidth: cardWidth || undefined, minHeight: cardHeight || undefined, height: 'auto', boxSizing: 'border-box', overflow: 'visible' }}
         onClick={() => onSelectMember(member)}
         title={`${member.fullName} (Đời ${member.generation}) - Nhấp để xem hồ sơ chi tiết`}
@@ -256,7 +276,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
 
         {/* Header: Đời & Trạng thái Sống/Mất */}
         <div
-          className={`px-1.5 py-1 flex items-center justify-between text-[9px] font-bold rounded-t-[10px] border-b ${
+          className={`family-tree-card-header px-1.5 py-1 flex items-center justify-between text-[9px] font-bold rounded-t-[10px] border-b ${
             isTraditional
               ? 'bg-[#350207]/95 border-amber-500/30 text-amber-300'
               : 'bg-slate-100 border-slate-200 text-slate-600'
@@ -286,6 +306,14 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
           </div>
         )}
 
+        {/* Avatar dọc: chỉ chiếm một vùng cố định, tên vẫn giữ trọng tâm. */}
+        {showAvatar && (
+          <div className="relative flex justify-center py-1">
+            <DefaultAvatar avatarUrl={member.avatarUrl} gender={member.gender} fullName={member.fullName} size="sm" />
+            <span title={member.isAlive ? 'Còn sống' : 'Đã tạ thế'} className={`absolute bottom-0 right-1/2 translate-x-4 w-2.5 h-2.5 rounded-full border ${isTraditional ? 'border-[#300207]' : 'border-white'} ${member.isAlive ? 'bg-emerald-400' : 'bg-amber-600'}`} />
+          </div>
+        )}
+
         {/* HỌ VÀ TÊN SỔ DỌC (TỪNG TỪ XUỐNG DÒNG) */}
         <div className="px-1 py-1.5 flex flex-col items-center">
           <div
@@ -309,6 +337,19 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
               </span>
             ))}
           </div>
+
+          {showHierarchy && hierarchyDetails && (
+            <div className={`w-full mt-1 px-1 text-[7.5px] text-center truncate ${isTraditional ? 'text-amber-300/75' : 'text-slate-500'}`} title={hierarchyDetails}>
+              {hierarchyDetails}
+            </div>
+          )}
+
+          {showBirthPlace && member.birthPlace && (
+            <div className={`w-full mt-1 flex items-center justify-center gap-0.5 text-[7.5px] truncate ${isTraditional ? 'text-amber-200/75' : 'text-slate-500'}`} title={`Nơi sinh: ${member.birthPlace}`}>
+              <MapPin className="w-2 h-2 shrink-0" />
+              <span className="truncate">{member.birthPlace}</span>
+            </div>
+          )}
 
           {/* Tự / Thụy nếu có */}
           {showTitles && (member.courtesyName || member.posthumousName) && (
@@ -354,50 +395,26 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
           )}
         </div>
 
-        {/* Hover Action Floating Bar
-            Desktop: show on hover.
-            Touch/mobile: always show because there is no reliable hover gesture. */}
-        <div className="family-tree-mobile-actions opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity flex items-center justify-center gap-1 pb-1">
-          <button
-            type="button"
-            title="Xem chi tiết"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectMember(member);
-            }}
-            className="nodrag nopan p-1 rounded bg-amber-500 text-amber-950 hover:bg-amber-400 shadow text-[9px] sm:min-w-0 min-w-6 min-h-6 flex items-center justify-center"
-          >
-            <Eye className="w-2.5 h-2.5" />
-          </button>
-
-          {onFocusSubtree && (
-            <button
-              type="button"
-              title="Xem riêng cành nhánh / tổ tiên trực hệ của người này"
-              onClick={(e) => {
-                e.stopPropagation();
-                onFocusSubtree(member.id);
-              }}
-              className="nodrag nopan p-1 rounded bg-amber-600/80 text-amber-100 hover:bg-amber-500 shadow text-[9px] sm:min-w-0 min-w-6 min-h-6 flex items-center justify-center"
-            >
-              <GitFork className="w-2.5 h-2.5" />
+        {/* Action toolbar: compact primary controls for vertical cards. Admin tools live in a separate row. */}
+        <div className="family-tree-card-actions family-tree-card-actions-vertical px-1.5 pb-1.5 pt-0.5 flex flex-col gap-1.5">
+          <div className="family-tree-card-primary-actions grid grid-cols-2 gap-1.5">
+            <button type="button" title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); onSelectMember(member); }} className="family-tree-action-btn family-tree-action-primary nodrag nopan">
+              <Eye className="w-3.5 h-3.5" />
+              <span className="sr-only">Chi tiết</span>
             </button>
-          )}
-
-          {canEdit && onAddSpouse && <button type="button" title="Thêm phối ngẫu" onClick={(e) => { e.stopPropagation(); onAddSpouse(member); }} className="nodrag nopan p-1 rounded bg-rose-500 text-white shadow text-[9px] min-w-6 min-h-6 flex items-center justify-center"><Heart className="w-2.5 h-2.5" /></button>}
-
-          {canEdit && onAddChild && (
-            <button
-              type="button"
-              title="Thêm con"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddChild(member);
-              }}
-              className="nodrag nopan p-1 rounded bg-red-800 text-amber-100 hover:bg-red-700 shadow text-[9px] sm:min-w-0 min-w-6 min-h-6 flex items-center justify-center"
-            >
-              <UserPlus className="w-2.5 h-2.5" />
-            </button>
+            {onFocusSubtree && (
+              <button type="button" title="Xem riêng cành nhánh" onClick={(e) => { e.stopPropagation(); onFocusSubtree(member.id); }} className="family-tree-action-btn family-tree-action-primary family-tree-action-secondary nodrag nopan">
+                <GitFork className="w-3.5 h-3.5" />
+                <span className="sr-only">Nhánh</span>
+              </button>
+            )}
+          </div>
+          {canEdit && (
+            <div className="family-tree-card-admin-actions grid grid-cols-3 gap-1">
+              {onAddSpouse && <button type="button" title="Thêm phối ngẫu" onClick={(e) => { e.stopPropagation(); onAddSpouse(member); }} className="family-tree-action-btn family-tree-action-admin nodrag nopan"><Heart className="w-3.5 h-3.5" /></button>}
+              {onAddChild && <button type="button" title="Thêm con" onClick={(e) => { e.stopPropagation(); onAddChild(member); }} className="family-tree-action-btn family-tree-action-admin nodrag nopan"><UserPlus className="w-3.5 h-3.5" /></button>}
+              {canDelete && onDeleteMember && !member.isRootAncestor && <button type="button" title="Xóa thành viên" onClick={handleDeleteClick} className="family-tree-action-btn family-tree-action-admin family-tree-action-danger nodrag nopan"><Trash2 className="w-3.5 h-3.5" /></button>}
+            </div>
           )}
         </div>
 
@@ -409,7 +426,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
               e.stopPropagation();
               onToggleCollapse(member.id);
             }}
-            className={`absolute ${isVerticalCard ? '-right-3 top-1/2 -translate-y-1/2' : '-bottom-3 left-1/2 -translate-x-1/2'} z-40 px-1.5 py-0.2 rounded-full text-[8.5px] font-bold shadow-md flex items-center gap-0.5 transition-all whitespace-nowrap ${
+            className={`absolute ${isVerticalCard ? '-right-3 top-1/2 -translate-y-1/2' : '-bottom-3 left-1/2 -translate-x-1/2'} family-tree-collapse-control z-40 px-1.5 py-0.2 rounded-full text-[8.5px] font-bold shadow-md flex items-center gap-0.5 transition-all whitespace-nowrap ${
               isCollapsed
                 ? 'bg-amber-500 text-amber-950 ring-1 ring-amber-300 hover:scale-105'
                 : isTraditional
@@ -445,7 +462,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
   }
 
   return (
-    <div className={`${isTraditional ? traditionalNodeClass : modernNodeClass} ${fontClass} family-tree-card-content-aware`} style={{ ...cardTokenStyle, width: cardWidth || undefined, minWidth: cardWidth || undefined, maxWidth: cardWidth || undefined, minHeight: cardHeight || undefined, height: 'auto', boxSizing: 'border-box', overflow: 'visible' }}>
+    <div className={`${isTraditional ? traditionalNodeClass : modernNodeClass} ${fontClass} family-tree-card-content-aware family-tree-card-shell`} style={{ ...cardTokenStyle, width: cardWidth || undefined, minWidth: cardWidth || undefined, maxWidth: cardWidth || undefined, minHeight: cardHeight || undefined, height: 'auto', boxSizing: 'border-box', overflow: 'visible' }}>
       {/* Top Handle for Parent connections */}
       {!member.isRootAncestor && (
         <Handle
@@ -483,7 +500,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
 
       {/* Header Banner: Canh giữa thế hệ & Trạng thái sống/mất */}
       <div
-        className={`px-3 py-1.5 flex items-center justify-center relative text-[11px] font-bold rounded-t-[10px] ${
+        className={`family-tree-card-header px-3 py-1.5 flex items-center justify-center relative text-[11px] font-bold rounded-t-[10px] ${
           isTraditional
             ? 'bg-[#350207]/95 border-b border-amber-500/30 text-amber-300'
             : member.isRootAncestor
@@ -582,8 +599,8 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
             </p>
           )}
 
-          {/* Order Title & Nơi sinh nếu có */}
-          {showTitles && (member.orderTitle || (showBirthPlace && member.birthPlace)) && (
+          {/* Order Title */}
+          {showTitles && member.orderTitle && (
             <div className="flex flex-wrap items-center justify-center gap-1 mt-1">
               {member.orderTitle && (
                 <span
@@ -597,17 +614,13 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
                 </span>
               )}
 
-              {showBirthPlace && member.birthPlace && (
-                <span
-                  className={`text-[9.5px] flex items-center gap-0.5 truncate max-w-[140px] ${
-                    isTraditional ? 'text-amber-200/70' : 'text-slate-500'
-                  }`}
-                  title={`Nơi sinh: ${member.birthPlace}`}
-                >
-                  <MapPin className="w-2.5 h-2.5 flex-shrink-0 text-amber-400" />
-                  {member.birthPlace}
-                </span>
-              )}
+            </div>
+          )}
+
+          {showBirthPlace && member.birthPlace && (
+            <div className={`mt-1 max-w-full flex items-center justify-center gap-1 text-[9.5px] truncate ${isTraditional ? 'text-amber-200/75' : 'text-slate-500'}`} title={`Nơi sinh: ${member.birthPlace}`}>
+              <MapPin className="w-2.5 h-2.5 shrink-0" />
+              <span className="truncate">{member.birthPlace}</span>
             </div>
           )}
 
@@ -758,85 +771,52 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
           </div>
         )}
 
-        {/* Action Toolbar */}
-        <div className={`family-tree-card-actions mt-2.5 pt-2 border-t border-amber-500/20 grid gap-1 ${isVerticalCard ? 'grid-cols-2' : 'grid-cols-4'}`}>
-          <button
-            type="button"
-            onClick={() => onSelectMember(member)}
-            className={`family-tree-action-btn nodrag nopan min-w-0 w-full py-1 px-1 text-[10.5px] font-medium rounded flex items-center justify-center gap-1 transition-colors min-h-8 ${
-              isTraditional
-                ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
-            }`}
-          >
-            <Eye className="w-3 h-3" />
-            Chi tiết
-          </button>
-
-          {/* PA 2: Xem riêng cành/nhánh của cụ này (Tất cả các thẻ đều có thể xem để tra cứu tổ tiên trực hệ) */}
-          {onFocusSubtree && (
+        {/* Action Toolbar: primary actions are always equal; admin tools are a separate compact row. */}
+        <div className={`family-tree-card-actions mt-2.5 pt-2 border-t border-[color:var(--card-accent)]/25 flex flex-col gap-1.5 ${isVerticalCard ? 'family-tree-card-actions-vertical' : ''}`}>
+          <div className="family-tree-card-primary-actions grid grid-cols-2 gap-1.5">
             <button
               type="button"
-              title="Xem riêng cành nhánh / tổ tiên trực hệ của người này"
-              onClick={(e) => {
-                e.stopPropagation();
-                onFocusSubtree(member.id);
-              }}
-              className={`family-tree-action-btn nodrag nopan min-w-0 w-full py-1 px-1 text-[10.5px] font-medium rounded flex items-center gap-1 transition-colors min-h-8 ${
-                isTraditional
-                  ? 'bg-amber-500/20 hover:bg-amber-500/40 text-amber-200 border border-amber-500/50'
-                  : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200'
-              }`}
+              title="Xem chi tiết"
+              onClick={(e) => { e.stopPropagation(); onSelectMember(member); }}
+              className="family-tree-action-btn family-tree-action-primary nodrag nopan"
             >
-              <GitFork className="w-3 h-3 text-amber-400" />
-              <span className="hidden sm:inline">Nhánh</span>
+              <Eye className="w-3.5 h-3.5" />
+              <span>Chi tiết</span>
             </button>
-          )}
+            {onFocusSubtree && (
+              <button
+                type="button"
+                title="Xem riêng cành nhánh / tổ tiên trực hệ của người này"
+                onClick={(e) => { e.stopPropagation(); onFocusSubtree(member.id); }}
+                className="family-tree-action-btn family-tree-action-primary family-tree-action-secondary nodrag nopan"
+              >
+                <GitFork className="w-3.5 h-3.5" />
+                <span>Nhánh</span>
+              </button>
+            )}
+          </div>
 
           {canEdit && (
-            <>
-              {onAddChild && (
-                <button
-                  type="button"
-                  title="Thêm con cho thành viên này"
-                  onClick={() => onAddChild(member)}
-                  className={`family-tree-action-btn nodrag nopan min-w-0 w-full py-1 px-1 text-[10.5px] font-medium rounded flex items-center gap-1 transition-colors min-h-8 ${
-                    isTraditional
-                      ? 'bg-red-800/80 hover:bg-red-700 text-amber-100 border border-amber-500/40'
-                      : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200'
-                  }`}
-                >
-                  <UserPlus className="w-3 h-3" />
-                  + Con
-                </button>
-              )}
-
+            <div className="family-tree-card-admin-actions grid grid-cols-3 gap-1">
               {onAddSpouse && (
-                <button
-                  type="button"
-                  title="Thêm phối ngẫu (Vợ/Chồng)"
-                  onClick={() => onAddSpouse(member)}
-                  className={`family-tree-action-btn nodrag nopan min-w-0 w-full py-1 px-1 text-[10.5px] font-medium rounded flex items-center transition-colors ${
-                    isTraditional
-                      ? 'bg-amber-700/60 hover:bg-amber-600 text-amber-100'
-                      : 'bg-rose-50 hover:bg-rose-100 text-rose-700'
-                  }`}
-                >
-                  <Heart className="w-3 h-3" />
+                <button type="button" title="Thêm phối ngẫu" onClick={(e) => { e.stopPropagation(); onAddSpouse(member); }} className="family-tree-action-btn family-tree-action-admin nodrag nopan">
+                  <Heart className="w-3.5 h-3.5" />
+                  <span className="sr-only">Thêm phối ngẫu</span>
                 </button>
               )}
-
+              {onAddChild && (
+                <button type="button" title="Thêm con" onClick={(e) => { e.stopPropagation(); onAddChild(member); }} className="family-tree-action-btn family-tree-action-admin nodrag nopan">
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span className="sr-only">Thêm con</span>
+                </button>
+              )}
               {canDelete && onDeleteMember && !member.isRootAncestor && (
-                <button
-                  type="button"
-                  title="Xóa thành viên khỏi cây"
-                  onClick={handleDeleteClick}
-                  className="family-tree-action-btn nodrag nopan min-w-0 w-full py-1 px-1 text-[10.5px] font-medium rounded text-red-400 hover:text-red-200 hover:bg-red-950/60 transition-colors"
-                >
-                  <Trash2 className="w-3 h-3" />
+                <button type="button" title="Xóa thành viên khỏi cây" onClick={handleDeleteClick} className="family-tree-action-btn family-tree-action-admin family-tree-action-danger nodrag nopan">
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="sr-only">Xóa thành viên</span>
                 </button>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -849,7 +829,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
             e.stopPropagation();
             onToggleCollapse(member.id);
           }}
-          className={`absolute ${isVerticalCard ? '-right-3 top-1/2 -translate-y-1/2' : '-bottom-3 left-1/2 -translate-x-1/2'} z-40 px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-lg flex items-center gap-1 transition-all ${
+          className={`absolute ${isVerticalCard ? '-right-3 top-1/2 -translate-y-1/2' : '-bottom-3 left-1/2 -translate-x-1/2'} family-tree-collapse-control z-40 px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-lg flex items-center gap-1 transition-all ${
             isCollapsed
               ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-amber-950 ring-2 ring-amber-300 shadow-amber-500/50 hover:scale-105 active:scale-95'
               : isTraditional

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useDeferredValue, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useDeferredValue, useRef, useCallback } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -114,10 +114,10 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     focusDesktopZoom: adminDefaults?.focusDesktopZoom ?? 1.0,
     focusMobileOffsetY: adminDefaults?.focusMobileOffsetY ?? 0,
     focusDesktopOffsetY: adminDefaults?.focusDesktopOffsetY ?? 0,
-    horizontalCardWidth: adminDefaults?.horizontalCardWidth ?? 260,
-    horizontalCardHeight: adminDefaults?.horizontalCardHeight ?? 210,
-    verticalCardWidth: adminDefaults?.verticalCardWidth ?? 78,
-    verticalCardHeight: adminDefaults?.verticalCardHeight ?? 180,
+    horizontalCardWidth: adminDefaults?.horizontalCardWidth ?? 280,
+    horizontalCardHeight: adminDefaults?.horizontalCardHeight ?? 230,
+    verticalCardWidth: adminDefaults?.verticalCardWidth ?? 92,
+    verticalCardHeight: adminDefaults?.verticalCardHeight ?? 220,
     cardNameFontSize: adminDefaults?.cardNameFontSize ?? 14,
     horizontalCardFontSize: adminDefaults?.horizontalCardFontSize ?? adminDefaults?.cardNameFontSize ?? 16,
     horizontalCardNameAlignment: adminDefaults?.horizontalCardNameAlignment ?? 'auto',
@@ -166,6 +166,67 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
 
   // PA 2 State: Focus Subtree Root ID
   const [focusedSubtreeRootId, setFocusedSubtreeRootId] = useState<string | null>(null);
+
+  // Người dùng có thể kéo từng thẻ như các phiên bản trước. Vị trí kéo được ghi nhớ
+  // trên thiết bị theo đúng cấu hình layout; khi đổi kích thước/gap/theme thẻ, layout
+  // signature thay đổi và các vị trí cũ tự động không còn được áp dụng để tránh chồng thẻ.
+  const layoutSignature = useMemo(() => JSON.stringify({
+    v: 13,
+    algorithm: settings.layoutAlgorithm,
+    horizontalCardWidth: settings.horizontalCardWidth,
+    horizontalCardHeight: settings.horizontalCardHeight,
+    horizontalCardFontSize: settings.horizontalCardFontSize,
+    verticalCardWidth: settings.verticalCardWidth,
+    verticalCardHeight: settings.verticalCardHeight,
+    verticalCardFontSize: settings.verticalCardFontSize,
+    verticalCardStartGen: settings.verticalCardStartGen,
+    cardHorizontalGap: settings.cardHorizontalGap,
+    cardVerticalGap: settings.cardVerticalGap,
+    interFamilyGap: settings.interFamilyGap,
+    showSpouses: settings.showSpouses,
+    showAvatars: settings.showAvatars,
+    showDates: settings.showDates,
+    showTitles: settings.showTitles,
+    showBirthPlace: settings.showBirthPlace,
+    showHierarchy: settings.showHierarchy,
+    enableZigZagRows: settings.enableZigZagRows,
+  }), [settings]);
+
+  const positionStorageKey = useMemo(() => {
+    const clanKey = (clanInfo?.name || 'default-clan').trim().toLowerCase().replace(/[^a-z0-9\u00C0-\u024F]+/gi, '-').slice(0, 80);
+    return `gia-pha-tree-positions-v13:${clanKey}:${layoutSignature}`;
+  }, [clanInfo?.name, layoutSignature]);
+
+  const [manualPositions, setManualPositions] = useState<Record<string, { x: number; y: number }>>(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const raw = window.localStorage.getItem(positionStorageKey);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Re-load positions when the active clan/layout signature changes.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(positionStorageKey);
+      setManualPositions(raw ? JSON.parse(raw) : {});
+    } catch {
+      setManualPositions({});
+    }
+  }, [positionStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (Object.keys(manualPositions).length) window.localStorage.setItem(positionStorageKey, JSON.stringify(manualPositions));
+      else window.localStorage.removeItem(positionStorageKey);
+    } catch {
+      // localStorage can be unavailable in private browsing; dragging still works in memory.
+    }
+  }, [manualPositions, positionStorageKey]);
 
   // Map of children count per parent
   const childrenCountMap = useMemo(() => {
@@ -543,7 +604,8 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     // stays in sync with the DOM.
     const getHorizontalCardHeight = (m: Member) => {
       const configured = typeof settings.horizontalCardHeight === 'number' ? settings.horizontalCardHeight : 0;
-      let h = 96; // header + name + padding + equal action bar
+      // Header + name block + primary action row. Admin gets a second compact tool row.
+      let h = 150;
       const nameCharsPerLine = Math.max(12, Math.floor((settings.horizontalCardWidth ?? 260) / Math.max(7, (settings.horizontalCardFontSize ?? 16) * 0.58)));
       h += Math.max(0, Math.ceil(m.fullName.trim().length / nameCharsPerLine) - 1) * Math.max(18, (settings.horizontalCardFontSize ?? 16) * 1.15);
       if (settings.showAvatars) h += 62;
@@ -553,6 +615,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       if (settings.showSpouses && m.spouseIds?.length) {
         h += 48 + Math.min(4, m.spouseIds.length) * 96;
       }
+      if (userRole === 'super_admin' || userRole === 'branch_admin') h += 40;
       return Math.max(configured, h);
     };
 
@@ -561,14 +624,15 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       // Vertical cards need enough room for a 2x2 action grid, optional avatar,
       // title/date rows and the collapse control. Treat the configured value as
       // a minimum, never as a hard clipping height.
-      let h = 160; // header + name stack + 2x2 actions + safe room for collapse control
+      let h = 178; // header + name stack + primary actions + safe room for collapse control
       if (m) h += Math.max(0, m.fullName.trim().split(/\s+/).length - 3) * 14;
       if (m && settings.showAvatars) h += 38;
       if (m && settings.showTitles && (m.courtesyName || m.posthumousName || m.orderTitle)) h += 24;
       if (m && settings.showDates) h += 22 + (!m.isAlive && m.deathDateLunar ? 12 : 0);
       if (m && settings.showBirthPlace && m.birthPlace) h += 20;
       if (m && settings.showSpouses && m.spouseIds?.length) h += 20;
-      return Math.max(110, configured || 0, h);
+      if (userRole === 'super_admin' || userRole === 'branch_admin') h += 40;
+      return Math.max(140, configured || 0, h);
     };
 
 
@@ -755,7 +819,8 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
 
     // Instantiate ReactFlow Node & Edge objects
     filteredMembers.forEach((m) => {
-      const pos = nodePositions.get(m.id) || { x: 0, y: 0 };
+      const autoPos = nodePositions.get(m.id) || { x: 0, y: 0 };
+      const pos = manualPositions[m.id] ? { ...autoPos, ...manualPositions[m.id] } : autoPos;
       const childrenCount = childrenCountMap.get(m.id) || 0;
       const isCollapsed = collapsedNodeIds.has(m.id);
       const isSubtreeRoot = m.id === focusedSubtreeRootId;
@@ -829,6 +894,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
           verticalCardNameBackgroundColor: settings.verticalCardNameBackgroundColor,
           verticalCardBackgroundColor: settings.verticalCardBackgroundColor,
           verticalCardBorderColor: settings.verticalCardBorderColor,
+          cardThemePreset: settings.cardThemePreset,
         },
       });
 
@@ -898,10 +964,29 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     childrenCountMap,
     childrenMap,
     isLargeTree,
+    manualPositions,
   ]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  const handleNodesChange = useCallback((changes: any[]) => {
+    onNodesChange(changes);
+    const moved = changes.filter((change: any) => change.type === 'position' && change.position && change.dragging === false) as any[];
+    if (!moved.length) return;
+    setManualPositions((prev) => {
+      const next = { ...prev };
+      moved.forEach((change) => {
+        next[change.id] = { x: change.position.x, y: change.position.y };
+      });
+      return next;
+    });
+  }, [onNodesChange]);
+
+  const handleResetCardPositions = useCallback(() => {
+    setManualPositions({});
+    window.setTimeout(() => rfInstance?.fitView?.({ padding: 0.15, duration: 650 }), 50);
+  }, [rfInstance]);
   // ReactFlow giữ vị trí kéo trong state. Không được reset vị trí chỉ vì parent
   // render lại (đây là nguyên nhân v6/v7 làm thẻ vừa kéo xong bị nhảy về chỗ cũ).
   const lastInitialNodesRef = useRef(initialNodes);
@@ -1791,10 +1876,19 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
             </div>
           )}
 
+          <button
+            type="button"
+            onClick={handleResetCardPositions}
+            className="absolute top-3 right-3 z-20 px-2.5 py-1.5 rounded-lg border text-[10px] font-bold shadow-md backdrop-blur-sm bg-[color:var(--clan-surface)]/90 text-[color:var(--clan-text)] border-[color:var(--clan-border)] hover:opacity-90"
+            title="Đưa các thẻ về bố cục tự động"
+          >
+            <span className="inline-flex items-center gap-1"><RotateCcw className="w-3 h-3" /> Bố cục tự động</span>
+          </button>
+
           <ReactFlow
             nodes={nodes}
             edges={edges}
-            onNodesChange={onNodesChange}
+            onNodesChange={handleNodesChange}
             onEdgesChange={onEdgesChange}
             nodeTypes={nodeTypes}
             onInit={(instance) => setRfInstance(instance)}

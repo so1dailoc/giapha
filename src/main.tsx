@@ -60,7 +60,38 @@ async function ensureFreshBundle(): Promise<boolean> {
   }
 }
 
+function cleanupServiceWorkersAndCaches() {
+  // Old mobile browsers can keep a previous SPA document alive via BFCache or
+  // a service worker/cache created by an earlier deployment. We only clear
+  // CacheStorage/service workers; Supabase data and localStorage settings are
+  // intentionally preserved except for obsolete tree-position keys below.
+  try {
+    if ('serviceWorker' in navigator) {
+      void navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((registration) => void registration.unregister());
+      });
+    }
+    if ('caches' in window) {
+      void caches.keys().then((keys) => {
+        keys.forEach((key) => void caches.delete(key));
+      });
+    }
+  } catch {
+    // Best effort only.
+  }
+}
+
+window.addEventListener('pageshow', (event) => {
+  if ((event as PageTransitionEvent).persisted) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('__gia_pha_bfcache', APP_VERSION);
+    url.searchParams.set('_t', String(Date.now()));
+    window.location.replace(url.toString());
+  }
+});
+
 async function bootstrap() {
+  cleanupServiceWorkersAndCaches();
   const fresh = await ensureFreshBundle();
   if (!fresh) return;
 

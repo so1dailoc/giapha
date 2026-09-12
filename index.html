@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="vi">
   <head>
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gia Phả Đại Tộc - Quản Lý Phả Hệ & Gia Tộc</title>
@@ -15,6 +18,18 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Emergency guard for mobile browsers that restore an old document from
+      // their page cache before the React bundle gets a chance to run.
+      window.addEventListener('pageshow', function (e) {
+        if (e.persisted) {
+          var u = new URL(location.href);
+          u.searchParams.set('__gia_pha_bfcache', 'v21');
+          u.searchParams.set('_t', Date.now());
+          location.replace(u.toString());
+        }
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

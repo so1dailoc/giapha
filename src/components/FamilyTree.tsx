@@ -193,7 +193,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
   // trên thiết bị theo đúng cấu hình layout; khi đổi kích thước/gap/theme thẻ, layout
   // signature thay đổi và các vị trí cũ tự động không còn được áp dụng để tránh chồng thẻ.
   const layoutSignature = useMemo(() => JSON.stringify({
-    v: 18,
+    v: 21,
     algorithm: settings.layoutAlgorithm,
     layoutMode: settings.layoutMode,
     horizontalCardWidth: settings.horizontalCardWidth,

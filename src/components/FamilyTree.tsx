@@ -104,19 +104,16 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     verticalCardStartGen: adminDefaults?.verticalCardStartGen ?? 6,
     cardHorizontalGap: adminDefaults?.cardHorizontalGap ?? 30,
     interFamilyGap: adminDefaults?.interFamilyGap ?? 110,
-    mobileTreeHeight: adminDefaults?.mobileTreeHeight ?? 900,
-    mobileInitialZoom: adminDefaults?.mobileInitialZoom ?? 0.82,
-    mobileMinZoom: adminDefaults?.mobileMinZoom ?? 0.35,
-    mobileMaxZoom: adminDefaults?.mobileMaxZoom ?? 2.4,
+    mobileTreeHeight: adminDefaults?.mobileTreeHeight ?? 760,
+    mobileInitialZoom: adminDefaults?.mobileInitialZoom ?? 0.72,
+    mobileMinZoom: adminDefaults?.mobileMinZoom ?? 0.25,
+    mobileMaxZoom: adminDefaults?.mobileMaxZoom ?? 2.2,
     mobileShowMiniMap: adminDefaults?.mobileShowMiniMap ?? false,
     mobileControlsPosition: adminDefaults?.mobileControlsPosition ?? 'bottom-right',
     focusMobileZoom: adminDefaults?.focusMobileZoom ?? 0.9,
     focusDesktopZoom: adminDefaults?.focusDesktopZoom ?? 1.0,
     focusMobileOffsetY: adminDefaults?.focusMobileOffsetY ?? 0,
     focusDesktopOffsetY: adminDefaults?.focusDesktopOffsetY ?? 0,
-    mobileCardMinWidth: adminDefaults?.mobileCardMinWidth ?? 240,
-    showBranchLabel: adminDefaults?.showBranchLabel ?? true,
-    compactSpouseDisplay: adminDefaults?.compactSpouseDisplay ?? true,
     horizontalCardWidth: adminDefaults?.horizontalCardWidth ?? 260,
     horizontalCardHeight: adminDefaults?.horizontalCardHeight ?? 210,
     verticalCardWidth: adminDefaults?.verticalCardWidth ?? 78,
@@ -554,7 +551,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       if (settings.showBirthPlace && m.birthPlace) h += 24;
       if (settings.showDates) h += 30 + (!m.isAlive && m.deathDateLunar ? 18 : 0);
       if (settings.showSpouses && m.spouseIds?.length) {
-        h += settings.compactSpouseDisplay === false ? 72 + Math.min(4, m.spouseIds.length) * 52 : 34;
+        h += 48 + Math.min(4, m.spouseIds.length) * 96;
       }
       return Math.max(configured, h);
     };
@@ -570,7 +567,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       if (m && settings.showTitles && (m.courtesyName || m.posthumousName || m.orderTitle)) h += 24;
       if (m && settings.showDates) h += 22 + (!m.isAlive && m.deathDateLunar ? 12 : 0);
       if (m && settings.showBirthPlace && m.birthPlace) h += 20;
-      if (m && settings.showSpouses && m.spouseIds?.length) h += settings.compactSpouseDisplay === false ? 44 : 20;
+      if (m && settings.showSpouses && m.spouseIds?.length) h += 20;
       return Math.max(110, configured || 0, h);
     };
 
@@ -582,8 +579,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
       // Tôn trọng tuyệt đối kích thước thẻ ngang do Admin đặt; không để layout
       // dùng 330px trong khi card thực tế chỉ 260px. Đây là nguyên nhân gây chồng thẻ.
       if (typeof settings.horizontalCardWidth === 'number' && settings.horizontalCardWidth > 0) {
-        const mobileMin = isMobileViewport ? Math.max(180, settings.mobileCardMinWidth ?? 240) : 0;
-        return Math.max(150, settings.horizontalCardWidth, mobileMin);
+        return Math.max(150, settings.horizontalCardWidth);
       }
       if (settings.showSpouses) return 330;
       if (isMinimalCard) return 195;
@@ -833,9 +829,6 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
           verticalCardNameBackgroundColor: settings.verticalCardNameBackgroundColor,
           verticalCardBackgroundColor: settings.verticalCardBackgroundColor,
           verticalCardBorderColor: settings.verticalCardBorderColor,
-          showBranchLabel: settings.showBranchLabel ?? true,
-          compactSpouseDisplay: settings.compactSpouseDisplay ?? true,
-          mobileCardMinWidth: settings.mobileCardMinWidth ?? 240,
         },
       });
 
@@ -953,27 +946,21 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
   // ReactFlow node có thể thay đổi kích thước theo cấu hình Hiển Thị Thẻ, vì vậy đọc width/height thực tế.
   useEffect(() => {
     if (!rfInstance || !focusedSubtreeRootId) return;
-    let cancelled = false;
     const timer = window.setTimeout(() => {
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        if (cancelled) return;
-        const targetNode: any = rfInstance.getNode?.(focusedSubtreeRootId) || (rfInstance.getNodes?.() as any[] | undefined)?.find((n: any) => n.id === focusedSubtreeRootId) || initialNodes.find((n) => n.id === focusedSubtreeRootId);
-        if (!targetNode) return;
-        const width = targetNode.measured?.width ?? targetNode.width ?? 180;
-        const height = targetNode.measured?.height ?? targetNode.height ?? 150;
-        const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-        const zoom = isMobile ? (settings.focusMobileZoom ?? 0.9) : (settings.focusDesktopZoom ?? 1);
-        // Offset is configured in screen pixels, then converted to ReactFlow coordinates.
-        const screenOffsetY = isMobile ? (settings.focusMobileOffsetY ?? 0) : (settings.focusDesktopOffsetY ?? 0);
-        const flowOffsetY = screenOffsetY / Math.max(0.1, zoom);
-        rfInstance.setCenter?.(
-          targetNode.position.x + width / 2,
-          targetNode.position.y + height / 2 + flowOffsetY,
-          { zoom, duration: 650 }
-        );
-      }));
-    }, 520);
-    return () => { cancelled = true; clearTimeout(timer); };
+      const targetNode = rfInstance.getNode?.(focusedSubtreeRootId) || initialNodes.find((n) => n.id === focusedSubtreeRootId);
+      if (!targetNode) return;
+      const width = targetNode.measured?.width ?? targetNode.width ?? 180;
+      const height = targetNode.measured?.height ?? targetNode.height ?? 150;
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+      const offsetY = isMobile ? (settings.focusMobileOffsetY ?? 0) : (settings.focusDesktopOffsetY ?? 0);
+      const zoom = isMobile ? (settings.focusMobileZoom ?? 0.9) : (settings.focusDesktopZoom ?? 1);
+      rfInstance.setCenter?.(
+        targetNode.position.x + width / 2,
+        targetNode.position.y + height / 2 + offsetY,
+        { zoom, duration: 700 }
+      );
+    }, 320);
+    return () => clearTimeout(timer);
   }, [focusedSubtreeRootId, initialNodes, rfInstance, settings.focusMobileZoom, settings.focusDesktopZoom, settings.focusMobileOffsetY, settings.focusDesktopOffsetY]);
 
   // Jump to specific member and smoothly center ReactFlow canvas
@@ -1005,8 +992,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
         const height = targetNode.measured?.height ?? targetNode.height ?? 150;
         const mobile = typeof window !== 'undefined' && window.innerWidth < 640;
         const zoom = mobile ? (settings.focusMobileZoom ?? 0.9) : (settings.focusDesktopZoom ?? 1);
-        const screenOffsetY = mobile ? (settings.focusMobileOffsetY ?? 0) : (settings.focusDesktopOffsetY ?? 0);
-        const offsetY = screenOffsetY / Math.max(0.1, zoom);
+        const offsetY = mobile ? (settings.focusMobileOffsetY ?? 0) : (settings.focusDesktopOffsetY ?? 0);
         rfInstance.setCenter(targetNode.position.x + width / 2, targetNode.position.y + height / 2 + offsetY, {
           zoom,
           duration: 700,

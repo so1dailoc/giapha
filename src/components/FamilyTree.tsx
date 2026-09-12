@@ -136,7 +136,13 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     cardBackgroundColor: adminDefaults?.cardBackgroundColor ?? '',
     cardBorderColor: adminDefaults?.cardBorderColor ?? '',
     cardVerticalGap: adminDefaults?.cardVerticalGap ?? 150,
-    collapseControlOffset: adminDefaults?.collapseControlOffset ?? 8,
+    collapseControlOffset: adminDefaults?.collapseControlOffset ?? 12,
+    collapseControlSize: adminDefaults?.collapseControlSize ?? 20,
+    horizontalCardNameBackgroundEnabled: adminDefaults?.horizontalCardNameBackgroundEnabled ?? false,
+    verticalCardNameBackgroundEnabled: adminDefaults?.verticalCardNameBackgroundEnabled ?? false,
+    treeCanvasBackgroundColor: adminDefaults?.treeCanvasBackgroundColor ?? (adminDefaults?.theme === 'traditional' ? '#1e0205' : '#f8fafc'),
+    treeCanvasGridColor: adminDefaults?.treeCanvasGridColor ?? (adminDefaults?.theme === 'traditional' ? '#7b1113' : '#cbd5e1'),
+    treeCanvasGridGap: adminDefaults?.treeCanvasGridGap ?? 24,
     cardThemePreset: adminDefaults?.cardThemePreset ?? adminDefaults?.theme ?? 'traditional',
   }));
 
@@ -685,7 +691,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
         maxGenHeight += isGenVertical(gen) ? 140 : 160; // Extra room for second tier
       }
 
-      const collapseReserve = Math.max(0, settings.collapseControlOffset ?? 8) + 34;
+      const collapseReserve = Math.max(0, settings.collapseControlOffset ?? 12) + Math.max(20, settings.collapseControlSize ?? 20) + 14;
       const verticalGap = isGenVertical(gen)
         ? Math.max(collapseReserve, settings.cardVerticalGap ?? 120)
         : Math.max(collapseReserve, settings.cardVerticalGap ?? (settings.showSpouses ? 190 : (isMinimalCard ? 135 : 150)));
@@ -900,7 +906,10 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
           verticalCardBackgroundColor: settings.verticalCardBackgroundColor,
           verticalCardBorderColor: settings.verticalCardBorderColor,
           cardThemePreset: settings.cardThemePreset,
-          collapseControlOffset: settings.collapseControlOffset ?? 8,
+          collapseControlOffset: settings.collapseControlOffset ?? 12,
+          collapseControlSize: settings.collapseControlSize ?? 20,
+          horizontalCardNameBackgroundEnabled: settings.horizontalCardNameBackgroundEnabled ?? false,
+          verticalCardNameBackgroundEnabled: settings.verticalCardNameBackgroundEnabled ?? false,
         },
       });
 
@@ -1133,11 +1142,12 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
   return (
     <div
       className={`relative w-full rounded-2xl overflow-hidden border shadow-2xl flex flex-col min-h-[520px] sm:h-[840px] ${
-        isTraditional
-          ? 'bg-[#1e0205] border-amber-500/40 text-amber-50'
-          : 'bg-slate-50 border-slate-200 text-slate-900'
+        'border-amber-500/40 text-amber-50'
       }`}
-      style={isMobileViewport ? { height: `${Math.max(560, settings.mobileTreeHeight ?? 760)}px` } : undefined}
+      style={{
+        backgroundColor: settings.treeCanvasBackgroundColor ?? (isTraditional ? '#1e0205' : '#f8fafc'),
+        ...(isMobileViewport ? { height: `${Math.max(560, settings.mobileTreeHeight ?? 760)}px` } : {}),
+      }}
     >
       {/* PA 2: Focused Subtree Active Banner */}
       {focusedSubtreeMember && (
@@ -1891,6 +1901,10 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
             <span className="inline-flex items-center gap-1"><RotateCcw className="w-3 h-3" /> Bố cục tự động</span>
           </button>
 
+          <div
+            className="absolute inset-0 transition-colors duration-200"
+            style={{ backgroundColor: settings.treeCanvasBackgroundColor ?? (isTraditional ? '#1e0205' : '#f8fafc') }}
+          />
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -1917,8 +1931,8 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
             className={isMobileViewport ? 'family-tree-touch-canvas' : undefined}
           >
             <Background
-              color={isTraditional ? '#7b1113' : '#cbd5e1'}
-              gap={24}
+              color={settings.treeCanvasGridColor ?? (isTraditional ? '#7b1113' : '#cbd5e1')}
+              gap={Math.max(8, settings.treeCanvasGridGap ?? 24)}
               size={1.5}
               variant={BackgroundVariant.Dots}
             />

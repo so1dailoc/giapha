@@ -56,6 +56,9 @@ export interface FamilyTreeNodeData extends Record<string, unknown> {
   verticalCardBorderColor?: string;
   cardThemePreset?: 'traditional' | 'modern' | 'ivory' | 'emerald' | 'midnight';
   collapseControlOffset?: number;
+  collapseControlSize?: number;
+  horizontalCardNameBackgroundEnabled?: boolean;
+  verticalCardNameBackgroundEnabled?: boolean;
 }
 
 export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>>) => {
@@ -106,7 +109,10 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
     verticalCardBackgroundColor,
     verticalCardBorderColor,
     cardThemePreset = theme === 'traditional' ? 'traditional' : 'modern',
-    collapseControlOffset = 8,
+    collapseControlOffset = 12,
+    collapseControlSize = 20,
+    horizontalCardNameBackgroundEnabled = false,
+    verticalCardNameBackgroundEnabled = false,
   } = data;
 
   const isTraditional = cardThemePreset === 'traditional';
@@ -140,8 +146,8 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
     ? (verticalCardNameColor || cardNameColor || cardPalette.name)
     : (horizontalCardNameColor || cardNameColor || cardPalette.name);
   const activeNameBackground = isVerticalCard
-    ? (verticalCardNameBackgroundColor || cardNameBackgroundColor || 'transparent')
-    : (horizontalCardNameBackgroundColor || cardNameBackgroundColor || 'transparent');
+    ? (verticalCardNameBackgroundEnabled ? (verticalCardNameBackgroundColor || cardNameBackgroundColor || 'transparent') : 'transparent')
+    : (horizontalCardNameBackgroundEnabled ? (horizontalCardNameBackgroundColor || cardNameBackgroundColor || 'transparent') : 'transparent');
   const activeCardBackground = isVerticalCard
     ? (verticalCardBackgroundColor || cardBackgroundColor || undefined)
     : (horizontalCardBackgroundColor || cardBackgroundColor || undefined);
@@ -149,9 +155,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
     ? (verticalCardBorderColor || cardBorderColor || undefined)
     : (horizontalCardBorderColor || cardBorderColor || undefined);
   const nameAlignment = isVerticalCard ? verticalCardNameAlignment : horizontalCardNameAlignment;
-  const resolvedNameAlignment = nameAlignment === 'auto'
-    ? (isVerticalCard ? 'center' : (showAvatar || showSpouse || showDates || showTitles || showBirthPlace ? 'left' : 'center'))
-    : nameAlignment;
+  const resolvedNameAlignment = nameAlignment === 'auto' ? 'center' : nameAlignment;
   const nameSizeBase = isVerticalCard ? (verticalCardFontSize || cardNameFontSize) : (horizontalCardFontSize || cardNameFontSize);
   const nameFontSize = isVerticalCard
     ? Math.max(11, Math.min(18, nameSizeBase))
@@ -228,6 +232,9 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
   // Đảm bảo font chữ luôn đồng nhất với đời trên thông qua fontClass
   if (isVerticalCard) {
     const nameWords = member.fullName.trim().split(/\s+/);
+    const longestNameWord = nameWords.reduce((a, b) => a.length >= b.length ? a : b, '');
+    const verticalAvailable = Math.max(44, (cardWidth || 92) - 22);
+    const verticalNameFontSize = Math.max(9, Math.min(nameFontSize, Math.floor(verticalAvailable / Math.max(1, longestNameWord.length * 0.62))));
     const verticalNodeClass = isTraditional
       ? `relative rounded-xl transition-all duration-300 shadow-xl border-2 cursor-pointer select-none group ${
           isHighlighted
@@ -319,21 +326,20 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
         {/* HỌ VÀ TÊN SỔ DỌC (TỪNG TỪ XUỐNG DÒNG) */}
         <div className="px-1 py-1.5 flex flex-col items-center justify-center flex-1 min-h-0">
           <div
-            className={`family-tree-card-name w-[78%] min-h-[72px] flex flex-col items-center justify-center py-2 px-1 rounded border transition-colors ${
+            className={`family-tree-card-name w-[82%] min-h-[72px] flex items-center justify-center py-2 px-1 transition-colors ${
               isTraditional
-                ? 'bg-black/30 border-amber-500/30 group-hover:border-amber-400/70'
-                : 'bg-slate-50 border-slate-200 group-hover:border-blue-300'
+                ? (verticalCardNameBackgroundEnabled ? 'border border-amber-500/30 group-hover:border-amber-400/70' : '')
+                : (verticalCardNameBackgroundEnabled ? 'border border-slate-200 group-hover:border-blue-300' : '')
             }`}
             style={{ '--card-name-color': activeNameColor, '--card-name-bg': activeNameBackground } as React.CSSProperties}
           >
             {nameWords.map((word, idx) => (
               <span
                 key={idx}
-                className={`block font-bold tracking-wider leading-none my-0.5 ${fontClass} ${
-                  isTraditional
-                    ? 'text-amber-100 drop-shadow-sm uppercase'
-                    : 'text-slate-800 font-bold uppercase'
-                }`} style={{ fontSize: `${nameFontSize}px`, textAlign: resolvedNameAlignment, lineHeight: 1.12, width: '100%' }}
+                className={`block font-bold leading-none my-0.5 ${fontClass} ${
+                  isTraditional ? 'text-amber-100 drop-shadow-sm uppercase' : 'text-slate-800 font-bold uppercase'
+                }`}
+                style={{ fontSize: `${verticalNameFontSize}px`, textAlign: resolvedNameAlignment, lineHeight: 1.05, width: '100%', whiteSpace: 'nowrap', overflow: 'visible', letterSpacing: '0.01em' }}
               >
                 {word}
               </span>
@@ -436,7 +442,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
                 : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
             }`}
             title={isCollapsed ? `Mở rộng ${childrenCount} con` : `Thu gọn ${childrenCount} con`}
-            style={{ bottom: `-${Math.max(0, collapseControlOffset) + 18}px` }}
+            style={{ top: `calc(100% + ${Math.max(0, collapseControlOffset)}px)`, height: `${Math.max(18, collapseControlSize)}px`, minHeight: `${Math.max(18, collapseControlSize)}px` }}
           >
             {isCollapsed ? (
               <>
@@ -576,7 +582,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
 
           {/* TÊN THÀNH VIÊN TRÊN CÂY GIA PHẢ: VIẾT HOA VÀ CANH GIỮA HOÀN TOÀN */}
           <h3
-            className={`family-tree-card-name font-black tracking-wide uppercase w-[86%] min-h-[64px] flex items-center justify-center text-center break-words select-text ${fontClass} ${
+            className={`family-tree-card-name font-black uppercase w-[88%] min-h-[64px] flex items-center justify-center text-center break-words select-text ${fontClass} ${
               isMinimalCard ? 'py-1' : 'py-1.5'
             }`}
             title={member.fullName}
@@ -842,7 +848,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
               : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 shadow'
           }`}
           title={isCollapsed ? `Bấm để mở rộng ${childrenCount} con cháu` : `Bấm để thu gọn nhánh ${childrenCount} con cháu`}
-          style={{ bottom: `-${Math.max(0, collapseControlOffset) + 18}px` }}
+          style={{ top: `calc(100% + ${Math.max(0, collapseControlOffset)}px)`, height: `${Math.max(18, collapseControlSize)}px`, minHeight: `${Math.max(18, collapseControlSize)}px` }}
         >
           {isCollapsed ? (
             <>

@@ -216,7 +216,13 @@ export interface FamilyTreeSettings {
   cardBackgroundColor?: string;
   cardBorderColor?: string;
   cardVerticalGap?: number;
-  collapseControlOffset?: number; // Khoảng cách nút thu gọn/mở rộng nằm bên dưới thẻ (px)
+  collapseControlOffset?: number; // Khoảng cách từ đáy thẻ tới nút thu gọn/mở rộng (px)
+  collapseControlSize?: number; // Cỡ nút thu gọn/mở rộng (px)
+  horizontalCardNameBackgroundEnabled?: boolean;
+  verticalCardNameBackgroundEnabled?: boolean;
+  treeCanvasBackgroundColor?: string; // Nền riêng của vùng ReactFlow, không phụ thuộc theme website
+  treeCanvasGridColor?: string; // Màu chấm/lưới ReactFlow
+  treeCanvasGridGap?: number;
   cardThemePreset?: 'traditional' | 'modern' | 'ivory' | 'emerald' | 'midnight';
 
   // Theme toàn website (AdminCP đặt mặc định cho giao diện chung).

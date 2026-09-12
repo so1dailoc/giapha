@@ -500,3 +500,49 @@ html[data-clan-theme="traditional"], html[data-clan-theme="midnight"] { color-sc
 .clan-app-shell .family-tree-card-shell .family-tree-card-name * {
   color: var(--card-name-color) !important;
 }
+
+
+/* ===== V15 CARD / TREE CANVAS HARDENING ===== */
+.clan-app-shell .family-tree-card-shell .family-tree-card-name {
+  flex-shrink: 0 !important;
+  margin-inline: auto !important;
+  background: var(--card-name-bg) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-card-name span {
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-card-actions {
+  margin-top: auto !important;
+  width: 100% !important;
+  flex-shrink: 0 !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-card-primary-actions > .family-tree-action-btn {
+  height: 36px !important;
+  min-height: 36px !important;
+  width: 100% !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-card-admin-actions > .family-tree-action-btn {
+  height: 32px !important;
+  min-height: 32px !important;
+  width: 100% !important;
+}
+.clan-app-shell .family-tree-card-shell .family-tree-collapse-control {
+  top: calc(100% + var(--collapse-offset, 12px)) !important;
+  bottom: auto !important;
+  min-width: 52px !important;
+  min-height: 20px !important;
+  justify-content: center !important;
+  pointer-events: auto !important;
+}
+@media (max-width: 639px) {
+  .clan-app-shell .family-tree-card-shell .family-tree-card-name {
+    width: 90% !important;
+  }
+  .clan-app-shell .family-tree-card-shell .family-tree-card-primary-actions > .family-tree-action-btn {
+    height: 34px !important;
+    min-height: 34px !important;
+  }
+}

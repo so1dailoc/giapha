@@ -10,6 +10,7 @@ import {
   useNodesState,
   useEdgesState,
   MarkerType,
+  Position,
 } from '@xyflow/react';
 
 import { Member, Branch, UserRole, FamilyTreeSettings, ClanInfo, TreeViewMode, LayoutAlgorithm } from '../types';
@@ -42,7 +43,7 @@ import {
   X as XIcon,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { resolveGenerationCollisions } from '../utils/layoutEngineV2';
+import { resolveLayoutV3 } from '../utils/layoutEngineV3';
 import { getTreeCanvasPreset } from '../utils/themeDefaults';
 
 interface FamilyTreeProps {
@@ -144,6 +145,10 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
     cardVerticalGap: adminDefaults?.cardVerticalGap ?? 150,
     collapseControlOffset: adminDefaults?.collapseControlOffset ?? 18,
     collapseControlSize: adminDefaults?.collapseControlSize ?? 24,
+    collapseControlCollapsedColor: adminDefaults?.collapseControlCollapsedColor ?? '#f59e0b',
+    collapseControlExpandedColor: adminDefaults?.collapseControlExpandedColor ?? '#3b0206',
+    collapseControlTextColor: adminDefaults?.collapseControlTextColor ?? '#fcd34d',
+    collapseControlBorderColor: adminDefaults?.collapseControlBorderColor ?? '#d4a72c',
     horizontalCardNameBackgroundEnabled: adminDefaults?.horizontalCardNameBackgroundEnabled ?? false,
     verticalCardNameBackgroundEnabled: adminDefaults?.verticalCardNameBackgroundEnabled ?? false,
     treeCanvasAutoTheme: adminDefaults?.treeCanvasAutoTheme ?? true,
@@ -868,7 +873,7 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
 
     // Layout Engine V2: post-process every generation to prevent card overlap.
     if (settings.layoutMode !== 'manual') {
-      resolveGenerationCollisions(filteredMembers, nodePositions, getGenNodeWidth, Math.max(8, settings.cardHorizontalGap ?? 30));
+      resolveLayoutV3(filteredMembers, nodePositions, getGenNodeWidth, getGenNodeHeight, Math.max(8, settings.cardHorizontalGap ?? 30), Math.max(20, settings.interFamilyGap ?? 110));
     }
 
     // Instantiate ReactFlow Node & Edge objects
@@ -952,6 +957,10 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
           cardThemePreset: settings.cardThemePreset,
           collapseControlOffset: settings.collapseControlOffset ?? 18,
           collapseControlSize: settings.collapseControlSize ?? 24,
+          collapseControlCollapsedColor: settings.collapseControlCollapsedColor,
+          collapseControlExpandedColor: settings.collapseControlExpandedColor,
+          collapseControlTextColor: settings.collapseControlTextColor,
+          collapseControlBorderColor: settings.collapseControlBorderColor,
           horizontalCardNameBackgroundEnabled: settings.horizontalCardNameBackgroundEnabled ?? false,
           verticalCardNameBackgroundEnabled: settings.verticalCardNameBackgroundEnabled ?? false,
         },
@@ -972,6 +981,8 @@ export const FamilyTree: React.FC<FamilyTreeProps> = ({
           source: parentId,
           target: m.id,
           type: isLargeTree ? 'straight' : 'smoothstep',
+          sourcePosition: Position.Bottom,
+          targetPosition: Position.Top,
           animated: !isLargeTree && (isAncestralLine || isHighlightedFamily),
           style: {
             stroke: isAncestralLine

@@ -318,13 +318,20 @@ export default function App() {
       return;
     }
     const previous = members.find((m) => m.id === updated.id);
+    const parentCandidates = [updated.fatherId, updated.motherId].filter(Boolean) as string[];
+    const parentGenerations = parentCandidates.map((id) => members.find((m) => m.id === id)?.generation || 0).filter((g) => g > 0);
+    // Quan hệ cha/mẹ là nguồn sự thật cho "Đời". Khi có cha hoặc mẹ, hệ thống
+    // tự chuẩn hóa đời của người đang sửa; người dùng không phải xóa tạo lại.
+    const normalizedUpdated = parentGenerations.length
+      ? { ...updated, generation: Math.max(...parentGenerations) + 1 }
+      : updated;
     const oldSpouses = new Set(previous?.spouseIds || []);
-    const newSpouses = new Set(updated.spouseIds || []);
+    const newSpouses = new Set(normalizedUpdated.spouseIds || []);
 
     // Nếu đổi/xóa phối ngẫu, tự tháo liên kết cũ và thêm liên kết mới ở hồ sơ đối phương.
-    const affectedIds = new Set<string>([...oldSpouses, ...newSpouses]);
+    const affectedIds = new Set<string>([...(Array.from(oldSpouses) as string[]), ...(Array.from(newSpouses) as string[])]);
     const nextMembers = members.map((m) => {
-      if (m.id === updated.id) return { ...updated, spouseIds: Array.from(newSpouses) };
+      if (m.id === normalizedUpdated.id) return { ...normalizedUpdated, spouseIds: Array.from(newSpouses) };
       if (oldSpouses.has(m.id) && !newSpouses.has(m.id)) return { ...m, spouseIds: (m.spouseIds || []).filter((id) => id !== updated.id) };
       if (newSpouses.has(m.id)) return { ...m, spouseIds: Array.from(new Set([...(m.spouseIds || []), updated.id])) };
       return m;
@@ -340,7 +347,7 @@ export default function App() {
         if (list) list.push(child.id); else childrenByParent.set(parentId, [child.id]);
       }
     });
-    const queue = [updated.id];
+    const queue = [normalizedUpdated.id];
     const visited = new Set<string>();
     while (queue.length) {
       const parentId = queue.shift()!;
@@ -360,9 +367,9 @@ export default function App() {
     }
 
     setMembers(nextMembers);
-    setSelectedMember(byId.get(updated.id) || updated);
+    setSelectedMember(byId.get(normalizedUpdated.id) || normalizedUpdated);
     if (isSupabaseConfigured) {
-      const toSave = nextMembers.filter((m) => m.id === updated.id || affectedIds.has(m.id) || visited.has(m.id));
+      const toSave = nextMembers.filter((m) => m.id === normalizedUpdated.id || affectedIds.has(m.id) || visited.has(m.id));
       for (const item of toSave) {
         const res = await saveMemberToSupabase(item);
         if (res.missingBurialCoordinatesColumn) setSchemaWarningNotice(true);

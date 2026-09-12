@@ -222,6 +222,10 @@ export interface FamilyTreeSettings {
   cardVerticalGap?: number;
   collapseControlOffset?: number; // Khoảng cách từ đáy thẻ tới nút thu gọn/mở rộng (px)
   collapseControlSize?: number; // Cỡ nút thu gọn/mở rộng (px)
+  collapseControlCollapsedColor?: string;
+  collapseControlExpandedColor?: string;
+  collapseControlTextColor?: string;
+  collapseControlBorderColor?: string;
   horizontalCardNameBackgroundEnabled?: boolean;
   verticalCardNameBackgroundEnabled?: boolean;
   treeCanvasAutoTheme?: boolean; // Đồng bộ màu nền ReactFlow theo theme giao diện

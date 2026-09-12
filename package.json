@@ -1,7 +1,7 @@
 {
   "name": "gia-pha-dai-toc",
   "private": true,
-  "version": "1.0.0-v15",
+  "version": "1.0.0-v17",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
@@ -11,7 +11,8 @@
     "lint": "tsc --noEmit",
     "check": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test:relationships": "tsx tests/relationshipCalculator.deep.test.ts"
+    "test:relationships": "tsx tests/relationshipCalculator.deep.test.ts",
+    "test:layout": "tsx tests/layoutEngineV3.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

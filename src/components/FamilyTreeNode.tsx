@@ -57,6 +57,10 @@ export interface FamilyTreeNodeData extends Record<string, unknown> {
   cardThemePreset?: 'traditional' | 'modern' | 'ivory' | 'emerald' | 'midnight';
   collapseControlOffset?: number;
   collapseControlSize?: number;
+  collapseControlCollapsedColor?: string;
+  collapseControlExpandedColor?: string;
+  collapseControlTextColor?: string;
+  collapseControlBorderColor?: string;
   horizontalCardNameBackgroundEnabled?: boolean;
   verticalCardNameBackgroundEnabled?: boolean;
 }
@@ -111,6 +115,10 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
     cardThemePreset = theme === 'traditional' ? 'traditional' : 'modern',
     collapseControlOffset = 12,
     collapseControlSize = 20,
+    collapseControlCollapsedColor,
+    collapseControlExpandedColor,
+    collapseControlTextColor,
+    collapseControlBorderColor,
     horizontalCardNameBackgroundEnabled = false,
     verticalCardNameBackgroundEnabled = false,
   } = data;
@@ -339,7 +347,7 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
                 className={`block font-bold leading-none my-0.5 ${fontClass} ${
                   isTraditional ? 'text-amber-100 drop-shadow-sm uppercase' : 'text-slate-800 font-bold uppercase'
                 }`}
-                style={{ fontSize: `${verticalNameFontSize}px`, textAlign: resolvedNameAlignment, lineHeight: 1.08, width: '100%', whiteSpace: 'nowrap', overflow: 'visible', letterSpacing: '0', display: 'block' }}
+                style={{ fontSize: `${verticalNameFontSize}px`, textAlign: resolvedNameAlignment, lineHeight: 1.08, width: '100%', whiteSpace: 'nowrap', overflow: 'visible', letterSpacing: '0', display: 'block', flex: '0 0 auto' }}
               >
                 {word}
               </span>
@@ -428,22 +436,26 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
 
         {/* Nút Thu Gọn / Mở Rộng Cành Con [+] / [-] */}
         {childrenCount > 0 && onToggleCollapse && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleCollapse(member.id);
-            }}
-            className={`absolute left-1/2 -translate-x-1/2 family-tree-collapse-control z-40 px-1.5 py-0.2 rounded-full text-[8.5px] font-bold shadow-md flex items-center gap-0.5 transition-all whitespace-nowrap ${
-              isCollapsed
-                ? 'bg-amber-500 text-amber-950 ring-1 ring-amber-300 hover:scale-105'
-                : isTraditional
-                ? 'bg-[#3b0206] text-amber-300 border border-amber-500/60 hover:bg-amber-600 hover:text-white'
-                : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
-            }`}
-            title={isCollapsed ? `Mở rộng ${childrenCount} con` : `Thu gọn ${childrenCount} con`}
-            style={{ top: `calc(100% + ${Math.max(0, collapseControlOffset)}px)`, height: `${Math.max(20, collapseControlSize)}px`, minHeight: `${Math.max(20, collapseControlSize)}px`, left: '50%', transform: 'translateX(-50%)' }}
+          <div
+            className="family-tree-collapse-anchor"
+            style={{ top: `calc(100% + ${Math.max(0, collapseControlOffset)}px)`, height: `${Math.max(20, collapseControlSize)}px` }}
           >
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleCollapse(member.id);
+              }}
+              className="family-tree-collapse-control z-40 rounded-full font-bold shadow-md flex items-center justify-center gap-0.5 transition-all whitespace-nowrap"
+              title={isCollapsed ? `Mở rộng ${childrenCount} con` : `Thu gọn ${childrenCount} con`}
+              style={{
+                height: `${Math.max(20, collapseControlSize)}px`,
+                minHeight: `${Math.max(20, collapseControlSize)}px`,
+                backgroundColor: isCollapsed ? (collapseControlCollapsedColor || '#f59e0b') : (collapseControlExpandedColor || (isTraditional ? '#3b0206' : '#ffffff')),
+                color: collapseControlTextColor || (isCollapsed ? '#451a03' : (isTraditional ? '#fcd34d' : '#334155')),
+                border: `1px solid ${collapseControlBorderColor || (isTraditional ? '#d4a72c' : '#cbd5e1')}`,
+              }}
+            >
             {isCollapsed ? (
               <>
                 <ChevronDown className="w-2.5 h-2.5" />
@@ -455,7 +467,8 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
                 <span>-{childrenCount}</span>
               </>
             )}
-          </button>
+            </button>
+          </div>
         )}
 
         {/* Bottom Handle for Children connection */}
@@ -834,22 +847,26 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
 
       {/* PA 1: Nút Thu Gọn / Mở Rộng Nhánh Con [+] / [-] */}
       {childrenCount > 0 && onToggleCollapse && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleCollapse(member.id);
-          }}
-          className={`absolute left-1/2 -translate-x-1/2 family-tree-collapse-control z-40 px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-lg flex items-center gap-1 transition-all ${
-            isCollapsed
-              ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-amber-950 ring-2 ring-amber-300 shadow-amber-500/50 hover:scale-105 active:scale-95'
-              : isTraditional
-              ? 'bg-[#3b0206] text-amber-300 border border-amber-500/60 hover:bg-amber-600 hover:text-white'
-              : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 shadow'
-          }`}
-          title={isCollapsed ? `Bấm để mở rộng ${childrenCount} con cháu` : `Bấm để thu gọn nhánh ${childrenCount} con cháu`}
-          style={{ top: `calc(100% + ${Math.max(0, collapseControlOffset)}px)`, height: `${Math.max(20, collapseControlSize)}px`, minHeight: `${Math.max(20, collapseControlSize)}px`, left: '50%', transform: 'translateX(-50%)' }}
+        <div
+          className="family-tree-collapse-anchor"
+          style={{ top: `calc(100% + ${Math.max(0, collapseControlOffset)}px)`, height: `${Math.max(20, collapseControlSize)}px` }}
         >
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleCollapse(member.id);
+            }}
+            className="family-tree-collapse-control z-40 rounded-full font-bold shadow-lg flex items-center justify-center gap-1 transition-all whitespace-nowrap"
+            title={isCollapsed ? `Bấm để mở rộng ${childrenCount} con cháu` : `Bấm để thu gọn nhánh ${childrenCount} con cháu`}
+            style={{
+              height: `${Math.max(20, collapseControlSize)}px`,
+              minHeight: `${Math.max(20, collapseControlSize)}px`,
+              backgroundColor: isCollapsed ? (collapseControlCollapsedColor || '#f59e0b') : (collapseControlExpandedColor || (isTraditional ? '#3b0206' : '#ffffff')),
+              color: collapseControlTextColor || (isCollapsed ? '#451a03' : (isTraditional ? '#fcd34d' : '#334155')),
+              border: `1px solid ${collapseControlBorderColor || (isTraditional ? '#d4a72c' : '#cbd5e1')}`,
+            }}
+          >
           {isCollapsed ? (
             <>
               <ChevronDown className="w-3 h-3 text-amber-950 font-bold" />
@@ -861,7 +878,8 @@ export const FamilyTreeNode = memo(({ data }: NodeProps<Node<FamilyTreeNodeData>
               <span>- {childrenCount} con</span>
             </>
           )}
-        </button>
+          </button>
+        </div>
       )}
 
       {/* Bottom Handle for Children connections */}

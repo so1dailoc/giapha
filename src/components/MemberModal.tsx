@@ -24,6 +24,12 @@ import { DefaultAvatar } from './DefaultAvatar';
 import { submitBurialLocationSuggestion } from '../lib/supabaseService';
 import { MemberPicker } from './MemberPicker';
 
+const getSuggestedGeneration = (member: Member, allMembers: Member[]) => {
+  const parents = [member.fatherId, member.motherId].filter(Boolean) as string[];
+  const generations = parents.map((id) => allMembers.find((m) => m.id === id)?.generation || 0).filter((g) => g > 0);
+  return generations.length ? Math.max(...generations) + 1 : member.generation;
+};
+
 interface MemberModalProps {
   member: Member;
   allMembers: Member[];
@@ -86,6 +92,8 @@ export const MemberModal: React.FC<MemberModalProps> = ({
 
   const canEdit = userRole === 'super_admin' || userRole === 'branch_admin';
   const canDelete = userRole === 'super_admin';
+  const suggestedGeneration = getSuggestedGeneration(formData, allMembers);
+  const generationIsDerived = Boolean(formData.fatherId || formData.motherId) && suggestedGeneration !== formData.generation;
 
   const branch = branches.find((b) => b.id === member.branchId);
   const father = allMembers.find((m) => m.id === member.fatherId);
@@ -375,8 +383,14 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                   <select value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value as Member['gender'] })} className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none"><option value="male">Nam</option><option value="female">Nữ</option><option value="other">Khác</option></select>
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Đời (có thể thay đổi)</label>
-                  <input type="number" min="1" max="100" value={formData.generation} onChange={(e) => setFormData({ ...formData, generation: Math.max(1, Number(e.target.value) || 1) })} className="w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none font-bold text-amber-900" />
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <label className="block font-bold text-slate-700">Đời</label>
+                    {(formData.fatherId || formData.motherId) && (
+                      <button type="button" onClick={() => setFormData({ ...formData, generation: suggestedGeneration })} className="text-[10px] font-bold text-emerald-700 hover:underline">Đồng bộ theo cha/mẹ: Đời {suggestedGeneration}</button>
+                    )}
+                  </div>
+                  <input type="number" min="1" max="100" value={formData.generation} onChange={(e) => setFormData({ ...formData, generation: Math.max(1, Number(e.target.value) || 1) })} className={`w-full p-2.5 border rounded-lg focus:border-amber-600 focus:outline-none font-bold ${generationIsDerived ? 'border-amber-400 bg-amber-50 text-amber-900' : 'text-amber-900'}`} />
+                  {(formData.fatherId || formData.motherId) && <p className={`mt-1 text-[9px] ${generationIsDerived ? 'text-amber-700 font-semibold' : 'text-slate-500'}`}>{generationIsDerived ? `Đời sẽ tự chuẩn hóa thành ${suggestedGeneration} khi lưu.` : 'Đời đang khớp với quan hệ cha/mẹ.'}</p>}
                 </div>
 
                 <div>

@@ -23,6 +23,7 @@ import {
 import { DefaultAvatar } from './DefaultAvatar';
 import { submitBurialLocationSuggestion } from '../lib/supabaseService';
 import { MemberPicker } from './MemberPicker';
+import { compareFamilyMembers } from '../utils/layoutEngineV4';
 
 const getSuggestedGeneration = (member: Member, allMembers: Member[]) => {
   const parents = [member.fatherId, member.motherId].filter(Boolean) as string[];
@@ -99,7 +100,13 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   const father = allMembers.find((m) => m.id === member.fatherId);
   const mother = allMembers.find((m) => m.id === member.motherId);
   const spouses = allMembers.filter((m) => member.spouseIds?.includes(m.id));
-  const allChildren = allMembers.filter((m) => m.fatherId === member.id || m.motherId === member.id);
+  const allChildren = React.useMemo(() =>
+    allMembers
+      .filter((m) => m.fatherId === member.id || m.motherId === member.id)
+      .slice()
+      .sort(compareFamilyMembers),
+    [allMembers, member.id]
+  );
 
   // Group children by mother if this is a father with multiple wives
   const childrenBySpouseMap = React.useMemo(() => {
@@ -110,6 +117,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
           (c.fatherId === member.id && c.motherId === sp.id) ||
           (c.motherId === member.id && c.fatherId === sp.id)
       );
+      kids.sort(compareFamilyMembers);
       map.set(sp.id, kids);
     });
     return map;

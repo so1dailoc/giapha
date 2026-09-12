@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Member, Branch, UserRole } from '../types';
+import { compareFamilyMembers } from '../utils/layoutEngineV4';
 import {
   Search,
   BookOpen,
@@ -97,14 +98,12 @@ export const FamilyTreeBookView: React.FC<FamilyTreeBookViewProps> = ({
       map.get(g)!.push(m);
     });
 
-    // Sort inside each generation
+    // Sort inside each generation with the same canonical family ordering as the tree.
     map.forEach((list) => {
       list.sort((a, b) => {
-        // Group by fatherId
-        if (a.fatherId !== b.fatherId) {
-          return (a.fatherId || '').localeCompare(b.fatherId || '');
-        }
-        return (a.orderInFamily || 1) - (b.orderInFamily || 1);
+        if (a.fatherId !== b.fatherId) return (a.fatherId || '').localeCompare(b.fatherId || '');
+        if (a.motherId !== b.motherId) return (a.motherId || '').localeCompare(b.motherId || '');
+        return compareFamilyMembers(a, b);
       });
     });
 
